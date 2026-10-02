@@ -1,0 +1,7 @@
+node_modules/
+*.db
+*.env
+.steam_secrets
+__pycache__/
+.venv/
+.pytest_cache/

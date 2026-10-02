@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#14100d">
+<meta name="description" content="Последний котёл — паропанк-игра про кочегара, который решает, кому достанется пар.">
+<title>Последний котёл — паропанк-игра</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23c9a24a' stroke='%232a2119' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%23f1e6c8'/%3E%3Cpath d='M16 16 L22 9' stroke='%237a1f12' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Игровое поле: котёл, манометр и вентили" role="img"></canvas>
+<div id="sr-status" class="sr-only" aria-live="polite"></div>
+
+<section id="title" class="screen" aria-labelledby="t-h">
+  <div class="panel title-panel">
+    <div class="emblem" aria-hidden="true"></div>
+    <p class="kicker">Ферроград · зима · десять ночей</p>
+    <h1 id="t-h">Последний котёл</h1>
+    <p class="lead">Вы — кочегар старой Агафьи. Её пар — единственное тепло города. Решайте, кому его отдать.</p>
+    <div class="btns">
+      <button class="btn primary" id="b-continue" hidden>Продолжить</button>
+      <button class="btn primary" id="b-new">Новая игра</button>
+      <button class="btn" id="b-help">Как играть</button>
+      <button class="btn" id="b-settings">Настройки</button>
+    </div>
+    <p class="small" id="t-endings"></p>
+  </div>
+</section>
+
+<section id="prologue" class="screen" hidden aria-labelledby="p-h">
+  <div class="panel wide">
+    <p class="kicker">Пролог</p>
+    <h2 id="p-h">Агафья</h2>
+    <p>Зима пришла в Ферроград на месяц раньше. Угольный обоз застрял в снегах — до него десять ночей пути.</p>
+    <p>Пока он не придёт, весь город будет жить на том, что даст старый паровой котёл — Агафья. Госпиталь, кварталы, завод, фильтры — все тянут к ней трубы.</p>
+    <p>Пара на всех не хватит. Вы решаете, кому достанется тепло, чем придётся дышать и чья усталость оплатит ночь.</p>
+    <div class="btns"><button class="btn primary" id="b-start">К котлу</button></div>
+  </div>
+</section>
+
+<section id="pause" class="screen" hidden aria-labelledby="pa-h">
+  <div class="panel">
+    <h2 id="pa-h">Пауза</h2>
+    <div class="btns">
+      <button class="btn primary" id="b-resume">Продолжить</button>
+      <button class="btn" id="b-retry">Переиграть ночь</button>
+      <button class="btn" id="b-pset">Настройки</button>
+      <button class="btn" id="b-phelp">Как играть</button>
+      <button class="btn danger" id="b-menu">В меню</button>
+    </div>
+    <p class="small">Прогресс сохраняется автоматически в начале каждой ночи.</p>
+  </div>
+</section>
+
+<section id="settings" class="screen" hidden aria-labelledby="s-h">
+  <div class="panel">
+    <h2 id="s-h">Настройки</h2>
+    <label class="row"><span>Звук</span><input type="checkbox" id="o-sound" checked></label>
+    <label class="row"><span>Громкость</span><input type="range" id="o-vol" min="0" max="100" value="70"></label>
+    <label class="row"><span>Музыка</span><input type="range" id="o-music" min="0" max="100" value="50"></label>
+    <label class="row"><span>Меньше движения</span><input type="checkbox" id="o-reduce"></label>
+    <label class="row"><span>Тряска экрана</span><input type="checkbox" id="o-shake" checked></label>
+    <div class="btns"><button class="btn primary" id="b-sclose">Готово</button></div>
+    <p class="small"><button class="link" id="b-wipe">Стереть сохранение и достижения</button></p>
+  </div>
+</section>
+
+<section id="help" class="screen" hidden aria-labelledby="h-h">
+  <div class="panel wide">
+    <h2 id="h-h">Как играть</h2>
+    <p>Держите стрелку давления в <b class="g">зелёной зоне</b>. Подбрасывайте уголь — и распределяйте пар по четырём вентилям. Золотая отметка у каждой шахты — сколько пара нужно району прямо сейчас.</p>
+    <ul class="tips">
+      <li><b>Госпиталь</b> — если замёрзнет, люди погибают быстрее всего.</li>
+      <li><b>Кварталы</b> — тепло домов. Холод тоже убивает.</li>
+      <li><b>Завод</b> — даёт уголь, но рабочие устают. Усталость — это цена, которую вы платите.</li>
+      <li><b>Фильтры</b> — чистят дым. Без них город задыхается, а Агафья сильнее чадит.</li>
+      <li>Красные «!» — утечки пара. Нажмите, чтобы заделать.</li>
+      <li>Давление выше красной зоны — котёл взорвётся.</li>
+    </ul>
+    <div class="keys">
+      <div><kbd>Пробел</kbd> подбросить уголь</div>
+      <div><kbd>1</kbd>–<kbd>4</kbd> выбрать вентиль</div>
+      <div><kbd>↑</kbd><kbd>↓</kbd> открыть / закрыть</div>
+      <div><kbd>←</kbd><kbd>→</kbd> другой вентиль</div>
+      <div><kbd>F</kbd> заделать утечку</div>
+      <div><kbd>P</kbd> / <kbd>Esc</kbd> пауза</div>
+      <div><kbd>M</kbd> звук вкл/выкл</div>
+      <div>Мышь / палец: тяните вентиль, нажимайте на «!» и «Уголь»</div>
+    </div>
+    <div class="btns"><button class="btn primary" id="b-hclose">Понятно</button></div>
+  </div>
+</section>
+
+<section id="card" class="screen" hidden aria-labelledby="c-h">
+  <div class="panel wide">
+    <p class="kicker" id="c-who"></p>
+    <h2 id="c-h"></h2>
+    <p class="quote" id="c-text"></p>
+    <div class="choices" id="c-opts"></div>
+    <p class="small">Это решение изменит ход игры и финал.</p>
+  </div>
+</section>
+
+<section id="summary" class="screen" hidden aria-labelledby="su-h">
+  <div class="panel wide">
+    <p class="kicker" id="su-n"></p>
+    <h2 id="su-h">Рассвет</h2>
+    <div class="stats" id="su-stats"></div>
+    <p class="quote" id="su-text"></p>
+    <div class="btns"><button class="btn primary" id="b-next">Дальше</button></div>
+  </div>
+</section>
+
+<section id="ending" class="screen" hidden aria-labelledby="e-h">
+  <div class="panel wide">
+    <p class="kicker" id="e-kicker"></p>
+    <h2 id="e-h"></h2>
+    <div id="e-text"></div>
+    <div class="stats" id="e-stats"></div>
+    <p class="small" id="e-hint"></p>
+    <div class="btns"><button class="btn primary" id="b-again">Сыграть снова</button><button class="btn" id="b-emenu">В меню</button></div>
+  </div>
+</section>
+
+<noscript><p style="color:#f1e6c8;padding:2em">Для игры нужен JavaScript.</p></noscript>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
