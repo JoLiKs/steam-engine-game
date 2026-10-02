@@ -13,7 +13,7 @@
  */
 export const BACKEND = 'https://185-255-133-179.sslip.io/steam';
 export const ADMIN_HOSTS = new Set(['steam-engine-game.pages.dev']);
-const PUBLIC_ROUTES = { '/api/g/leaderboard': 'GET', '/api/g/run': 'POST', '/api/g/event': 'POST', '/api/g/score': 'POST' };
+const PUBLIC_ROUTES = { '/api/g/leaderboard': 'GET', '/api/g/run': 'POST', '/api/g/event': 'POST', '/api/g/score': 'POST', '/api/g/note': 'GET' };
 const METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'DELETE']);
 const MAX_BODY = 8 * 1024;
 const FORWARD_REQ = ['accept', 'content-type', 'cookie', 'origin', 'x-csrf-token'];

@@ -36,6 +36,7 @@ class Settings:
     rl_score_per_day: int = 25
     rl_read_per_min: int = 120
     max_events_per_run: int = 80
+    ai_master_key: str = ""             # ключ Fernet для шифрования API-ключей админа (только env-файл сервера)
     min_time_factor: float = 0.5        # доля суммарной длительности пройденных ночей, быстрее которой пройти нельзя
 
     @classmethod
@@ -54,6 +55,7 @@ class Settings:
         s.cookie_secure = g("SEG_COOKIE_SECURE", "1") not in ("0", "false", "no")
         s.retention_days = int(g("SEG_RETENTION_DAYS", str(s.retention_days)))
         s.require_proxy = g("SEG_REQUIRE_PROXY", "1") not in ("0", "false", "no")
+        s.ai_master_key = g("SEG_AI_MASTER_KEY", "")
         s.min_time_factor = float(g("SEG_MIN_TIME_FACTOR", str(s.min_time_factor)))   # 0 — только для локальных e2e-тестов
         s.rl_score_per_min = int(g("SEG_RL_SCORE_PER_MIN", str(s.rl_score_per_min)))
         return s

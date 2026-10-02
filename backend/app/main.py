@@ -18,6 +18,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Res
 from . import __version__
 from .config import Settings
 from .db import DB, SESSION_SORT
+from .ai import AiError, AiService
+from .aicrypto import KeyVault
+from .ainotes import SITUATIONS
 from .ratelimit import LoginGuard, RateLimiter
 from .scoring import ENDING_BONUS, PLATFORMS, Invalid, clean_nick, int_in, score_js, validate_result
 from .security import AdminAuth, Tickets, client_ip, hash_ip, hash_pid, proxy_verified
@@ -82,11 +85,14 @@ def validate_event(etype: str, d: Any) -> tuple[dict[str, Any], dict[str, Any]]:
     return out, meta
 
 
-def create_app(settings: Settings | None = None, db: DB | None = None, clock=time.time) -> FastAPI:
+def create_app(settings: Settings | None = None, db: DB | None = None, clock=time.time, ai_transport=None, ai_background: bool = True) -> FastAPI:
     s = settings or Settings.from_env()
     s.validate()
     db = db or DB(s.db_path)
     auth = AdminAuth(s)
+    s_key = s.secret_key
+    ai = AiService(db, KeyVault(s.ai_master_key), clock=clock, transport=ai_transport, background=ai_background)
+    rl_ai = RateLimiter(12, 60)          # тяжёлые действия раздела «ИИ» в админке (проверка ключа, пример) — на сессию
     tickets = Tickets(s.secret_key, s.ticket_ttl_s)
     rl_run, rl_event = RateLimiter(s.rl_run_per_min, 60), RateLimiter(s.rl_event_per_min, 60)
     rl_score, rl_score_day = RateLimiter(s.rl_score_per_min, 60), RateLimiter(s.rl_score_per_day, 86400)
@@ -109,7 +115,7 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
         t.cancel()
 
     app = FastAPI(title="Last Boiler API", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    app.state.db, app.state.settings = db, s
+    app.state.db, app.state.settings, app.state.ai = db, s, ai
 
     def ip_of(request: Request) -> str:
         return client_ip(request.headers, request.client.host if request.client else None, s.proxy_secret)
@@ -231,6 +237,15 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
         rows = db.leaderboard(board, max(1, min(limit, 50)))
         return {"board": board, "entries": [{"nick": x["nick"], "score": x["score"], "nights": x["nights"], "pop": x["pop"], "ending": x["ending"],
                                              "date": time.strftime("%Y-%m-%d", time.gmtime(x["created_at"]))} for x in rows]}
+
+
+    @app.get("/api/g/note")
+    def game_note(request: Request, s: str = "calm", n: int = 1):
+        """«Заметка механика»: ответ мгновенный (из пула/запасных текстов), ИИ дергается в фоне. Ситуация — только из белого списка."""
+        ip = ip_of(request)
+        if (r := limited(rl_read, ip)):
+            return r
+        return ai.note(s if s in SITUATIONS else "calm", max(1, min(10, n)), hash_ip(ip, s_key))
 
     # ====================================================== админка
     def origin_ok(request: Request) -> bool:
@@ -409,6 +424,78 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
             w.writerow([csv_cell(time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(r[c])) if c in ("created_at", "updated_at") and r[c] else r[c]) for c in cols])
         return Response("\ufeff" + buf.getvalue(), media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": f'attachment; filename="last-boiler-{what}.csv"'})
+
+
+    # ---- раздел «ИИ»: настройки, провайдеры (ключи шифруются, наружу — только маски), проверка, пример
+    def ai_guard(request: Request, write: bool = False, heavy: bool = False) -> dict[str, Any]:
+        sess = require_admin(request, write=write)
+        if heavy:
+            ok, _ = rl_ai.check(sess["sid"])
+            if not ok:
+                raise HTTPException(429, "too many requests")
+        return sess
+
+    def ai_call(fn):
+        try:
+            return fn()
+        except AiError as e:
+            return err(e.code, str(e))
+
+    @app.get("/api/admin/ai")
+    def admin_ai(request: Request):
+        ai_guard(request)
+        return ai.admin_state()
+
+    @app.post("/api/admin/ai/settings")
+    async def admin_ai_settings(request: Request):
+        ai_guard(request, write=True)
+        d = await read_json(request, 4096)
+        if not isinstance(d, dict):
+            return err(422, "body")
+        return ai_call(lambda: {"settings": ai.save_settings(d)})
+
+    @app.post("/api/admin/ai/providers")
+    async def admin_ai_add(request: Request):
+        ai_guard(request, write=True, heavy=True)
+        d = await read_json(request, 2048)
+        if not isinstance(d, dict) or not isinstance(d.get("key"), str):
+            return err(422, "key")
+        name = d.get("name") if isinstance(d.get("name"), str) else ""
+        return await asyncio.get_running_loop().run_in_executor(None, lambda: ai_call(lambda: {"provider": ai.add_provider(d["key"], name)}))
+
+    @app.post("/api/admin/ai/order")
+    async def admin_ai_order(request: Request):
+        ai_guard(request, write=True)
+        d = await read_json(request, 2048)
+        return ai_call(lambda: {"providers": ai.reorder(d.get("ids") if isinstance(d, dict) else None)})
+
+    @app.post("/api/admin/ai/sample")
+    async def admin_ai_sample(request: Request):
+        ai_guard(request, write=True, heavy=True)
+        d = await read_json(request, 1024)
+        sit = d.get("situation", "calm") if isinstance(d, dict) else "calm"
+        return await asyncio.get_running_loop().run_in_executor(None, lambda: ai_call(lambda: ai.sample(sit if isinstance(sit, str) else "calm")))
+
+    @app.post("/api/admin/ai/providers/{pid}/check")
+    async def admin_ai_check(pid: str, request: Request):
+        ai_guard(request, write=True, heavy=True)
+        return await asyncio.get_running_loop().run_in_executor(None, lambda: ai_call(lambda: ai.check_provider(pid)))
+
+    @app.post("/api/admin/ai/providers/{pid}")
+    async def admin_ai_patch(pid: str, request: Request):
+        ai_guard(request, write=True)
+        d = await read_json(request, 2048)
+        if not isinstance(d, dict):
+            return err(422, "body")
+        return ai_call(lambda: {"provider": ai.update_provider(pid, d)})
+
+    @app.delete("/api/admin/ai/providers/{pid}")
+    def admin_ai_delete(pid: str, request: Request):
+        ai_guard(request, write=True)
+        def run():
+            ai.delete_provider(pid)
+            return {"ok": True}
+        return ai_call(run)
 
     @app.api_route("/api/admin/{rest:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"], include_in_schema=False)
     def admin_unknown(rest: str, request: Request):

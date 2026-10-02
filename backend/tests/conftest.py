@@ -30,13 +30,48 @@ def clock():
 
 @pytest.fixture()
 def settings(tmp_path):
-    return Settings(db_path=str(tmp_path / "t.db"), secret_key="k" * 48, proxy_secret=PROXY, admin_password=PASSWORD,
+    from app.aicrypto import KeyVault
+    return Settings(ai_master_key=KeyVault.generate(), db_path=str(tmp_path / "t.db"), secret_key="k" * 48, proxy_secret=PROXY, admin_password=PASSWORD,
                     cookie_secure=False, allowed_origins=[ORIGIN], admin_origins=[ORIGIN])
 
 
+class FakeAI:
+    """Подставной «интернет» для провайдеров ИИ (httpx.MockTransport): какой ключ какому хосту принадлежит, что отвечает чат."""
+    def __init__(self):
+        self.valid = {}                    # host -> ключ, который этот хост принимает
+        self.keyless_ok = set()            # хосты, отвечающие без ключа
+        self.reply = "Паровой манометр Бурдона изобрели в 1849 году, и кочегары наконец перестали гадать по звуку."
+        self.reply_by_host = {}
+        self.models = {}                   # host -> список id
+        self.fail_hosts = {}               # host -> HTTP-статус ошибки
+        self.calls = []                    # (host, method, path, headers)
+
+    def __call__(self, request):
+        import httpx
+        host = request.url.host; self.calls.append((host, request.method, request.url.path, dict(request.headers), request.content))
+        if host in self.fail_hosts:
+            return httpx.Response(self.fail_hosts[host], json={"error": "x"})
+        auth = request.headers.get("authorization", "").replace("Bearer ", "") or request.headers.get("x-api-key", "")
+        if host not in self.keyless_ok and self.valid.get(host) != auth:
+            return httpx.Response(401, json={"error": "bad key"})
+        if request.method == "GET":
+            ids = self.models.get(host, ["gpt-4o-mini", "gpt-4o", "text-embedding-3-small", "whisper-1"])
+            return httpx.Response(200, json={"data": [{"id": i} for i in ids]})
+        text = self.reply_by_host.get(host, self.reply)
+        if host == "api.anthropic.com":
+            return httpx.Response(200, json={"content": [{"type": "text", "text": text}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
+
+
 @pytest.fixture()
-def app(settings, clock):
-    return create_app(settings, clock=clock)
+def fake_ai():
+    return FakeAI()
+
+
+@pytest.fixture()
+def app(settings, clock, fake_ai):
+    import httpx
+    return create_app(settings, clock=clock, ai_transport=httpx.MockTransport(fake_ai), ai_background=False)
 
 
 def make_client(app, ip="203.0.113.7", proxy=True):
