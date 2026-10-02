@@ -51,6 +51,7 @@ const FAULT = [
       const p = await ctx.newPage(); const errs = [];
       p.on('pageerror', e => errs.push('pageerror: ' + e.message));
       p.on('console', m => { if (m.type() === 'error' && !/\/api\//.test(m.location().url || '') && !/Failed to load resource/.test(m.text())) errs.push('console: ' + m.text()); });
+      if (/WebKit/.test(eng.name)) await p.addInitScript(() => { window.__keepAlive = false; });   // в песочнице WPE нет медиа-конвейера: <audio> роняет процесс
       await setup(p, ctx, eng);
       const t0 = Date.now();
       await p.goto(BASE + '/', { waitUntil: 'commit', timeout: 60000 }).catch(e => errs.push('goto: ' + e.message.slice(0, 100)));
@@ -73,6 +74,7 @@ const FAULT = [
       const ctx = await b.newContext({ ...eng.device });
       const p = await ctx.newPage(); const errs = [];
       p.on('pageerror', e => errs.push(e.message));
+      if (/WebKit/.test(eng.name)) await p.addInitScript(() => { window.__keepAlive = false; });
       await setup(p, ctx, eng);
       await p.goto(BASE + '/', { waitUntil: 'commit', timeout: 60000 }).catch(() => {});
       if (expect === 'start') {

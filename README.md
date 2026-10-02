@@ -105,14 +105,37 @@
 * Аудио создаётся/возобновляется по первому касанию (`pointerdown`/`touchend`); плотность пикселей на телефонах ограничена 2×.
 * Проверено эмуляцией в headless Chrome (Playwright): 390×844, 360×640, 412×915 и ландшафт 844×390 — скриншоты в `screenshots/v1.1/`. **Реальные устройства не проверялись** (см. ограничения в CHANGELOG).
 
+## Версия 1.2 — что нового
+
+### Подсказки только при «нелогичной» игре
+Надпись «ОБУЧЕНИЕ» и панель шагов убраны. `src/coach.js` («тренер») следит за действиями и показывает совет, только если за 20 секунд набралось ≥ 3 нелогичных действия: вентиль закрывают, когда людям не хватает пара; открывают, когда пара и так избыток; сыплют уголь в полную топку; давление у красной черты ≥ 6 с без реакции; давление упало, а уголь не подбрасывают; утечка висит ≥ 7 с; дым > 70 % при закрытых фильтрах. Разумное действие обнуляет серию. Кулдаун 45 с, на категорию 90 с, ≤ 3 подсказок за ночь. Бот «хорошего» и «среднего» игрока не получает подсказок вообще (`tests/coach.test.mjs`).
+
+### Звук на телефонах
+Причины «звук не работает» и что сделано (`src/audio.js`): `AudioContext` создаётся и `resume()` вызывается **внутри жеста** (`pointerup/touchend/click/keydown`); на iOS — «разблокировка» тихим буфером; для iOS-«беззвучного» режима — `navigator.audioSession.type = 'playback'` и тихий зацикленный `<audio>` (только iOS/iPadOS); повторный `resume()` на `visibilitychange/pageshow/focus` и на следующем жесте (состояния `suspended`/`interrupted`/`closed`, контекст пересоздаётся); если контекст не `running`, в игре появляется ненавязчивая кнопка «🔇 Включить звук», в настройках — строка состояния. **Проверено только эмуляцией** (Playwright Chromium «Android» без флага автозапуска и WebKit «iPhone»); на реальных iPhone/Android не проверялось.
+
+### ИИ-комментатор «заметка механика»
+Редко (≥ 45 с от начала ночи, не в кризис, не сразу после подсказки; обычно 2–3 раза за ночь) в панели сообщений появляется короткая реплика механика: факт или фраза про паровые машины, котлы, давление, индустриальную эпоху или ситуацию в игре. Браузер **не видит ключей и не вызывает ИИ**: он спрашивает `GET /api/g/note?s=<код ситуации>&n=<ночь>` у бэкенда. В промпт попадают только код ситуации из белого списка и номер ночи — **ники и любой текст игрока не передаются**. Бэкенд (`backend/app/ai*.py`):
+* цепочка провайдеров по приоритету с кулдауном при сбоях и общим дедлайном 28 с; встроенные бесплатные без ключа: OVHcloud AI Endpoints, ch.at, LLM7.io, Pollinations (выбраны по реальной проверке с сервера; свои ключи админа стоят выше);
+* ответ игре мгновенный: из кэша-пула по ситуации (TTL 6 ч) или запасной русский текст; пул наполняется в фоне — поэтому первые заметки после перезапуска могут быть запасными;
+* лимиты на сервере: на IP — не чаще раза в 20 с и 24/час, общий бюджет — 40 обращений к ИИ в час; на клиенте — интервал и число за ночь из ответа сервера;
+* санитизация (`clean_note`): без HTML/markdown/ссылок/почты/эмодзи, без блоков `<think>`, ≥ 70 % кириллицы, отбрасываются «как ИИ…», «ignore previous…» и т. п., обрезка по длине настройки; системный промпт на русском с защитой от инъекций;
+* если ИИ недоступен или выключен — игра работает как раньше (запасные тексты / нет заметок).
+
+### Админка: раздел «ИИ»
+Вкладка «ИИ» в панели `/admin`: включить/выключить; «о чём писать» (тема), стиль, длина, частота; список провайдеров с порядком (▲▼), вкл/выкл, «Проверить», удалением; «Сгенерировать пример». **Добавление своего ИИ: вставляется только ключ** (и по желанию название) — провайдер определяется по таблице сигнатур (`sk-ant-` Anthropic, `sk-or-` OpenRouter, `gsk_` Groq, `xai-` xAI, `AIza` Google, `csk-` Cerebras, `pplx-`, `fw_`, `nvapi-`, `hf_`, `tgp_v1_`, `sk-proj-` OpenAI и т. д.), а для неоднозначных форматов (`sk-…`, 32 символа Mistral, 64 hex Together…) — пробным запросом к `/models` у кандидатов; модель выбирается автоматически (дешёвая чат-модель). Если формат ключа неизвестен, он отправляется на проверку нескольким известным провайдерам (в интерфейсе об этом написано). URL провайдеров зашиты в код (SSRF исключён).
+
+**Безопасность ключей:** хранятся только зашифрованными (Fernet); мастер-ключ — в `SEG_AI_MASTER_KEY` в `/etc/steam-engine-game.env` (chmod 640 root:seg), не в репозитории и не в БД; без него добавить ключ нельзя (503). Наружу (API, админка, логи) — только маска `abcd…wxyz`. Сессия + CSRF + Origin — как у остальной админки; тяжёлые действия (добавить/проверить/пример) ограничены 12 в минуту на сессию. Создать мастер-ключ: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. **Потеря мастер-ключа = ключи придётся добавить заново.**
+
 ## Тесты и баланс
 
 ```bash
 npm install                                  # playwright-core, puppeteer-core (используется системный Chrome)
 bash tests/run-all.sh                        # всё сразу (≈ 8 минут)
-node --test tests/                           # юниты: логика (20), звук (5, мок AudioContext), счёт (общие векторы с бэкендом)
+node --test tests/                           # юниты: логика, тренер, заметки, звук (мок AudioContext), счёт (общие векторы с бэкендом) — 71
 node tests/audio_offline.js                  # звук: реальный OfflineAudioContext — каналы «Звуки»/«Музыка» независимы
-(cd backend && python -m pytest -q)          # бэкенд: 43 теста (валидация, лимиты, ник, билеты, CORS, 401, CSRF, админка, CSV)
+(cd backend && python -m pytest -q)          # бэкенд: 121 тест (+ ИИ: сигнатуры ключей, Fernet, санитизация, лимиты, цепочка фолбэков, 401/CSRF)
+node tests/pw/audio_mobile.pw.js             # Playwright: звук — Android Chromium и iPhone WebKit: состояние AudioContext после жеста, кнопка «Включить звук»
+node tests/pw/ai.pw.js                       # Playwright: заметки в игре (десктоп/телефон/офлайн) и вкладка «ИИ» в админке (ИИ-провайдеры подменены SEG_AI_MOCK=1)
 node tests/pw/rating_admin.pw.js             # Playwright: рейтинг, телеметрия, офлайн, админка (стенд: бэкенд + настоящий _worker.js)
 node tests/pw/mobile_visual.pw.js            # Playwright: 4 мобильных и 3 десктопных вьюпорта, касания, манометр, дым, safe-area, FPS
 node tests/compat/boot.pw.js                 # загрузка на «телефонах»: Android Chromium + iPhone WebKit, сбои сети/хранилища/звука, экран ошибки
@@ -132,8 +155,8 @@ node scripts/balance.mjs                     # таблица: бот × пол�
 ```
 index.html  style.css  _headers  _worker.js  _routes.json
 admin/                страница входа в админку (Pages)
-src/                  sim.js data.js rng.js layout.js render.js draw.js fx.js audio.js bot.js main.js score.js net.js
-backend/              FastAPI+SQLite: app/ (main, db, scoring, security, ratelimit, static/ — панель), tests/, deploy/ (systemd, nginx)
+src/                  sim.js data.js rng.js layout.js render.js draw.js fx.js audio.js bot.js main.js score.js net.js coach.js notes.js
+backend/              FastAPI+SQLite: app/ (main, db, scoring, security, ratelimit, ai, aiproviders, ainotes, aicrypto, static/ — панель), tests/, deploy/ (systemd, nginx)
 tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты версии 1.1)
 ```
 
@@ -142,9 +165,10 @@ tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты вер�
 * **Сборка** (`node scripts/build.mjs [dir]`): `src/*.js` → один классический скрипт `game.<хеш>.js` (esbuild, цели Safari 11+/Chrome 64+/Firefox 60+/Edge 79+), `boot.<хеш>.js` — страж загрузки, который показывает экран ошибки вместо чёрного экрана. Модули `src/` остаются для разработки и тестов (`index.html` в репозитории подключает их напрямую).
 
 * **Игра/Pages**: `scripts/deploy.sh` (wrangler 3, проект `steam-engine-game`; публикуются только файлы сайта). Секрет прокси задаётся в проекте Pages как `SEG_PROXY_SECRET`.
-* **Бэкенд**: `backend/deploy/` — unit systemd (`steam-engine-game.service`, порт 8932, пользователь без shell, `ProtectSystem=strict`) и фрагмент nginx (`location /steam/`). Переменные окружения (`SEG_*`) — в `/etc/steam-engine-game.env` (chmod 640 root:seg): `SEG_SECRET_KEY`, `SEG_PROXY_SECRET`, `SEG_ADMIN_PASSWORD_HASH` (получить: `echo -n 'пароль' | python -m app.hashpw`), `SEG_ALLOWED_ORIGINS`, `SEG_ADMIN_ORIGINS`.
+* **Бэкенд**: `backend/deploy/` — unit systemd (`steam-engine-game.service`, порт 8932, пользователь без shell, `ProtectSystem=strict`) и фрагмент nginx (`location /steam/`). Переменные окружения (`SEG_*`) — в `/etc/steam-engine-game.env` (chmod 640 root:seg): `SEG_SECRET_KEY`, `SEG_PROXY_SECRET`, `SEG_ADMIN_PASSWORD_HASH` (получить: `echo -n 'пароль' | python -m app.hashpw`), `SEG_ALLOWED_ORIGINS`, `SEG_ADMIN_ORIGINS`, `SEG_AI_MASTER_KEY` (Fernet-ключ для ИИ-ключей админа). Зависимости бэкенда: `pip install -r backend/requirements.txt` (fastapi, uvicorn, httpx, cryptography).
 
 ## Ветки
 
 * `1.0` / тег `v1.0` — исходная версия игры (без онлайна). `main` = 1.0.
-* `1.1` — эта версия.
+* `1.1` — онлайн-рейтинг, админка, мобильная версия (теги `v1.1`, `v1.1.1`).
+* `1.2` — эта версия (тег `v1.2.0`): тренер вместо обучения, звук на телефонах, ИИ-комментатор и раздел «ИИ» в админке.
