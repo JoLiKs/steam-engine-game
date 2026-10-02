@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#14100d">
 <meta name="description" content="Последний котёл — паропанк-игра про кочегара, который решает, кому достанется пар.">
 <title>Последний котёл — паропанк-игра</title>
@@ -22,6 +22,7 @@
     <div class="btns">
       <button class="btn primary" id="b-continue" hidden>Продолжить</button>
       <button class="btn primary" id="b-new">Новая игра</button>
+      <button class="btn" id="b-board" hidden>Рейтинг</button>
       <button class="btn" id="b-help">Как играть</button>
       <button class="btn" id="b-settings">Настройки</button>
     </div>
@@ -62,6 +63,8 @@
     <label class="row"><span>Музыка</span><input type="range" id="o-music" min="0" max="100" value="60" aria-label="Громкость музыки"></label>
     <label class="row"><span>Меньше движения</span><input type="checkbox" id="o-reduce"></label>
     <label class="row"><span>Тряска экрана</span><input type="checkbox" id="o-shake" checked></label>
+    <label class="row"><span>Отправлять анонимную статистику</span><input type="checkbox" id="o-stats" checked aria-describedby="stats-note"></label>
+    <p class="small left" id="stats-note">Если включено, игра отправляет на сервер: старт прохождения, итоги ночей и концовку, длительность, средние положения вентилей, тип устройства, размер экрана и краткое название браузера. Без имени, без cookie, без вашего IP (адрес хешируется и меняется каждые сутки). Выключите — события отправляться не будут. Для рейтинга игра при старте только запрашивает у сервера одноразовый билет (ничего не сохраняется); результат уходит в рейтинг лишь по вашей кнопке на финальном экране.</p>
     <div class="btns"><button class="btn primary" id="b-sclose">Готово</button></div>
     <p class="small"><button class="link" id="b-wipe">Стереть сохранение и достижения</button></p>
   </div>
@@ -120,7 +123,23 @@
     <div id="e-text"></div>
     <div class="stats" id="e-stats"></div>
     <p class="small" id="e-hint"></p>
+    <div id="e-rank" hidden>
+      <label class="row"><span>Ник в рейтинге</span><input type="text" id="e-nick" maxlength="16" placeholder="Аноним" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Ник в рейтинге (необязательно)"></label>
+      <div class="btns"><button class="btn primary" id="b-submit">Отправить в рейтинг</button></div>
+      <p class="small" id="e-rank-msg" role="status"></p>
+    </div>
     <div class="btns"><button class="btn primary" id="b-again">Сыграть снова</button><button class="btn" id="b-emenu">В меню</button></div>
+  </div>
+</section>
+
+<section id="board" class="screen" hidden aria-labelledby="lb-h">
+  <div class="panel wide">
+    <h2 id="lb-h">Рейтинг</h2>
+    <div class="tabs" role="tablist"><button class="tab on" role="tab" data-board="score">По очкам</button><button class="tab" role="tab" data-board="survival">По выживанию</button></div>
+    <ol id="lb-list" class="lb"></ol>
+    <p class="small" id="lb-msg" role="status"></p>
+    <p class="small left">Очки = ночи × 100 + жители ÷ 2 + бонус концовки − падения смены × 25 − средний дым (%). Выживание — сколько ночей пройдено, затем сколько жителей уцелело. В таблице один результат на игрока.</p>
+    <div class="btns"><button class="btn primary" id="b-lbclose">Закрыть</button></div>
   </div>
 </section>
 

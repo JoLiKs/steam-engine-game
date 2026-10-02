@@ -27,7 +27,7 @@ export class Fx {
   }
   smoke(x, y, n = 1, a = 0.35) {
     const r = this.rng; n = Math.ceil(n * this.density);
-    for (let i = 0; i < n; i++) this.add({ k: 'smoke', x: x + (r() - 0.5) * 8, y, vx: 10 + r() * 14, vy: -(24 + r() * 24), r: 8, grow: 14, life: 0, max: 3 + r() * 2, a, col: '70,64,60' });
+    for (let i = 0; i < n; i++) this.add({ k: 'smoke', x: x + (r() - 0.5) * 8, y, vx: 8 + r() * 10, vy: -(26 + r() * 18), r: 6, grow: 6, life: 0, max: 3 + r() * 1.4, a, col: '70,64,60' });
   }
   text(x, y, str, col = '#f1e6c8', size = 16) { if (this.texts.length < 20) this.texts.push({ x, y, str, col, size, life: 0, max: 1.6 }); }
   shake(a) { if (this.shakeOn && !this.reduced) this.shakeAmt = Math.max(this.shakeAmt, a); }

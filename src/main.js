@@ -7,9 +7,11 @@ import { Fx } from './fx.js';
 import { Sound } from './audio.js';
 import { botAct } from './bot.js';
 import { makeRng } from './rng.js';
+import { Run, deviceInfo, fetchBoard, randomId } from './net.js';
+import { runResult } from './score.js';
 
 const DT = 1 / 60;
-const SAVE_KEY = 'last-boiler-save-v1', SET_KEY = 'last-boiler-settings-v1', META_KEY = 'last-boiler-meta-v1';
+const SAVE_KEY = 'last-boiler-save-v1', SET_KEY = 'last-boiler-settings-v1', META_KEY = 'last-boiler-meta-v1', NICK_KEY = 'last-boiler-nick-v1', PID_KEY = 'last-boiler-pid-v1';
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
@@ -24,7 +26,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
 };
-let settings = { sound: true, sfx: 70, music: 60, reduce: mq.matches, shake: true };
+let settings = { stats: true, sound: true, sfx: 70, music: 60, reduce: mq.matches, shake: true };
 try {
   const saved = JSON.parse(store.get(SET_KEY) || '{}');
   if (saved.sfx === undefined && saved.vol !== undefined) { saved.sfx = saved.vol; if (saved.music !== undefined) saved.music = Math.min(100, saved.music + 10); } // миграция со старой «Громкости»
@@ -43,11 +45,20 @@ let endTimer = 0;
 let view = { portrait: false, scale: 1, W: 1100, H: 700 }, L = makeLayout(1100, 700, false), dpr = 1, bg = null, city = null;
 const input = { sel: 0, drag: -1, shovelDown: 0, hover: null };
 const vis = { needle: 22, fireShown: 0, satShown: [1, 1, 1, 1], popShown: POP_START, swing: 0, kidSwing: 0, wheelKick: [0, 0, 0, 0], snow: [], t: 0, shakeKick: 0 };
-const speedParam = Math.max(1, Math.min(60, +(params.get('speed') || 1)));
+const speedParam = DEBUG ? Math.max(1, Math.min(60, +(params.get('speed') || 1))) : 1;   // ускорение только для отладки/тестов
 const dbg = { bot: null, botOpts: {}, speed: speedParam };
 const rnd = makeRng(99);
 for (let i = 0; i < 70; i++) vis.snow.push({ x: rnd() * 1400, y: rnd() * 90, s: 1 + rnd() * 1.6, v: 8 + rnd() * 16, dx: 6 + rnd() * 10 });
 let gears = [];
+// онлайн: билет прохождения + анонимная статистика; всё необязательно и молча отключается без сети
+const run = new Run(() => settings.stats);
+let playTime = 0, boardAvailable = false, boardCur = 'score', submitted = false;
+const vstat = { sum: [0, 0, 0, 0], t: 0, moves: 0, prev: [0, 0, 0, 0], moving: false };
+function resetRunStats() { playTime = 0; submitted = false; vstat.sum = [0, 0, 0, 0]; vstat.t = 0; vstat.moves = 0; vstat.prev = s.valves.slice(); vstat.moving = false; }
+const avgValves = () => vstat.sum.map(x => Math.round(vstat.t > 0 ? x / vstat.t * 1000 : 0) / 1000);
+function startRun() {
+  resetRunStats(); run.begin().then(tk => { if (tk) run.event('start', deviceInfo()); updateBoardBtn(); });
+}
 
 function applySettings() {
   sound.set({ enabled: settings.sound, sfxVol: settings.sfx / 100, musicVol: settings.music / 100 });
@@ -58,8 +69,11 @@ function applySettings() {
 
 // ---------- размеры
 function resize() {
-  const cssW = window.innerWidth, cssH = window.innerHeight;
-  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  // размер берём у самого холста (он уже учитывает safe-area), а не у окна
+  const cr = canvas.getBoundingClientRect();
+  const cssW = Math.max(1, Math.round(cr.width || window.innerWidth)), cssH = Math.max(1, Math.round(cr.height || window.innerHeight));
+  const small = Math.min(cssW, cssH) < 700;     // телефон: ограничиваем плотность пикселей ради производительности
+  dpr = Math.min(window.devicePixelRatio || 1, small ? 2 : 2.5);
   canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
   view = viewFor(cssW, cssH);
   L = makeLayout(view.W, view.H, view.portrait);
@@ -120,18 +134,23 @@ function trackPhase() {
   if (s.phase !== lastPhase || s.night !== lastNight) {
     lastPhase = s.phase; lastNight = s.night;
     if (s.phase === 'night' && s.t === 0) { snap = serialize(s); saveGame(); }
-    else if (s.phase === 'summary' || s.phase === 'card') saveGame();
+    else if (s.phase === 'summary' || s.phase === 'card') { saveGame(); if (s.phase === 'summary' && s.summary) run.event('night_end', nightPayload(s.summary)); }
     else if (s.phase === 'ended') { store.del(SAVE_KEY); recordEnding(); }
     routeUi();
   }
 }
+function nightPayload(m) {
+  return { night: m.night, ok: true, pop: m.pop, lost: m.lost, coal: Math.max(0, Math.min(99, Math.floor(s.coal))), smog: m.smog, fw: m.fw, burnouts: Math.min(60, m.burnouts | 0), dur_s: Math.round(playTime * 10) / 10, valves: avgValves(), moves: vstat.moves };
+}
+function endingResult() { return runResult(s, smogAvg, playTime); }
 function recordEnding() {
+  const r = endingResult(); run.event('ending', { ending: r.ending, nights: r.nights, pop: r.pop, burnouts: r.burnouts, smog: r.smog, dur_s: r.duration_s, score: r.score, valves: avgValves(), moves: vstat.moves });
   if (!meta.endings.includes(s.ending)) meta.endings.push(s.ending);
   meta.plays++; store.set(META_KEY, JSON.stringify(meta));
 }
 
 // ---------- интерфейс
-const screens = ['title', 'prologue', 'pause', 'settings', 'help', 'card', 'summary', 'ending'];
+const screens = ['title', 'prologue', 'pause', 'settings', 'help', 'card', 'summary', 'ending', 'board'];
 function show(id) {
   for (const k of screens) $(k).hidden = k !== id;
   if (id) { const first = $(id).querySelector('.btn.primary, .choice'); if (first) setTimeout(() => first.focus({ preventScroll: true }), 30); }
@@ -155,7 +174,7 @@ function updateTitle() {
 function newGame() {
   s = createState((Math.random() * 2 ** 31) | 0 || 1); lastPhase = null; lastNight = -1;
   log = []; fx.clear(); banner = null; vis.satShown = [1, 1, 1, 1]; vis.popShown = POP_START; vis.needle = s.P; vis.fireShown = 0;
-  store.del(SAVE_KEY); show('prologue'); ui = 'prologue';
+  store.del(SAVE_KEY); show('prologue'); ui = 'prologue'; startRun();
 }
 function startPlay() {
   sound.ensure(); sound.startMusic();
@@ -170,7 +189,7 @@ function beginPlayFromState() {
 function continueGame() {
   if (!loadGame()) { newGame(); return; }
   log = []; fx.clear(); banner = null; vis.satShown = s.sat.slice(); vis.popShown = s.pop; vis.needle = s.P; vis.fireShown = s.fire;
-  sound.ensure(); sound.startMusic();
+  sound.ensure(); sound.startMusic(); startRun();
   snap = s.phase === 'night' ? serialize(s) : snap;
   lastPhase = null; lastNight = -1; ui = 'play'; trackPhase(); routeUi();
   if (s.phase === 'night') show(null);
@@ -232,19 +251,64 @@ function renderEnding() {
   $('e-text').innerHTML = e.lines.map(l => '<p></p>').join('');
   [...$('e-text').querySelectorAll('p')].forEach((p, i) => { p.textContent = e.lines[i]; });
   const alive = Math.round(s.pop), tl = Math.round(toll(s)), sm = Math.round(smogAvg(s));
-  const items = [['Выжило жителей', `${alive} из ${POP_START}`], ['Цена смены', s.burnouts ? `${s.burnouts} падений` : tl > 25 ? 'тяжёлая' : 'небольшая'], ['Средний дым', sm + '%'], ['Ночей пережито', `${Math.min(s.night + (s.phase === 'ended' && s.ending !== 'boom' && s.ending !== 'silence' ? 1 : 0), 10)} из 10`]];
+  const rr = endingResult();
+  const items = [['Счёт', String(rr.score)], ['Время игры', Math.floor(playTime / 60) + ':' + String(Math.floor(playTime % 60)).padStart(2, '0')], ['Выжило жителей', `${alive} из ${POP_START}`], ['Цена смены', s.burnouts ? `${s.burnouts} падений` : tl > 25 ? 'тяжёлая' : 'небольшая'], ['Средний дым', sm + '%'], ['Ночей пережито', `${Math.min(s.night + (s.phase === 'ended' && s.ending !== 'boom' && s.ending !== 'silence' ? 1 : 0), 10)} из 10`]];
   $('e-stats').innerHTML = items.map(() => '<div class="stat"><small></small><strong></strong></div>').join('');
   [...$('e-stats').querySelectorAll('.stat')].forEach((el, i) => { el.querySelector('small').textContent = items[i][0]; el.querySelector('strong').textContent = items[i][1]; });
   const left = Object.keys(ENDINGS).length - meta.endings.length;
   const hints = { light: 'Это лучшая концовка. Остальные цены тоже есть — попробуйте принять «выгодные» решения и посмотрите, чем платят другие.', smoke: 'Попробуйте отказаться от бурого угля и держать фильтры открытыми.', iron: 'Попробуйте не продлевать смену и дать усталости остыть: снижайте вентиль завода, когда шкала красная.', cold: 'Госпиталь и кварталы важнее всего. Не жалейте им пара.', boom: 'Следите за стрелкой: в красной зоне больше двух секунд — взрыв. Не перебарщивайте с углём.', silence: 'Держите хотя бы госпиталь и кварталы в тепле — и утечки заделывайте сразу.' };
   $('e-hint').textContent = hints[s.ending] + (left > 0 ? `  Открыто концовок: ${meta.endings.length} из ${Object.keys(ENDINGS).length}.` : '  Вы открыли все концовки.');
   sound.play(tone === 'good' ? 'end-good' : tone === 'fail' ? 'end-fail' : 'end-bitter');
+  setupRank();
+}
+
+// ---------- рейтинг (необязательный, только онлайн)
+function setupRank() {
+  const box = $('e-rank'); box.hidden = true;
+  $('e-nick').value = store.get(NICK_KEY) || '';
+  $('b-submit').disabled = false; $('e-rank-msg').textContent = '';
+  run.pending ? run.pending.then(() => { box.hidden = !run.online; }) : (box.hidden = !run.online);
+}
+function playerId() { let id = store.get(PID_KEY); if (!id || !/^[0-9a-f]{24}$/.test(id)) { id = randomId(); store.set(PID_KEY, id); } return id; }
+async function submitScore() {
+  if (submitted) return;
+  const nick = $('e-nick').value.trim(); store.set(NICK_KEY, nick);
+  const btn = $('b-submit'), msg = $('e-rank-msg'); btn.disabled = true; msg.textContent = 'Отправляем…';
+  const r = await run.submit(endingResult(), nick, playerId());
+  if (r && r.ok && r.data && r.data.ok) {
+    submitted = true; msg.textContent = `Записано как «${r.data.nick}». Место: ${r.data.rank.score} по очкам, ${r.data.rank.survival} по выживанию.`;
+    btn.hidden = true; boardAvailable = true; openBoard('score');
+  } else {
+    btn.disabled = false;
+    msg.textContent = !r ? 'Нет связи с сервером рейтинга. Игра от этого не страдает — попробуйте позже.' : r.status === 429 ? 'Слишком часто. Подождите минуту.' : r.status === 409 ? 'Этот результат уже отправлен.' : r.status === 422 ? 'Сервер не принял результат (проверка правдоподобия).' : 'Не удалось отправить результат.';
+  }
+}
+function updateBoardBtn() { $('b-board').hidden = !boardAvailable; }
+async function openBoard(which) {
+  if (ui !== 'board') openOverlay('board');
+  boardCur = which || boardCur;
+  document.querySelectorAll('#board .tab').forEach(b => { const on = b.dataset.board === boardCur; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  const list = $('lb-list'), msg = $('lb-msg'); list.replaceChildren(); msg.textContent = 'Загружаем…';
+  const entries = await fetchBoard(boardCur);
+  if (ui !== 'board') return;
+  if (!entries) { msg.textContent = 'Рейтинг сейчас недоступен.'; return; }
+  msg.textContent = entries.length ? '' : 'Пока пусто — станьте первым.';
+  entries.forEach((e, i) => {
+    const li = document.createElement('li');
+    const nick = document.createElement('b'); nick.textContent = String(e.nick);
+    const sc = document.createElement('span'); sc.textContent = boardCur === 'score' ? `${e.score} очк.` : `${e.nights} ноч. · ${e.pop} жит.`;
+    const sub = document.createElement('small'); sub.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} · ${boardCur === 'score' ? `${e.nights} ноч.` : `${e.score} очк.`}`;
+    li.append(nick, sc, sub); list.append(li);
+  });
 }
 
 // ---------- события интерфейса
 function wire() {
   const click = (id, fn) => $(id).addEventListener('click', () => { sound.ensure(); sound.play('click'); fn(); });
   click('b-new', newGame); click('b-continue', continueGame);
+  click('b-board', () => openBoard('score')); click('b-lbclose', closeOverlay); click('b-submit', submitScore);
+  document.querySelectorAll('#board .tab').forEach(b => b.addEventListener('click', () => { sound.ensure(); sound.play('click'); openBoard(b.dataset.board); }));
+  $('o-stats').addEventListener('change', e => { settings.stats = e.target.checked; applySettings(); });
   click('b-help', () => openOverlay('help')); click('b-settings', () => openOverlay('settings'));
   click('b-start', startPlay);
   click('b-resume', resumeGame); click('b-retry', retryNight); click('b-menu', goMenu);
@@ -258,9 +322,12 @@ function wire() {
   $('o-music').addEventListener('input', e => { settings.music = +e.target.value; applySettings(); });
   $('o-reduce').addEventListener('change', e => { settings.reduce = e.target.checked; applySettings(); });
   $('o-shake').addEventListener('change', e => { settings.shake = e.target.checked; applySettings(); });
-  $('o-sound').checked = settings.sound; $('o-sfx').value = settings.sfx; $('o-music').value = settings.music; $('o-reduce').checked = settings.reduce; $('o-shake').checked = settings.shake;
+  $('o-sound').checked = settings.sound; $('o-stats').checked = settings.stats; $('o-sfx').value = settings.sfx; $('o-music').value = settings.music; $('o-reduce').checked = settings.reduce; $('o-shake').checked = settings.shake;
   document.addEventListener('visibilitychange', () => { if (document.hidden) { pauseGame(); sound.silence(); } });
   window.addEventListener('blur', () => { if (ui === 'play') pauseGame(); });
+  ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => sound.ensure(), { capture: true, passive: true }));   // iOS/Android: аудио стартует с первого касания
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
   window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 120));
   if (mq.addEventListener) mq.addEventListener('change', e => { settings.reduce = e.matches; $('o-reduce').checked = e.matches; applySettings(); });
 }
@@ -271,6 +338,11 @@ function toLogical(ev) {
   return [(ev.clientX - r.left) / view.scale - L.offX, (ev.clientY - r.top) / view.scale];
 }
 const inRect = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+// зона нажатия «Пауза» — не меньше 44×44 CSS-пикселей, даже когда сцена сильно уменьшена (альбомный телефон)
+function pauseHit() { const p = L.pause, m = Math.max(p.w, 46 / view.scale), cx = p.x + p.w / 2, cy = p.y + p.h / 2; return { x: cx - m / 2, y: Math.max(0, cy - m / 2), w: m, h: m }; }
+// радиус нажатия на утечку: не меньше 22 CSS-пикселей (≥44 px в поперечнике) и на мелком масштабе
+function leakR() { return Math.max(32, 23 / view.scale); }
+function hitPause(x, y) { const r = pauseHit(); return x >= r.x && x <= r.x + r.w + 12 && y >= r.y && y <= r.y + r.h; }
 function valveFromY(i, y) { const c = column(L, i); return Math.max(0, Math.min(1, (c.ty1 - y) / (c.ty1 - c.ty0))); }
 function setV(i, v) {
   v = Math.round(v * 100) / 100; if (Math.abs(v - s.valves[i]) < 0.005) return;
@@ -281,9 +353,9 @@ canvas.addEventListener('pointerdown', ev => {
   if (ui !== 'play') return;
   const [x, y] = toLogical(ev);
   canvas.setPointerCapture?.(ev.pointerId);
-  if (inRect(x, y, L.pause)) { pauseGame(); return; }
+  if (hitPause(x, y)) { pauseGame(); return; }
   // утечки
-  for (const lk of s.leaks) { const c = column(L, lk.pipe); if (Math.hypot(x - c.leak.x, y - c.leak.y) < 32) { fixLeak(s, lk.id); handleEvents(); return; } }
+  for (const lk of s.leaks) { const c = column(L, lk.pipe); if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR()) { fixLeak(s, lk.id); handleEvents(); return; } }
   if (inRect(x, y, L.shovel)) { input.shovelDown = 0.15; shovel(s); handleEvents(); return; }
   for (let i = 0; i < 4; i++) {
     const c = column(L, i);
@@ -297,8 +369,8 @@ canvas.addEventListener('pointerdown', ev => {
 canvas.addEventListener('pointermove', ev => {
   if (ui !== 'play') return; const [x, y] = toLogical(ev);
   if (input.drag >= 0) { setV(input.drag, valveFromY(input.drag, y)); return; }
-  let over = inRect(x, y, L.shovel) || inRect(x, y, L.pause);
-  for (const lk of s.leaks) { const c = column(L, lk.pipe); if (Math.hypot(x - c.leak.x, y - c.leak.y) < 32) over = true; }
+  let over = inRect(x, y, L.shovel) || hitPause(x, y);
+  for (const lk of s.leaks) { const c = column(L, lk.pipe); if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR()) over = true; }
   for (let i = 0; i < 4 && !over; i++) { const c = column(L, i); if (x >= c.x && x <= c.x + c.w && y >= c.ty0 - 20 && y <= c.ty1 + 20) over = true; }
   canvas.style.cursor = over ? 'pointer' : 'default';
 });
@@ -313,7 +385,7 @@ window.addEventListener('keydown', ev => {
   sound.ensure();
   if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { settings.sound = !settings.sound; $('o-sound').checked = settings.sound; applySettings(); return; }
   if (ui === 'card') { if (k === '1' || k === '2') { const o = s.card.options[+k - 1]; if (o) { ev.preventDefault(); pickCard(o.key); } } return; }
-  if (ui === 'settings' || ui === 'help') { if (k === 'Escape') closeOverlay(); return; }
+  if (ui === 'settings' || ui === 'help' || ui === 'board') { if (k === 'Escape') closeOverlay(); return; }
   if (ui === 'pause') { if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') resumeGame(); return; }
   if (ui !== 'play') return;
   if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') { pauseGame(); return; }
@@ -328,6 +400,11 @@ window.addEventListener('keydown', ev => {
 
 // ---------- цикл
 function update(dt) {
+  if (s.phase === 'night') {   // средние положения вентилей и число движений — для анонимной статистики
+    let ch = false;
+    for (let i = 0; i < 4; i++) { vstat.sum[i] += s.valves[i] * dt; if (Math.abs(s.valves[i] - vstat.prev[i]) > 0.004) { ch = true; vstat.prev[i] = s.valves[i]; } }
+    vstat.t += dt; if (ch && !vstat.moving) vstat.moves++; vstat.moving = ch;
+  }
   if (dbg.bot && s.phase === 'night') { botAct(s, dbg.bot, dbg.botOpts); }
   step(s, dt);
   if (s.shake > 0.6) { fx.shake(s.shake); }
@@ -372,6 +449,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dtReal = Math.min(0.1, (now - last) / 1000 || 0); last = now;
   const playing = ui === 'play';
+  if (playing) playTime += dtReal;
   if (playing) {
     acc += dtReal * dbg.speed; let n = 0;
     while (acc >= DT && n < 60 * dbg.speed + 5) { update(DT); acc -= DT; n++; if (ui !== 'play') { acc = 0; break; } }
@@ -382,7 +460,7 @@ function frame(now) {
   }
   visUpdate(dtReal, playing);
   // дым из трубы — один шлейф (бурый уголь делает его чуть плотнее, а не добавляет второй)
-  if (playing && s.fire > 8 && Math.random() < 0.3 + s.fire / 200) { fx.smoke(L.chimney.x, L.chimney.y - 28, 1, 0.22 + s.smog / 250 + (s.flags.brown ? 0.08 : 0)); }
+  if (playing && s.fire > 8 && Math.random() < 0.2 + s.fire / 400) { fx.smoke(L.chimney.x, L.chimney.y - 28, 1, 0.22 + s.smog / 250 + (s.flags.brown ? 0.08 : 0)); }
   ambient();
   render();
 }
@@ -390,7 +468,7 @@ function frame(now) {
 // ---------- тестовые крючки (только с ?debug)
 if (DEBUG) {
   window.__game = {
-    get s() { return s; }, get ui() { return ui; }, get L() { return L; }, get view() { return view; },
+    get s() { return s; }, get ui() { return ui; }, get L() { return L; }, get view() { return view; }, get run() { return run; }, resize, pauseHit,
     setBot(skill, opts) { dbg.bot = skill; dbg.botOpts = opts || {}; }, setSpeed(v) { dbg.speed = v; },
     setUiState: (u) => { ui = u; }, input, settings, meta, log, fx, sound,
     jump(night, flags) { // быстрый переход к ночи n (для скриншотов и тестов)
@@ -404,6 +482,7 @@ if (DEBUG) {
 // ---------- запуск
 function init() {
   wire(); applySettings(); resize(); updateTitle(); show('title');
+  fetchBoard('score').then(e => { boardAvailable = e !== null; updateBoardBtn(); });
   requestAnimationFrame(t => { last = t; frame(t); });
 }
 init();

@@ -10,9 +10,9 @@ async function run(b, base, name, w, h, mob, prefix = '') {
   const errs = [];
   const ctx = await b.createBrowserContext(); const p = await ctx.newPage();
   await p.setViewport({ width: w, height: h, deviceScaleFactor: mob ? 2 : 1, isMobile: mob, hasTouch: mob });
-  p.on('console', m => { if (['error', 'warning'].includes(m.type())) errs.push(m.type() + ': ' + m.text()); });
+  p.on('console', m => { if (['error', 'warning'].includes(m.type()) && !(m.location().url || '').includes('/api/g/')) errs.push(m.type() + ': ' + m.text()); });
   p.on('pageerror', e => errs.push('pageerror: ' + e.message));
-  p.on('requestfailed', r => errs.push('requestfailed: ' + r.url()));
+  p.on('requestfailed', r => !r.url().includes('/api/g/') && errs.push('requestfailed: ' + r.url()));
   const external = []; p.on('request', r => { if (!r.url().startsWith(base) && !r.url().startsWith('data:')) external.push(r.url()); });
   const shot = async n => { await sleep(150); await p.screenshot({ path: path.join(OUT, `${prefix}${name}-${n}.png`) }); };
   await p.goto(base + '/?debug', { waitUntil: 'load' }); await sleep(500);

@@ -1,0 +1,33 @@
+# Код в /opt/steam-engine-game/backend (venv внутри), секреты в /etc/steam-engine-game.env (root:seg 640), данные в /var/lib/steam-engine-game
+[Unit]
+Description=Last Boiler (steam-engine-game) backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=seg
+Group=seg
+WorkingDirectory=/opt/steam-engine-game/backend
+EnvironmentFile=/etc/steam-engine-game.env
+Environment=SEG_HOST=127.0.0.1 SEG_PORT=8932 SEG_DB_PATH=/var/lib/steam-engine-game/seg.db
+ExecStart=/opt/steam-engine-game/backend/.venv/bin/python -m app
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/steam-engine-game
+StateDirectory=steam-engine-game
+StateDirectoryMode=0700
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

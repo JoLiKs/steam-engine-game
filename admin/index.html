@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark">
+  <title>Последний котёл — вход в админку</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/admin/login.css">
+</head>
+<body>
+<main class="wrap">
+  <form id="loginForm" class="card" autocomplete="off">
+    <h1>⚙ Последний котёл</h1>
+    <p class="sub">админ-панель</p>
+    <label for="pw">Пароль администратора</label>
+    <input id="pw" name="password" type="password" autocomplete="current-password" required autofocus>
+    <p id="err" class="err" role="alert" hidden></p>
+    <button class="btn" type="submit">Войти</button>
+    <p class="hint">Доступ только для владельца. После нескольких неверных попыток вход временно блокируется.</p>
+  </form>
+</main>
+<script src="/admin/login.js" defer></script>
+</body>
+</html>

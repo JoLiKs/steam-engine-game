@@ -4,7 +4,7 @@
   "private": true,
   "description": "Последний котёл — паропанк-игра (v1.1: рейтинг, телеметрия, админка, мобильная версия)",
   "scripts": {
-    "test": "node --test tests/ && node tests/run-e2e.js",
+    "test": "bash tests/run-all.sh",
     "test:backend": "cd backend && python -m pytest -q"
   },
   "devDependencies": {
