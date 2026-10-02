@@ -1,0 +1,4263 @@
+(() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropSymbols = Object.getOwnPropertySymbols;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __propIsEnum = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues = (a, b) => {
+    for (var prop in b || (b = {}))
+      if (__hasOwnProp.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    if (__getOwnPropSymbols)
+      for (var prop of __getOwnPropSymbols(b)) {
+        if (__propIsEnum.call(b, prop))
+          __defNormalProp(a, prop, b[prop]);
+      }
+    return a;
+  };
+  var __objRest = (source, exclude) => {
+    var target = {};
+    for (var prop in source)
+      if (__hasOwnProp.call(source, prop) && exclude.indexOf(prop) < 0)
+        target[prop] = source[prop];
+    if (source != null && __getOwnPropSymbols)
+      for (var prop of __getOwnPropSymbols(source)) {
+        if (exclude.indexOf(prop) < 0 && __propIsEnum.call(source, prop))
+          target[prop] = source[prop];
+      }
+    return target;
+  };
+
+  // src/data.js
+  var POP_START = 1e3;
+  var COAL_MAX = 99;
+  var CAP = [5.6, 8.5, 6.5, 3.2];
+  var DISTRICTS = [
+    { id: "hosp", name: "\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C", short: "\u0413\u041E\u0421\u041F", icon: "cross" },
+    { id: "home", name: "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u044B", short: "\u0414\u041E\u041C\u0410", icon: "house" },
+    { id: "fact", name: "\u0417\u0430\u0432\u043E\u0434", short: "\u0417\u0410\u0412\u041E\u0414", icon: "factory" },
+    { id: "scrub", name: "\u0424\u0438\u043B\u044C\u0442\u0440\u044B", short: "\u0424\u0418\u041B\u042C\u0422\u0420", icon: "filter" }
+  ];
+  var NIGHTS = [
+    { name: "\u0420\u0430\u0441\u0442\u043E\u043F\u043A\u0430", dur: 42, need: [1.5, 2.2, 3, 1.2], leakEvery: 0, events: [], sub: "\u041F\u0435\u0440\u0432\u0430\u044F \u043D\u043E\u0447\u044C \u0443 \u0441\u0442\u0430\u0440\u043E\u0439 \u0410\u0433\u0430\u0444\u044C\u0438" },
+    { name: "\u041F\u0435\u0440\u0432\u044B\u0439 \u0438\u043D\u0435\u0439", dur: 55, need: [2, 2.9, 3.4, 1.4], leakEvery: 22, events: [{ t0: 26, t1: 40, d: 1, m: 1.3, label: "\u0425\u043E\u043B\u043E\u0434\u043D\u044B\u0439 \u0432\u0435\u0442\u0435\u0440 \u0441 \u0440\u0435\u043A\u0438" }], sub: "\u0413\u043E\u0440\u043E\u0434 \u0432\u043F\u0435\u0440\u0432\u044B\u0435 \u043F\u0440\u043E\u0441\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435" },
+    { name: "\u041B\u0438\u0445\u043E\u0440\u0430\u0434\u043A\u0430", dur: 55, need: [2.4, 3.3, 3.5, 1.5], leakEvery: 19, events: [{ t0: 18, t1: 36, d: 0, m: 1.5, label: "\u041B\u0438\u0445\u043E\u0440\u0430\u0434\u043A\u0430 \u0432 \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u0435" }], sub: "\u041F\u0430\u043B\u0430\u0442\u044B \u0437\u0430\u043F\u043E\u043B\u043D\u044F\u044E\u0442\u0441\u044F" },
+    { name: "\u0414\u043E\u043B\u0433\u0430\u044F \u0441\u043C\u0435\u043D\u0430", dur: 55, need: [2.5, 3.7, 3.6, 1.6], leakEvery: 18, events: [{ t0: 30, t1: 46, d: 1, m: 1.35, label: "\u041C\u043E\u0440\u043E\u0437 \u043A\u0440\u0435\u043F\u0447\u0430\u0435\u0442" }], sub: "\u0417\u0430\u0432\u043E\u0434 \u043F\u0440\u043E\u0441\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0440\u0435\u043C\u0435\u043D\u0438" },
+    { name: "\u0414\u044B\u043C", dur: 55, need: [2.6, 4.1, 3.6, 1.7], leakEvery: 16, events: [{ t0: 14, t1: 30, d: 0, m: 1.4, label: "\u041A\u0430\u0448\u0435\u043B\u044C \u0432 \u043F\u0430\u043B\u0430\u0442\u0430\u0445" }, { t0: 36, t1: 50, d: 1, m: 1.3, label: "\u041C\u0435\u0442\u0435\u043B\u044C" }], sub: "\u0412\u043E\u0437\u0434\u0443\u0445 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0442\u044F\u0436\u0451\u043B\u044B\u043C" },
+    { name: "\u041C\u0435\u0442\u0435\u043B\u044C", dur: 55, need: [2.7, 4.5, 3.7, 1.7], leakEvery: 15, events: [{ t0: 20, t1: 42, d: 1, m: 1.4, label: "\u0421\u043D\u0435\u0436\u043D\u0430\u044F \u0431\u0443\u0440\u044F" }], sub: "\u0422\u0440\u0443\u0431\u044B \u0433\u0443\u0434\u044F\u0442 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430" },
+    { name: "\u0427\u0451\u0440\u043D\u044B\u0439 \u043B\u0451\u0434", dur: 55, need: [2.8, 4.8, 3.7, 1.8], leakEvery: 14, events: [{ t0: 12, t1: 26, d: 0, m: 1.4, label: "\u041E\u0431\u043C\u043E\u0440\u043E\u0436\u0435\u043D\u043D\u044B\u0435 \u0432 \u043F\u0440\u0438\u0451\u043C\u043D\u043E\u043C" }, { t0: 34, t1: 50, d: 1, m: 1.3, label: "\u0427\u0451\u0440\u043D\u044B\u0439 \u043B\u0451\u0434 \u043D\u0430 \u043A\u0440\u044B\u0448\u0430\u0445" }], sub: "\u0421\u043B\u043E\u0431\u043E\u0434\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u0435\u0442" },
+    { name: "\u0421\u0442\u044B\u043B\u044B\u0439 \u0447\u0430\u0441", dur: 55, need: [3, 5.1, 3.8, 1.8], leakEvery: 13, events: [{ t0: 22, t1: 44, d: 1, m: 1.35, label: "\u0421\u0430\u043C\u0430\u044F \u0434\u043B\u0438\u043D\u043D\u0430\u044F \u043D\u043E\u0447\u044C" }], sub: "\u0423\u0433\u043E\u043B\u044C \u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" },
+    { name: "\u0411\u0443\u0440\u044F", dur: 55, need: [3.1, 5.4, 3.8, 1.9], leakEvery: 12, events: [{ t0: 10, t1: 28, d: 1, m: 1.3, label: "\u0423\u0440\u0430\u0433\u0430\u043D\u043D\u044B\u0439 \u0432\u0435\u0442\u0435\u0440" }, { t0: 34, t1: 50, d: 0, m: 1.4, label: "\u041F\u043E\u0442\u043E\u043A \u0440\u0430\u043D\u0435\u043D\u044B\u0445" }], sub: "\u041F\u043E\u0447\u0442\u0438 \u0443 \u0446\u0435\u043B\u0438" },
+    { name: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u043D\u043E\u0447\u044C", dur: 60, need: [3.2, 5.6, 3.8, 1.9], leakEvery: 11, events: [{ t0: 16, t1: 36, d: 1, m: 1.3, label: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043C\u043E\u0440\u043E\u0437" }, { t0: 40, t1: 54, d: 0, m: 1.3, label: "\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u043F\u0435\u0440\u0435\u043F\u043E\u043B\u043D\u0435\u043D" }], sub: "\u041E\u0431\u043E\u0437 \u0441 \u0443\u0433\u043B\u0451\u043C \u0443\u0436\u0435 \u0432 \u043F\u0443\u0442\u0438" }
+  ];
+  var TICKER = {
+    1: [{ t: 12, who: "\u0414\u043E\u043A\u0442\u043E\u0440 \u0418\u0432\u0438\u043D\u0430", text: "\u041F\u0430\u0440 \u043D\u0430 \u043F\u0430\u043B\u0430\u0442\u044B, \u043A\u043E\u0447\u0435\u0433\u0430\u0440. \u0414\u0435\u0442\u0438 \u043A\u0430\u0448\u043B\u044F\u044E\u0442 \u0443\u0436\u0435 \u0442\u0440\u0435\u0442\u0438\u0439 \u0434\u0435\u043D\u044C." }, { t: 34, who: "\u0422\u0438\u043C\u043A\u0430", text: "\u0414\u044F\u0434\u044F, \u0430 \u043F\u0440\u0430\u0432\u0434\u0430, \u0447\u0442\u043E \u0410\u0433\u0430\u0444\u044C\u044F \u0441\u0442\u0430\u0440\u0448\u0435 \u043D\u0430\u0448\u0435\u0433\u043E \u0433\u043E\u0440\u043E\u0434\u0430?" }],
+    2: [{ t: 8, who: "\u0414\u043E\u043A\u0442\u043E\u0440 \u0418\u0432\u0438\u043D\u0430", text: "\u041B\u0438\u0445\u043E\u0440\u0430\u0434\u043A\u0430. \u0415\u0441\u043B\u0438 \u043F\u0430\u043B\u0430\u0442\u044B \u043E\u0441\u0442\u044B\u043D\u0443\u0442, \u043C\u044B \u043F\u043E\u0442\u0435\u0440\u044F\u0435\u043C \u043B\u044E\u0434\u0435\u0439." }, { t: 40, who: "\u0413\u0440\u043E\u043C\u043E\u0432", text: "\u0417\u0430\u0432\u043E\u0434 \u0441\u0442\u043E\u0438\u0442 \u2014 \u0443\u0433\u043E\u043B\u044C \u043D\u0435 \u0440\u0430\u0441\u0442\u0451\u0442. \u0414\u0443\u043C\u0430\u0439, \u043A\u043E\u0447\u0435\u0433\u0430\u0440." }],
+    3: [{ t: 10, who: "\u0413\u0440\u043E\u043C\u043E\u0432", text: "\u041B\u044E\u0434\u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F. \u041F\u043E\u043A\u0430 \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F." }, { t: 44, who: "\u0422\u0438\u043C\u043A\u0430", text: "\u042F \u043C\u043E\u0433\u0443 \u0442\u0430\u0441\u043A\u0430\u0442\u044C \u0443\u0433\u043E\u043B\u044C. \u042F \u0431\u044B\u0441\u0442\u0440\u044B\u0439!" }],
+    4: [{ t: 8, who: "\u0414\u043E\u043A\u0442\u043E\u0440 \u0418\u0432\u0438\u043D\u0430", text: "\u041A\u043E\u043F\u043E\u0442\u044C \u043E\u0441\u0435\u0434\u0430\u0435\u0442 \u0432 \u043B\u0451\u0433\u043A\u0438\u0445. \u0412\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0444\u0438\u043B\u044C\u0442\u0440\u044B, \u0435\u0441\u043B\u0438 \u043C\u043E\u0436\u0435\u0442\u0435." }, { t: 40, who: "\u0420\u0430\u0431\u043E\u0447\u0438\u0439", text: "\u0420\u0443\u043A\u0438 \u043D\u0435 \u0434\u0435\u0440\u0436\u0430\u0442 \u043B\u043E\u043F\u0430\u0442\u0443, \u043C\u0430\u0441\u0442\u0435\u0440\u2026" }],
+    5: [{ t: 10, who: "\u0421\u043B\u043E\u0431\u043E\u0434\u0430", text: "\u041C\u044B \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u0435\u043C. \u0422\u0440\u0443\u0431\u044B \u043A \u043D\u0430\u043C \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0438\u0434\u0443\u0442." }, { t: 38, who: "\u0418\u0432\u0438\u043D\u0430", text: "\u0414\u044B\u043C \u043D\u0430\u0434 \u043A\u0440\u044B\u0448\u0430\u043C\u0438. \u0414\u044B\u0448\u0430\u0442\u044C \u043D\u0435\u0447\u0435\u043C." }],
+    6: [{ t: 8, who: "\u0413\u0440\u043E\u043C\u043E\u0432", text: "\u0421\u043C\u0435\u043D\u0430 \u043D\u0430 \u043D\u043E\u0433\u0430\u0445 \u0434\u0432\u0430\u0434\u0446\u0430\u0442\u044B\u0439 \u0447\u0430\u0441." }, { t: 40, who: "\u0422\u0438\u043C\u043A\u0430", text: "\u0414\u044F\u0434\u044F, \u0442\u044B \u0441\u043F\u0430\u043B \u0441\u0435\u0433\u043E\u0434\u043D\u044F?" }],
+    7: [{ t: 10, who: "\u041C\u044D\u0440", text: "\u0413\u043E\u0440\u043E\u0434 \u0441\u043C\u043E\u0442\u0440\u0438\u0442 \u043D\u0430 \u0432\u0430\u0448\u0443 \u0442\u0440\u0443\u0431\u0443. \u041D\u0435 \u043F\u043E\u0434\u0432\u0435\u0434\u0438\u0442\u0435." }, { t: 40, who: "\u0418\u0432\u0438\u043D\u0430", text: "\u041C\u044B \u0434\u0435\u0440\u0436\u0438\u043C\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0432\u0430\u0448\u0435\u043C \u043F\u0430\u0440\u0435." }],
+    8: [{ t: 8, who: "\u0422\u0435\u043B\u0435\u0433\u0440\u0430\u0444", text: "\u041E\u0431\u043E\u0437 \u0441 \u0443\u0433\u043B\u0451\u043C \u0432\u044B\u0448\u0435\u043B \u0441 \u044E\u0433\u0430. \u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0434\u0435\u0440\u0436\u0430\u0442\u044C\u0441\u044F." }, { t: 42, who: "\u0413\u0440\u043E\u043C\u043E\u0432", text: "\u0410\u0433\u0430\u0444\u044C\u044F \u0434\u0440\u043E\u0436\u0438\u0442, \u043D\u043E \u0442\u044F\u043D\u0435\u0442." }],
+    9: [{ t: 8, who: "\u0422\u0435\u043B\u0435\u0433\u0440\u0430\u0444", text: "\u041E\u0442\u0442\u0435\u043F\u0435\u043B\u044C \u043D\u0430 \u0440\u0430\u0441\u0441\u0432\u0435\u0442\u0435. \u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0443\u0441\u0438\u043B\u0438\u0435!" }, { t: 44, who: "\u0422\u0438\u043C\u043A\u0430", text: "\u0414\u044F\u0434\u044F, \u0441\u043C\u043E\u0442\u0440\u0438 \u2014 \u043D\u0430 \u0432\u043E\u0441\u0442\u043E\u043A\u0435 \u0441\u0432\u0435\u0442\u043B\u0435\u0435\u0442?" }]
+  };
+  var CARDS = {
+    1: {
+      id: "timka",
+      title: "\u0422\u0438\u043C\u043A\u0430 \u0443 \u043A\u043E\u0442\u043B\u0430",
+      who: "\u0422\u0438\u043C\u043A\u0430, \u043F\u043E\u0441\u044B\u043B\u044C\u043D\u044B\u0439 (12 \u043B\u0435\u0442)",
+      text: "\u041C\u0430\u043B\u044C\u0447\u0438\u0448\u043A\u0430 \u0441\u0442\u043E\u0438\u0442 \u0432 \u0434\u0432\u0435\u0440\u044F\u0445 \u0441 \u043B\u043E\u043F\u0430\u0442\u043E\u0439 \u043F\u043E\u0447\u0442\u0438 \u0432\u044B\u0448\u0435 \u0441\u0435\u0431\u044F. \xAB\u042F \u0431\u0443\u0434\u0443 \u043F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0442\u044C \u0443\u0433\u043E\u043B\u044C, \u043F\u043E\u043A\u0430 \u0432\u044B \u043D\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u0438. \u041C\u043D\u0435 \u0437\u0430 \u044D\u0442\u043E \u0434\u0430\u0434\u0443\u0442 \u043F\u0430\u0451\u043A\xBB.",
+      options: [
+        { key: "help", label: "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u043F\u043E\u043C\u043E\u0433\u0430\u0442\u044C", hint: "\u041F\u043E\u0434\u0440\u0443\u0447\u043D\u044B\u0439 \u043F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0435\u0442 \u0443\u0433\u043E\u043B\u044C \u0441\u0430\u043C, \u043A\u043E\u0433\u0434\u0430 \u0442\u043E\u043F\u043A\u0430 \u0441\u0442\u044B\u043D\u0435\u0442. \u041D\u043E \u044D\u0442\u043E \u2014 \u0434\u0435\u0442\u0441\u043A\u0438\u0439 \u0442\u0440\u0443\u0434.", effect: "\u0422\u0438\u043C\u043A\u0430 \u0431\u0440\u043E\u0441\u0430\u0435\u0442 \u0443\u0433\u043E\u043B\u044C, \u043A\u043E\u0433\u0434\u0430 \u0442\u043E\u043F\u043A\u0430 \u043E\u0441\u0442\u044B\u0432\u0430\u0435\u0442" },
+        { key: "ration", label: "\u0414\u0430\u0442\u044C \u043F\u0430\u0451\u043A \u0438 \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u043E\u043C\u043E\u0439", hint: "\u22126 \u0443\u0433\u043B\u044F \u0438\u0437 \u0437\u0430\u043F\u0430\u0441\u043E\u0432. \u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442\u0435 \u0441\u0430\u043C\u0438.", effect: "\u22126 \u0443\u0433\u043B\u044F, \u0432\u0441\u0451 \u043F\u043E-\u043F\u0440\u0435\u0436\u043D\u0435\u043C\u0443" }
+      ]
+    },
+    3: {
+      id: "shift",
+      title: "\u041F\u0440\u043E\u0441\u044C\u0431\u0430 \u0413\u0440\u043E\u043C\u043E\u0432\u0430",
+      who: "\u041C\u0430\u0441\u0442\u0435\u0440 \u0413\u0440\u043E\u043C\u043E\u0432, \u0437\u0430\u0432\u043E\u0434",
+      text: "\xAB\u041A\u043E\u0447\u0435\u0433\u0430\u0440, \u043D\u0430\u043C \u043D\u0443\u0436\u0435\u043D \u0443\u0433\u043E\u043B\u044C. \u0414\u0430\u0439 \u0434\u0432\u043E\u0439\u043D\u0443\u044E \u0441\u043C\u0435\u043D\u0443 \u2014 \u0432\u044B\u0434\u0430\u0434\u0438\u043C \u043D\u0430 \u0442\u0440\u0435\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0435. \u041B\u044E\u0434\u0438 \u0432\u044B\u0434\u0435\u0440\u0436\u0430\u0442. \u041D\u0430\u0432\u0435\u0440\u043D\u043E\u0435\xBB.",
+      options: [
+        { key: "extend", label: "\u0423\u0434\u043B\u0438\u043D\u0438\u0442\u044C \u0441\u043C\u0435\u043D\u0443", hint: "\u0423\u0433\u043E\u043B\u044C \u0441 \u0437\u0430\u0432\u043E\u0434\u0430 \xD71.35, \u043D\u043E \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0443\u0441\u0442\u0430\u044E\u0442 \u043D\u0430 40% \u0431\u044B\u0441\u0442\u0440\u0435\u0435.", effect: "\u0417\u0430\u0432\u043E\u0434 \u0434\u0430\u0451\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0433\u043B\u044F, \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0432\u044B\u043C\u0430\u0442\u044B\u0432\u0430\u044E\u0442\u0441\u044F" },
+        { key: "refuse", label: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C", hint: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0441\u043C\u0435\u043D\u0443 \u043A\u0430\u043A \u0435\u0441\u0442\u044C.", effect: "\u0421\u043C\u0435\u043D\u044B \u043F\u0440\u0435\u0436\u043D\u0438\u0435" }
+      ]
+    },
+    5: {
+      id: "brown",
+      title: "\u0411\u0443\u0440\u044B\u0439 \u0443\u0433\u043E\u043B\u044C",
+      who: "\u0413\u043E\u0440\u043E\u0434\u0441\u043A\u043E\u0439 \u0441\u043E\u0432\u0435\u0442",
+      text: "\xAB\u0415\u0441\u0442\u044C \u0432\u0430\u0433\u043E\u043D \u0431\u0443\u0440\u043E\u0433\u043E \u0443\u0433\u043B\u044F \u2014 \u0434\u0435\u0448\u0451\u0432\u043E\u0433\u043E, \u0436\u0438\u0440\u043D\u043E\u0433\u043E, \u0434\u044B\u043C\u043D\u043E\u0433\u043E. \u0425\u0432\u0430\u0442\u0438\u0442 \u043D\u0430 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043D\u043E\u0447\u0435\u0439. \u0414\u044B\u0448\u0430\u0442\u044C \u0431\u0443\u0434\u0435\u0442 \u0442\u0440\u0443\u0434\u043D\u0435\u0435, \u043D\u043E \u043A\u0442\u043E \u0441\u0447\u0438\u0442\u0430\u0435\u0442?\xBB",
+      options: [
+        { key: "accept", label: "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u0432\u0430\u0433\u043E\u043D", hint: "+32 \u0443\u0433\u043B\u044F, \u043D\u043E \u0434\u044B\u043C\u0430 \u043E\u0442 \u0442\u043E\u043F\u043A\u0438 \u043D\u0430 60% \u0431\u043E\u043B\u044C\u0448\u0435.", effect: "+32 \u0443\u0433\u043B\u044F, \u0434\u044B\u043C \u0433\u0443\u0449\u0435" },
+        { key: "decline", label: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F", hint: "\u0422\u043E\u043F\u0438\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u0442\u0435\u043C, \u0447\u0442\u043E \u0435\u0441\u0442\u044C.", effect: "\u0412\u043E\u0437\u0434\u0443\u0445 \u0447\u0438\u0449\u0435, \u0443\u0433\u043B\u044F \u043C\u0435\u043D\u044C\u0448\u0435" }
+      ]
+    },
+    7: {
+      id: "sloboda",
+      title: "\u0421\u043B\u043E\u0431\u043E\u0434\u0430",
+      who: "\u0421\u0442\u0430\u0440\u0448\u0430\u044F \u0441\u043B\u043E\u0431\u043E\u0434\u044B, \u041C\u0430\u0440\u0444\u0430",
+      text: "\xAB\u0423 \u043D\u0430\u0441 \u0434\u0435\u0442\u0438 \u0441\u043F\u044F\u0442 \u0432 \u0448\u0443\u0431\u0430\u0445. \u041F\u0440\u0438\u0448\u043B\u0438\u0442\u0435 \u0445\u043E\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0443\u0433\u043B\u044F \u0432 \u043D\u0430\u0448\u0438 \u043F\u0435\u0447\u0438, \u0430 \u0432\u044B \u0441\u0430\u043C\u0438 \u043A\u0430\u043A-\u043D\u0438\u0431\u0443\u0434\u044C\u2026\xBB",
+      options: [
+        { key: "aid", label: "\u041E\u0442\u0434\u0430\u0442\u044C \u0447\u0430\u0441\u0442\u044C \u0437\u0430\u043F\u0430\u0441\u043E\u0432", hint: "\u221218 \u0443\u0433\u043B\u044F. \u0425\u043E\u043B\u043E\u0434 \u0432 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u0430\u0445 \u0442\u0435\u043F\u0435\u0440\u044C \u0443\u0431\u0438\u0432\u0430\u0435\u0442 \u0432\u0434\u0432\u043E\u0435 \u0440\u0435\u0436\u0435.", effect: "\u221218 \u0443\u0433\u043B\u044F, \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u0435\u0435" },
+        { key: "keep", label: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0437\u0430\u043F\u0430\u0441\u044B", hint: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0443\u0433\u043E\u043B\u044C \u0434\u043B\u044F \u043A\u043E\u0442\u043B\u0430.", effect: "\u0423\u0433\u043E\u043B\u044C \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u0432 \u0431\u0443\u043D\u043A\u0435\u0440\u0435" }
+      ]
+    }
+  };
+  var ENDINGS = {
+    light: { id: "light", title: "\u0421\u0432\u0435\u0442 \u0432 \u043A\u0430\u0436\u0434\u043E\u043C \u043E\u043A\u043D\u0435", tone: "good", lines: [
+      "\u041D\u0430 \u0440\u0430\u0441\u0441\u0432\u0435\u0442\u0435 \u043A \u0432\u043E\u0440\u043E\u0442\u0430\u043C \u0424\u0435\u0440\u0440\u043E\u0433\u0440\u0430\u0434\u0430 \u043F\u0440\u0438\u0448\u0451\u043B \u043E\u0431\u043E\u0437 \u0441 \u0443\u0433\u043B\u0451\u043C, \u0438 \u043F\u0435\u0440\u0432\u044B\u043C, \u043A\u043E\u0433\u043E \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u043B\u0438 \u0432\u043E\u0437\u0447\u0438\u043A\u0438, \u0431\u044B\u043B \u0436\u0438\u0432\u043E\u0439 \u0433\u043E\u0440\u043E\u0434.",
+      "\u0412\u044B \u043D\u0435 \u0437\u0430\u0431\u0440\u0430\u043B\u0438 \u0447\u0443\u0436\u043E\u0433\u043E \u0432\u043E\u0437\u0434\u0443\u0445\u0430 \u0438 \u0447\u0443\u0436\u043E\u0439 \u0443\u0441\u0442\u0430\u043B\u043E\u0441\u0442\u0438. \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0442\u0451\u043F\u043B\u044B\u0439, \u043D\u0435\u0431\u043E \u043D\u0430\u0434 \u0442\u0440\u0443\u0431\u0430\u043C\u0438 \u0441\u0432\u0435\u0442\u043B\u0435\u0435\u0442.",
+      "\u0410\u0433\u0430\u0444\u044C\u044F \u0442\u0438\u0445\u043E \u043E\u0441\u0442\u044B\u0432\u0430\u0435\u0442. \u0412\u044B \u0432\u044B\u0442\u0438\u0440\u0430\u0435\u0442\u0435 \u0440\u0443\u043A\u0438 \u0438 \u0432\u043F\u0435\u0440\u0432\u044B\u0435 \u0437\u0430 \u0434\u0435\u0441\u044F\u0442\u044C \u043D\u043E\u0447\u0435\u0439 \u0441\u043B\u044B\u0448\u0438\u0442\u0435, \u043A\u0430\u043A \u0437\u0430 \u0441\u0442\u0435\u043D\u043E\u0439 \u0441\u043C\u0435\u044E\u0442\u0441\u044F \u0434\u0435\u0442\u0438."
+    ] },
+    smoke: { id: "smoke", title: "\u0414\u044B\u043C \u043D\u0430\u0434 \u0433\u043E\u0440\u043E\u0434\u043E\u043C", tone: "bitter", lines: [
+      "\u0413\u043E\u0440\u043E\u0434 \u043F\u0435\u0440\u0435\u0436\u0438\u043B \u0437\u0438\u043C\u0443. \u041D\u043E \u043A\u043E\u043F\u043E\u0442\u044C \u043B\u0435\u0433\u043B\u0430 \u043D\u0430 \u043A\u0440\u044B\u0448\u0438, \u043D\u0430 \u0431\u0435\u043B\u044C\u0451, \u043D\u0430 \u043B\u0451\u0433\u043A\u0438\u0435 \u0442\u0435\u0445, \u043A\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u0441\u044F.",
+      "\u0414\u043E\u043A\u0442\u043E\u0440 \u0418\u0432\u0438\u043D\u0430 \u0431\u0443\u0434\u0435\u0442 \u043B\u0435\u0447\u0438\u0442\u044C \u043A\u0430\u0448\u0435\u043B\u044C \u0435\u0449\u0451 \u043C\u043D\u043E\u0433\u043E \u043B\u0435\u0442. \u0412\u044B \u0441\u043E\u0433\u0440\u0435\u043B\u0438 \u043B\u044E\u0434\u0435\u0439 \u2014 \u0438 \u043E\u0442\u0440\u0430\u0432\u0438\u043B\u0438 \u0442\u043E, \u0440\u0430\u0434\u0438 \u0447\u0435\u0433\u043E \u0438\u0445 \u0433\u0440\u0435\u043B\u0438.",
+      "\u0422\u0435\u043F\u0435\u0440\u044C \u0432\u0430\u043C \u0440\u0435\u0448\u0430\u0442\u044C, \u0447\u0442\u043E \u0432\u044B \u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0435 \u043F\u043E\u0441\u043B\u0435 \u0441\u0435\u0431\u044F: \u0442\u0435\u043F\u043B\u043E \u0438\u043B\u0438 \u0447\u0438\u0441\u0442\u043E\u0435 \u043D\u0435\u0431\u043E. \u0412 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0440\u0430\u0437 \u2014 \u043E\u0431\u0430."
+    ] },
+    iron: { id: "iron", title: "\u0416\u0435\u043B\u0435\u0437\u043D\u044B\u0435 \u043B\u044E\u0434\u0438", tone: "bitter", lines: [
+      "\u0413\u043E\u0440\u043E\u0434 \u0432\u044B\u0436\u0438\u043B \u2014 \u043D\u0430 \u043F\u043B\u0435\u0447\u0430\u0445 \u0442\u0435\u0445, \u043A\u0442\u043E \u0441\u0442\u043E\u044F\u043B \u0443 \u0441\u0442\u0430\u043D\u043A\u043E\u0432, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u0430\u0434\u0430\u043B. \u0417\u0430\u0432\u043E\u0434 \u0434\u0430\u043B \u0443\u0433\u043E\u043B\u044C, \u0430 \u043B\u044E\u0434\u0438 \u0434\u0430\u043B\u0438 \u0431\u043E\u043B\u044C\u0448\u0435, \u0447\u0435\u043C \u043C\u043E\u0433\u043B\u0438.",
+      "\u0413\u0440\u043E\u043C\u043E\u0432 \u043C\u043E\u043B\u0447\u0438\u0442. \u0415\u0433\u043E \u0441\u043C\u0435\u043D\u0430 \u043D\u0435 \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F \u043F\u0440\u0435\u0436\u043D\u0435\u0439. \u0422\u0438\u043C\u043A\u0430 \u0442\u0430\u043A \u0438 \u043D\u0435 \u043D\u0430\u0443\u0447\u0438\u043B\u0441\u044F \u0441\u043C\u0435\u044F\u0442\u044C\u0441\u044F \u0432 \u0433\u043E\u043B\u043E\u0441.",
+      "\u0422\u0435\u043F\u043B\u043E \u043D\u0435 \u0431\u044B\u0432\u0430\u0435\u0442 \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u044B\u043C. \u0412\u043E\u043F\u0440\u043E\u0441 \u043B\u0438\u0448\u044C \u2014 \u043A\u0442\u043E \u043F\u043B\u0430\u0442\u0438\u0442. \u0412\u044B \u0437\u043D\u0430\u0435\u0442\u0435 \u043E\u0442\u0432\u0435\u0442."
+    ] },
+    cold: { id: "cold", title: "\u0425\u043E\u043B\u043E\u0434\u043D\u044B\u0439 \u0440\u0430\u0441\u0447\u0451\u0442", tone: "dark", lines: [
+      "\u0410\u0433\u0430\u0444\u044C\u044F \u0436\u0438\u0432\u0430. \u0422\u0440\u0443\u0431\u044B \u0446\u0435\u043B\u044B. \u041D\u043E \u043C\u043D\u043E\u0433\u0438\u0435 \u043E\u043A\u043D\u0430 \u0442\u0430\u043A \u0438 \u043E\u0441\u0442\u0430\u043B\u0438\u0441\u044C \u0442\u0451\u043C\u043D\u044B\u043C\u0438.",
+      "\u0412\u044B \u0441\u0447\u0438\u0442\u0430\u043B\u0438 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435, \u0443\u0433\u043E\u043B\u044C, \u0441\u043C\u0435\u043D\u044B \u2014 \u0438 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E \u043D\u0435 \u0441\u0447\u0438\u0442\u0430\u043B\u0438 \u043B\u044E\u0434\u0435\u0439. \u0413\u043E\u0440\u043E\u0434 \u0432\u0441\u0442\u0440\u0435\u0447\u0430\u0435\u0442 \u043E\u0431\u043E\u0437, \u043D\u043E \u0442\u0438\u0448\u0435, \u0447\u0435\u043C \u0434\u043E\u043B\u0436\u0435\u043D.",
+      "\u041C\u0430\u0448\u0438\u043D\u0430 \u043D\u0435 \u0441\u043F\u0430\u0441\u0451\u0442 \u0442\u0435\u0445, \u043E \u043A\u043E\u043C \u0437\u0430\u0431\u044B\u043B \u043C\u0430\u0448\u0438\u043D\u0438\u0441\u0442."
+    ] },
+    boom: { id: "boom", title: "\u0412\u0437\u0440\u044B\u0432 \u0410\u0433\u0430\u0444\u044C\u0438", tone: "fail", lines: [
+      "\u0414\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0435\u0440\u0435\u0448\u043B\u043E \u0447\u0435\u0440\u0442\u0443. \u0421\u0442\u0430\u0440\u044B\u0439 \u043A\u043E\u0442\u0451\u043B, \u043F\u0435\u0440\u0435\u0436\u0438\u0432\u0448\u0438\u0439 \u0442\u0440\u0438 \u043F\u043E\u043A\u043E\u043B\u0435\u043D\u0438\u044F \u043A\u043E\u0447\u0435\u0433\u0430\u0440\u043E\u0432, \u043D\u0435 \u0432\u044B\u0434\u0435\u0440\u0436\u0430\u043B.",
+      "\u041D\u0430\u0434 \u0424\u0435\u0440\u0440\u043E\u0433\u0440\u0430\u0434\u043E\u043C \u043F\u043E\u0434\u043D\u044F\u043B\u0441\u044F \u0431\u0435\u043B\u044B\u0439 \u0441\u0442\u043E\u043B\u0431 \u043F\u0430\u0440\u0430, \u0430 \u043F\u043E\u0442\u043E\u043C \u043D\u0430\u0441\u0442\u0443\u043F\u0438\u043B\u0430 \u0442\u0438\u0448\u0438\u043D\u0430. \u0425\u043E\u043B\u043E\u0434\u043D\u0430\u044F.",
+      "\u041F\u043E\u043C\u043D\u0438\u0442\u0435: \u043A\u043E\u0442\u0451\u043B \u2014 \u043D\u0435 \u0432\u0440\u0430\u0433. \u042D\u0442\u043E \u0432\u0430\u0448 \u043F\u0430\u0440\u0442\u043D\u0451\u0440, \u0438 \u0435\u043C\u0443 \u043D\u0443\u0436\u0435\u043D \u043F\u043E\u043A\u043E\u0439."
+    ] },
+    silence: { id: "silence", title: "\u0422\u0438\u0448\u0438\u043D\u0430", tone: "fail", lines: [
+      "\u041E\u0433\u043D\u0438 \u0432 \u043E\u043A\u043D\u0430\u0445 \u0433\u0430\u0441\u043B\u0438 \u043E\u0434\u0438\u043D \u0437\u0430 \u0434\u0440\u0443\u0433\u0438\u043C. \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C, \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B, \u0441\u043B\u043E\u0431\u043E\u0434\u0430.",
+      "\u041A\u043E\u0433\u0434\u0430 \u043E\u0431\u043E\u0437 \u043F\u0440\u0438\u0448\u0451\u043B, \u0435\u043C\u0443 \u0431\u044B\u043B\u043E \u043D\u0435\u043A\u043E\u043C\u0443 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0442\u044C \u0432\u043E\u0440\u043E\u0442\u0430.",
+      "\u041F\u0430\u0440 \u2014 \u044D\u0442\u043E \u0436\u0438\u0437\u043D\u044C. \u0410 \u0432\u044B\u0431\u043E\u0440, \u043A\u043E\u043C\u0443 \u0435\u0433\u043E \u043E\u0442\u0434\u0430\u0442\u044C, \u043D\u0438\u043A\u043E\u0433\u0434\u0430 \u043D\u0435 \u0431\u044B\u0432\u0430\u0435\u0442 \u043B\u0451\u0433\u043A\u0438\u043C."
+    ] }
+  };
+  var TUTORIAL = [
+    { id: "shovel", text: "\u0422\u043E\u043F\u043A\u0430 \u043E\u0441\u0442\u044B\u043B\u0430. \u041F\u043E\u0434\u0431\u0440\u043E\u0441\u044C\u0442\u0435 \u0443\u0433\u043E\u043B\u044C \u2014 \u041F\u0420\u041E\u0411\u0415\u041B \u0438\u043B\u0438 \u043A\u043D\u043E\u043F\u043A\u0430 \xAB\u0423\u0433\u043E\u043B\u044C\xBB.", hint: "shovel" },
+    { id: "pressure", text: "\u041E\u0433\u043E\u043D\u044C \u0433\u0440\u0435\u0435\u0442 \u043A\u043E\u0442\u0451\u043B. \u041F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0433\u043E\u043B\u044C, \u043F\u043E\u043A\u0430 \u0441\u0442\u0440\u0435\u043B\u043A\u0430 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u044F \u043D\u0435 \u0432\u043E\u0439\u0434\u0451\u0442 \u0432 \u0437\u0435\u043B\u0451\u043D\u0443\u044E \u0437\u043E\u043D\u0443.", hint: "gauge" },
+    { id: "hosp", text: "\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044F \u0434\u043E \u0437\u043E\u043B\u043E\u0442\u043E\u0439 \u043E\u0442\u043C\u0435\u0442\u043A\u0438. \u0411\u043E\u043B\u044C\u043D\u044B\u043C \u043D\u0443\u0436\u0435\u043D \u043F\u0430\u0440 \u0432 \u043F\u0435\u0440\u0432\u0443\u044E \u043E\u0447\u0435\u0440\u0435\u0434\u044C.", hint: "v0" },
+    { id: "home", text: "\u0422\u0435\u043F\u0435\u0440\u044C \u041A\u0432\u0430\u0440\u0442\u0430\u043B\u044B. \u041B\u044E\u0434\u0438 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u044E\u0442 \u2014 \u043F\u0440\u0438\u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0434\u043E \u043E\u0442\u043C\u0435\u0442\u043A\u0438.", hint: "v1" },
+    { id: "fact", text: "\u0417\u0430\u0432\u043E\u0434 \u0434\u0430\u0451\u0442 \u0443\u0433\u043E\u043B\u044C, \u043D\u043E \u0440\u0430\u0431\u043E\u0447\u0438\u0435 \u0443\u0441\u0442\u0430\u044E\u0442. \u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0435\u0433\u043E \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0434\u043E \u043E\u0442\u043C\u0435\u0442\u043A\u0438.", hint: "v2" },
+    { id: "scrub", text: "\u0424\u0438\u043B\u044C\u0442\u0440\u044B \u0447\u0438\u0441\u0442\u044F\u0442 \u0434\u044B\u043C. \u041E\u043D\u0438 \u0435\u0434\u044F\u0442 \u043F\u0430\u0440, \u043D\u043E \u0431\u0435\u0437 \u043D\u0438\u0445 \u0433\u043E\u0440\u043E\u0434 \u0437\u0430\u0434\u043E\u0445\u043D\u0451\u0442\u0441\u044F.", hint: "v3" },
+    { id: "leak", text: "\u0423\u0442\u0435\u0447\u043A\u0430! \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043E\u0431\u043B\u0430\u0447\u043A\u043E \u043F\u0430\u0440\u0430 \u043D\u0430\u0434 \u0442\u0440\u0443\u0431\u043E\u0439 (\u0438\u043B\u0438 F), \u0447\u0442\u043E\u0431\u044B \u0437\u0430\u0442\u043A\u043D\u0443\u0442\u044C \u0435\u0451.", hint: "leak" },
+    { id: "go", text: "\u0413\u043E\u0442\u043E\u0432\u043E! \u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0437\u0435\u043B\u0451\u043D\u043E\u0439 \u0437\u043E\u043D\u0435 \u0438 \u043F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0433\u043E\u043B\u044C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043D\u043E\u0447\u044C.", hint: null }
+  ];
+
+  // src/rng.js
+  function nextRand(s2) {
+    s2.rs = s2.rs + 1831565813 >>> 0;
+    let t = s2.rs;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+  function randRange(s2, a, b) {
+    return a + (b - a) * nextRand(s2);
+  }
+  function makeRng(seed) {
+    let a = seed >>> 0;
+    return function() {
+      a = a + 1831565813 >>> 0;
+      let t = a;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // src/sim.js
+  var P_GREEN = [40, 78];
+  var P_VENT = 88;
+  var P_DANGER = 96;
+  var FIRE_COEF = 0.16;
+  var FIRE_DECAY = 0.05;
+  var SHOVEL_FIRE = 15;
+  var SHOVEL_CD = 0.42;
+  var BOILER_CAP = 3;
+  var IRON_TOLL = 40;
+  var SMOKE_AVG = 30;
+  var COLD_POP = 0.74;
+  var SILENCE_POP = 0.5;
+  function createState(seed = 1, opts = {}) {
+    const s2 = {
+      v: 1,
+      rs: seed >>> 0 || 1,
+      seed: seed >>> 0,
+      phase: "night",
+      night: 0,
+      t: 0,
+      clock: 0,
+      P: 22,
+      fire: 0,
+      coal: 24,
+      smog: 8,
+      smogSum: 0,
+      smogTime: 0,
+      valves: [0, 0, 0, 0],
+      sat: [1, 1, 1, 1],
+      flow: [0, 0, 0, 0],
+      needNow: [0, 0, 0, 0],
+      pop: POP_START,
+      lostHosp: 0,
+      lostCold: 0,
+      lostSmog: 0,
+      nightLost: 0,
+      fw: 10,
+      burnouts: 0,
+      burnT: 0,
+      exhaustSec: 0,
+      timkaShovels: 0,
+      timkaCd: 0,
+      leaks: [],
+      leakTimer: 12,
+      leakId: 1,
+      leaksFixed: 0,
+      leaksIgnored: 0,
+      shovelCd: 0,
+      danger: 0,
+      venting: false,
+      spills: 0,
+      shovels: 0,
+      flags: { timka: false, extend: false, brown: false, aid: false },
+      choices: {},
+      card: null,
+      ending: null,
+      summary: null,
+      tut: opts.skipTutorial ? null : { step: 0, active: true, done: false, shovels: 0 },
+      tickerIdx: 0,
+      evShown: {},
+      events: [],
+      msgs: [],
+      shake: 0,
+      coalMade: 0,
+      coalBurned: 0,
+      nightStartCoal: 24,
+      nightStartPop: POP_START,
+      nightCoalMade: 0
+    };
+    return s2;
+  }
+  function emit(s2, type, data) {
+    if (s2.events.length < 200)
+      s2.events.push(__spreadValues({ type }, data));
+  }
+  function eventMult(s2, d) {
+    const N = NIGHTS[s2.night];
+    let m = 1;
+    for (const e of N.events) {
+      if (e.d !== d)
+        continue;
+      if (s2.t >= e.t0 && s2.t <= e.t1) {
+        const ramp = Math.min(1, (s2.t - e.t0) / 2, (e.t1 - s2.t) / 2);
+        m = Math.max(m, 1 + (e.m - 1) * Math.max(0, ramp));
+      }
+    }
+    return m;
+  }
+  function needNow(s2, d) {
+    const N = NIGHTS[s2.night];
+    let n = N.need[d] * eventMult(s2, d);
+    if (d === 0)
+      n *= 1 + s2.smog / 300;
+    return n;
+  }
+  function setValve(s2, i, v) {
+    if (i >= 0 && i < 4)
+      s2.valves[i] = Math.max(0, Math.min(1, v));
+  }
+  function adjustValve(s2, i, dv) {
+    setValve(s2, i, Math.round((s2.valves[i] + dv) * 100) / 100);
+  }
+  function shovel(s2) {
+    if (s2.phase !== "night")
+      return false;
+    if (s2.shovelCd > 0)
+      return false;
+    if (s2.coal < 1) {
+      emit(s2, "nocoal", {});
+      s2.shovelCd = 0.3;
+      return false;
+    }
+    s2.coal -= 1;
+    s2.coalBurned += 1;
+    s2.shovelCd = SHOVEL_CD;
+    s2.shovels++;
+    if (s2.tut && s2.tut.active)
+      s2.tut.shovels++;
+    if (s2.fire > 85) {
+      s2.fire = Math.min(100, s2.fire + 4);
+      s2.spills++;
+      s2.smog = Math.min(100, s2.smog + 1.5);
+      emit(s2, "spill", {});
+    } else {
+      s2.fire = Math.min(100, s2.fire + SHOVEL_FIRE);
+      emit(s2, "shovel", { good: s2.fire < 88 });
+    }
+    return true;
+  }
+  function fixLeak(s2, id) {
+    const idx = id == null ? s2.leaks.length ? 0 : -1 : s2.leaks.findIndex((l2) => l2.id === id);
+    if (idx < 0)
+      return false;
+    const l = s2.leaks.splice(idx, 1)[0];
+    s2.leaksFixed++;
+    emit(s2, "fix", { pipe: l.pipe, id: l.id });
+    return true;
+  }
+  function spawnLeak(s2, pipe2) {
+    if (s2.leaks.length >= 3)
+      return;
+    if (pipe2 == null)
+      pipe2 = Math.floor(nextRand(s2) * 4);
+    if (s2.leaks.some((l2) => l2.pipe === pipe2))
+      return;
+    const l = { id: s2.leakId++, pipe: pipe2, age: 0 };
+    s2.leaks.push(l);
+    emit(s2, "leak", { pipe: pipe2, id: l.id });
+  }
+  function chooseCard(s2, key) {
+    if (s2.phase !== "card" || !s2.card)
+      return;
+    const c = s2.card;
+    s2.choices[c.id] = key;
+    if (c.id === "timka") {
+      if (key === "help")
+        s2.flags.timka = true;
+      else
+        s2.coal = Math.max(0, s2.coal - 6);
+    } else if (c.id === "shift") {
+      if (key === "extend")
+        s2.flags.extend = true;
+    } else if (c.id === "brown") {
+      if (key === "accept") {
+        s2.flags.brown = true;
+        s2.coal = Math.min(COAL_MAX, s2.coal + 32);
+      }
+    } else if (c.id === "sloboda") {
+      if (key === "aid") {
+        s2.flags.aid = true;
+        s2.coal = Math.max(0, s2.coal - 18);
+      }
+    }
+    emit(s2, "choice", { id: c.id, key });
+    s2.card = null;
+    beginNight(s2, s2.night + 1);
+  }
+  function beginNight(s2, n) {
+    s2.night = n;
+    s2.t = 0;
+    s2.phase = "night";
+    s2.nightLost = 0;
+    s2.tickerIdx = 0;
+    s2.evShown = {};
+    s2.smog *= 0.8;
+    s2.fw *= 0.55;
+    s2.burnT = 0;
+    s2.leaks = [];
+    s2.leakTimer = NIGHTS[n].leakEvery ? NIGHTS[n].leakEvery * 0.6 : 99;
+    s2.danger = 0;
+    s2.nightStartPop = s2.pop;
+    s2.nightStartCoal = s2.coal;
+    s2.nightCoalMade = s2.coalMade;
+    emit(s2, "night", { n });
+  }
+  function continueSummary(s2) {
+    if (s2.phase !== "summary")
+      return;
+    const c = CARDS[s2.night + 1];
+    if (s2.night + 1 >= NIGHTS.length) {
+      finish(s2, computeEnding(s2));
+      return;
+    }
+    if (c) {
+      s2.card = c;
+      s2.phase = "card";
+    } else
+      beginNight(s2, s2.night + 1);
+  }
+  function toll(s2) {
+    return s2.exhaustSec * 0.5 + s2.burnouts * 15 + s2.timkaShovels * 0.6 + (s2.flags.extend ? 8 : 0);
+  }
+  function smogAvg(s2) {
+    return s2.smogTime > 0 ? s2.smogSum / s2.smogTime : 0;
+  }
+  function computeEnding(s2) {
+    const pop = s2.pop / POP_START;
+    if (pop < COLD_POP)
+      return "cold";
+    const tollR = toll(s2) / IRON_TOLL, smogR = smogAvg(s2) / SMOKE_AVG;
+    if (tollR >= 1 || smogR >= 1)
+      return tollR >= smogR ? "iron" : "smoke";
+    return "light";
+  }
+  function finish(s2, id) {
+    s2.ending = id;
+    s2.phase = "ended";
+    emit(s2, "ending", { id });
+  }
+  function step(s2, dt) {
+    s2.clock += dt;
+    if (s2.shake > 0)
+      s2.shake = Math.max(0, s2.shake - dt * 2.2);
+    if (s2.phase !== "night")
+      return;
+    const N = NIGHTS[s2.night];
+    const tutorial = !!(s2.tut && s2.tut.active);
+    const timerRuns = !tutorial;
+    s2.shovelCd = Math.max(0, s2.shovelCd - dt);
+    if (timerRuns)
+      s2.t += dt;
+    for (let i = 0; i < 4; i++)
+      s2.needNow[i] = needNow(s2, i);
+    for (let k = 0; k < N.events.length; k++) {
+      const e = N.events[k];
+      if (!s2.evShown[k] && s2.t >= e.t0) {
+        s2.evShown[k] = true;
+        emit(s2, "event", { label: e.label, d: e.d });
+      }
+    }
+    const tk = TICKER[s2.night];
+    if (tk && s2.tickerIdx < tk.length && s2.t >= tk[s2.tickerIdx].t) {
+      emit(s2, "talk", tk[s2.tickerIdx]);
+      s2.tickerIdx++;
+    }
+    if (s2.flags.timka && s2.fire < 22 && s2.timkaCd <= 0 && s2.coal >= 1) {
+      s2.coal -= 1;
+      s2.coalBurned += 1;
+      s2.fire += 13;
+      s2.timkaShovels++;
+      s2.timkaCd = 2;
+      emit(s2, "timka", {});
+    }
+    s2.timkaCd = Math.max(0, s2.timkaCd - dt);
+    for (const l of s2.leaks)
+      l.age += dt;
+    let leakLoss = 0;
+    for (const l of s2.leaks)
+      leakLoss += 1.6 + Math.min(l.age, 12) * 0.1;
+    if (N.leakEvery && !tutorial) {
+      s2.leakTimer -= dt;
+      if (s2.leakTimer <= 0) {
+        spawnLeak(s2);
+        s2.leakTimer = N.leakEvery * randRange(s2, 0.75, 1.25);
+      }
+    }
+    s2.fire = Math.max(0, s2.fire - s2.fire * FIRE_DECAY * dt);
+    if (s2.fire < 0.05)
+      s2.fire = 0;
+    const gen = FIRE_COEF * s2.fire;
+    const pf = Math.max(0, Math.min(1, s2.P / 30));
+    s2.burnT = Math.max(0, s2.burnT - dt);
+    let totalFlow = 0;
+    for (let i = 0; i < 4; i++) {
+      let open = s2.valves[i];
+      if (i === 2 && s2.burnT > 0)
+        open = 0;
+      s2.flow[i] = open * CAP[i] * pf;
+      totalFlow += s2.flow[i];
+    }
+    s2.venting = s2.P > P_VENT;
+    const vent = s2.venting ? 2 + (s2.P - P_VENT) * 0.8 : 0;
+    if (s2.venting && Math.floor(s2.clock * 6) !== Math.floor((s2.clock - dt) * 6))
+      emit(s2, "vent", {});
+    s2.P += (gen - totalFlow - leakLoss - vent - 0.012 * s2.P) / BOILER_CAP * dt;
+    s2.P = Math.max(0, Math.min(100, s2.P));
+    if (s2.P >= P_DANGER)
+      s2.danger += dt;
+    else
+      s2.danger = Math.max(0, s2.danger - dt * 0.8);
+    if (s2.danger >= 2.5) {
+      s2.shake = 1;
+      finish(s2, "boom");
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const tgt = Math.min(1, s2.flow[i] / s2.needNow[i]);
+      s2.sat[i] += (tgt - s2.sat[i]) * Math.min(1, dt * 1.2);
+    }
+    const smogMul = s2.flags.brown ? 1.6 : 1;
+    s2.smog += (s2.fire * 0.016 * smogMul - s2.flow[3] * 0.55 - 0.012 * s2.smog) * dt;
+    s2.smog = Math.max(0, Math.min(100, s2.smog));
+    if (timerRuns) {
+      s2.smogSum += s2.smog * dt;
+      s2.smogTime += dt;
+    }
+    const shiftM = s2.flags.extend ? 1.4 : 1;
+    const ratio = s2.flow[2] / s2.needNow[2];
+    if (s2.burnT > 0)
+      s2.fw = Math.max(0, s2.fw - 1.2 * dt);
+    else if (ratio < 0.15)
+      s2.fw = Math.max(0, s2.fw - 2.2 * dt);
+    else
+      s2.fw = Math.min(100, s2.fw + (ratio * 1.4 * shiftM - 0.5) * dt);
+    if (s2.fw >= 100) {
+      s2.burnouts++;
+      s2.burnT = 8;
+      s2.fw = 65;
+      s2.shake = Math.max(s2.shake, 0.5);
+      emit(s2, "collapse", {});
+    }
+    if (s2.fw >= 75 && timerRuns)
+      s2.exhaustSec += dt;
+    const eff = 1 - 0.6 * Math.max(0, (s2.fw - 50) / 50);
+    const made = s2.flow[2] * 0.08 * eff * (s2.flags.extend ? 1.35 : 1) * dt;
+    s2.coal = Math.min(COAL_MAX, s2.coal + made);
+    s2.coalMade += made;
+    if (!tutorial) {
+      let r0 = Math.max(0, 0.75 - s2.sat[0]) * 2.2;
+      let r1 = Math.max(0, 0.6 - s2.sat[1]) * 2 * (s2.flags.aid ? 0.5 : 1);
+      let r2 = Math.max(0, s2.smog - 65) * 0.03;
+      s2.lostHosp += r0 * dt;
+      s2.lostCold += r1 * dt;
+      s2.lostSmog += r2 * dt;
+      const lost = (r0 + r1 + r2) * dt;
+      const before = Math.floor(s2.pop);
+      s2.pop = Math.max(0, s2.pop - lost);
+      s2.nightLost += lost;
+      if (Math.floor(s2.pop) < before)
+        emit(s2, "loss", { d: r0 >= r1 ? 0 : 1 });
+      if (s2.pop / POP_START < SILENCE_POP) {
+        finish(s2, "silence");
+        return;
+      }
+    }
+    if (tutorial)
+      tutorialStep(s2);
+    if (!tutorial && s2.t >= N.dur)
+      endNight(s2);
+  }
+  function tutorialStep(s2) {
+    const T = s2.tut, id = TUTORIAL[T.step].id;
+    const mark = (d) => Math.min(1, s2.needNow[d] / CAP[d]);
+    let ok = false;
+    if (id === "shovel")
+      ok = T.shovels >= 1;
+    else if (id === "pressure")
+      ok = s2.P >= 42;
+    else if (id === "hosp")
+      ok = s2.valves[0] >= mark(0) - 0.04 && s2.valves[0] <= mark(0) + 0.3;
+    else if (id === "home")
+      ok = s2.valves[1] >= mark(1) - 0.04 && s2.valves[1] <= mark(1) + 0.3;
+    else if (id === "fact")
+      ok = s2.valves[2] >= mark(2) - 0.04 && s2.valves[2] <= mark(2) + 0.3;
+    else if (id === "scrub")
+      ok = s2.valves[3] >= mark(3) - 0.04 && s2.valves[3] <= mark(3) + 0.3;
+    else if (id === "leak") {
+      if (!T.leakSpawned) {
+        spawnLeak(s2, 1);
+        T.leakSpawned = true;
+      }
+      ok = T.leakSpawned && s2.leaks.length === 0;
+    }
+    if (ok) {
+      T.step++;
+      T.at = s2.clock;
+      emit(s2, "tutstep", { step: T.step });
+      if (T.step >= TUTORIAL.length - 1) {
+        T.active = false;
+        T.done = true;
+        s2.coal = Math.max(s2.coal, 22);
+      }
+    }
+  }
+  function endNight(s2) {
+    const N = NIGHTS[s2.night];
+    s2.summary = {
+      night: s2.night,
+      name: N.name,
+      lost: Math.round(s2.nightLost),
+      pop: Math.floor(s2.pop),
+      coalDelta: Math.round(s2.coal - s2.nightStartCoal),
+      smog: Math.round(s2.smog),
+      fw: Math.round(s2.fw),
+      burnouts: s2.burnouts,
+      leaks: s2.leaksFixed
+    };
+    s2.phase = "summary";
+    emit(s2, "nightend", {});
+  }
+  function serialize(s2) {
+    const _a = s2, { events, msgs } = _a, rest = __objRest(_a, ["events", "msgs"]);
+    return JSON.stringify(rest);
+  }
+  function deserialize(str) {
+    const o = JSON.parse(str);
+    o.events = [];
+    o.msgs = [];
+    return o;
+  }
+
+  // src/layout.js
+  var MIN_P = { w: 400, h: 860 };
+  var MIN_L = { w: 1100, h: 700 };
+  function viewFor(cssW, cssH) {
+    const portrait = cssW / cssH < 0.95;
+    const m = portrait ? MIN_P : MIN_L;
+    const scale = Math.min(cssW / m.w, cssH / m.h);
+    return { portrait, scale, W: cssW / scale, H: cssH / scale };
+  }
+  function makeLayout(fullW, H, portrait) {
+    if (portrait) {
+      const W2 = Math.min(fullW, 520), w = W2;
+      const L3 = {
+        portrait,
+        W: W2,
+        H,
+        fullW,
+        offX: (fullW - W2) / 2,
+        hud: { x: 0, y: 0, w: W2, h: 46 },
+        sky: { x: 0, y: 46, w: W2, h: 78 },
+        gauge: { cx: 102, cy: 224, r: 84 },
+        tank: { x: 200, y: 134, w: 190, h: 100 },
+        furnace: { x: 200, y: 242, w: 190, h: 72 },
+        coal: null,
+        shovel: { x: 16, y: 648, w: w - 32, h: 64 },
+        manifoldY: 338,
+        modules: { x: 8, y: 372, w: w - 16, h: 268 },
+        msg: { x: 12, y: 722, w: w - 24, h: Math.max(90, H - 722 - 8) },
+        pause: { x: W2 - 42, y: 5, w: 36, h: 36 }
+      };
+      L3.trunkX = 188;
+      L3.trunk = [[188, L3.tank.y + L3.tank.h * 0.55], [188, L3.manifoldY]];
+      L3.tankLink = [[L3.tank.x, L3.tank.y + L3.tank.h * 0.55], [L3.gauge.cx + L3.gauge.r - 10, L3.tank.y + L3.tank.h * 0.55]];
+      L3.chimney = { x: L3.tank.x + L3.tank.w * 0.75, y: L3.tank.y - 6 };
+      return L3;
+    }
+    const mw = Math.min(fullW - 590, 800), W = 590 + mw;
+    const L2 = {
+      portrait,
+      W,
+      H,
+      fullW,
+      offX: (fullW - W) / 2,
+      hud: { x: 0, y: 0, w: W, h: 52 },
+      sky: { x: 0, y: 52, w: W, h: 88 },
+      gauge: { cx: 190, cy: 300, r: 120 },
+      tank: { x: 335, y: 190, w: 190, h: 232 },
+      furnace: { x: 30, y: 458, w: 250, h: 210 },
+      coal: { x: 290, y: 458, w: 100, h: 210 },
+      shovel: { x: 400, y: 458, w: 125, h: 210 },
+      manifoldY: 172,
+      modules: { x: 570, y: 206, w: mw, h: 362 },
+      msg: { x: 570, y: 580, w: mw, h: Math.max(100, H - 580 - 16) },
+      pause: { x: W - 48, y: 8, w: 38, h: 38 }
+    };
+    L2.trunkX = L2.tank.x + L2.tank.w * 0.8;
+    L2.trunk = [[L2.tank.x + L2.tank.w * 0.8, L2.tank.y], [L2.tank.x + L2.tank.w * 0.8, L2.manifoldY]];
+    L2.tankLink = [[L2.tank.x, L2.tank.y + L2.tank.h * 0.5], [L2.gauge.cx + L2.gauge.r - 10, L2.tank.y + L2.tank.h * 0.5]];
+    L2.chimney = { x: L2.tank.x + L2.tank.w * 0.3, y: L2.tank.y - 6 };
+    return L2;
+  }
+  function column(L2, i) {
+    const m = L2.modules, gap = L2.portrait ? 6 : 14;
+    const cw = (m.w - gap * 3) / 4;
+    const x = m.x + i * (cw + gap);
+    const head = L2.portrait ? 42 : 52;
+    const ty0 = m.y + head + 34, ty1 = m.y + m.h - (L2.portrait ? 62 : 72);
+    return { x, y: m.y, w: cw, h: m.h, cx: x + cw / 2, head, ty0, ty1, leak: { x: x + cw / 2, y: L2.manifoldY + (m.y - L2.manifoldY) * 0.55 } };
+  }
+
+  // src/draw.js
+  var C = {
+    bg0: "#14100d",
+    bg1: "#1d1713",
+    iron0: "#2a2119",
+    iron1: "#3a2e25",
+    iron2: "#4b3c30",
+    brass0: "#7d5f21",
+    brass1: "#c9a24a",
+    brass2: "#f0d37e",
+    copper0: "#6e371c",
+    copper1: "#b8693a",
+    copper2: "#e39a62",
+    steam: "#e9f0ec",
+    cream: "#f1e6c8",
+    text: "#f3e7c9",
+    dim: "#b7a98b",
+    green: "#7fd079",
+    yellow: "#f0c24a",
+    red: "#e0523c",
+    water: "#4fa6b8",
+    coal: "#1a1512",
+    flame0: "#ff5a1f",
+    flame1: "#ffb13a",
+    flame2: "#fff0a0",
+    gold: "#ffd36b"
+  };
+  function rr(ctx2, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx2.beginPath();
+    ctx2.moveTo(x + r, y);
+    ctx2.arcTo(x + w, y, x + w, y + h, r);
+    ctx2.arcTo(x + w, y + h, x, y + h, r);
+    ctx2.arcTo(x, y + h, x, y, r);
+    ctx2.arcTo(x, y, x + w, y, r);
+    ctx2.closePath();
+  }
+  function brassGrad(ctx2, x0, y0, x1, y1) {
+    const g = ctx2.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, C.brass2);
+    g.addColorStop(0.35, C.brass1);
+    g.addColorStop(0.7, C.brass0);
+    g.addColorStop(1, C.brass1);
+    return g;
+  }
+  function copperGrad(ctx2, x0, y0, x1, y1) {
+    const g = ctx2.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, C.copper2);
+    g.addColorStop(0.4, C.copper1);
+    g.addColorStop(1, C.copper0);
+    return g;
+  }
+  function rivet(ctx2, x, y, r = 2.6) {
+    const g = ctx2.createRadialGradient(x - r * 0.4, y - r * 0.4, 0.2, x, y, r);
+    g.addColorStop(0, "#f6e3a6");
+    g.addColorStop(0.5, "#a98332");
+    g.addColorStop(1, "#3d2c10");
+    ctx2.fillStyle = g;
+    ctx2.beginPath();
+    ctx2.arc(x, y, r, 0, 6.2832);
+    ctx2.fill();
+  }
+  function rivetsRect(ctx2, x, y, w, h, inset = 6, r = 2.4, step2 = 40) {
+    const nx = Math.max(1, Math.round((w - inset * 2) / step2)), ny = Math.max(1, Math.round((h - inset * 2) / step2));
+    for (let i = 0; i <= nx; i++) {
+      const px = x + inset + (w - inset * 2) * i / nx;
+      rivet(ctx2, px, y + inset, r);
+      rivet(ctx2, px, y + h - inset, r);
+    }
+    for (let j = 1; j < ny; j++) {
+      const py = y + inset + (h - inset * 2) * j / ny;
+      rivet(ctx2, x + inset, py, r);
+      rivet(ctx2, x + w - inset, py, r);
+    }
+  }
+  function plate(ctx2, x, y, w, h, o = {}) {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    const r = (_a = o.r) != null ? _a : 8;
+    ctx2.save();
+    rr(ctx2, x, y, w, h, r);
+    const g = ctx2.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, (_b = o.top) != null ? _b : C.iron2);
+    g.addColorStop(1, (_c = o.bot) != null ? _c : C.iron0);
+    ctx2.fillStyle = g;
+    ctx2.fill();
+    ctx2.lineWidth = 2;
+    ctx2.strokeStyle = (_d = o.edge) != null ? _d : "rgba(0,0,0,.6)";
+    ctx2.stroke();
+    rr(ctx2, x + 1.5, y + 1.5, w - 3, h - 3, r - 1);
+    ctx2.lineWidth = 1;
+    ctx2.strokeStyle = (_e = o.hi) != null ? _e : "rgba(255,230,170,.16)";
+    ctx2.stroke();
+    if (o.rivets !== false)
+      rivetsRect(ctx2, x, y, w, h, (_f = o.inset) != null ? _f : 7, (_g = o.rr) != null ? _g : 2.2, (_h = o.step) != null ? _h : 46);
+    ctx2.restore();
+  }
+  function gearPath(ctx2, r, teeth, depth = 0.16, hole = 0.28) {
+    const n = teeth * 2;
+    ctx2.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a0 = i / n * 6.2832, a1 = (i + 1) / n * 6.2832, rr0 = i % 2 ? r : r * (1 + depth);
+      const aa = a0 + (a1 - a0) * 0.15, ab = a0 + (a1 - a0) * 0.85;
+      const rin = i % 2 ? r : r * (1 + depth);
+      ctx2.lineTo(Math.cos(aa) * rin, Math.sin(aa) * rin);
+      ctx2.lineTo(Math.cos(ab) * rin, Math.sin(ab) * rin);
+    }
+    ctx2.closePath();
+    ctx2.moveTo(r * hole, 0);
+    ctx2.arc(0, 0, r * hole, 0, 6.2832, true);
+  }
+  var gearCache = /* @__PURE__ */ new Map();
+  function gearSprite(r, teeth, kind = "iron", dpr2 = 1) {
+    const key = `${Math.round(r)}|${teeth}|${kind}|${dpr2}`;
+    let c = gearCache.get(key);
+    if (c)
+      return c;
+    const size = Math.ceil(r * 2.5 * dpr2);
+    c = document.createElement("canvas");
+    c.width = c.height = size;
+    const x = c.getContext("2d");
+    x.scale(dpr2, dpr2);
+    x.translate(size / 2 / dpr2, size / 2 / dpr2);
+    const pal = { iron: ["#5a4a3b", "#2b211a", "#1a130e"], brass: ["#f0d37e", "#a98332", "#5a4012"], copper: ["#e39a62", "#a85a2c", "#4e2410"] }[kind];
+    gearPath(x, r, teeth);
+    const g = x.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 1.2);
+    g.addColorStop(0, pal[0]);
+    g.addColorStop(0.6, pal[1]);
+    g.addColorStop(1, pal[2]);
+    x.fillStyle = g;
+    x.fill("evenodd");
+    x.lineWidth = 1.5;
+    x.strokeStyle = "rgba(0,0,0,.55)";
+    x.stroke();
+    x.strokeStyle = "rgba(0,0,0,.35)";
+    x.lineWidth = Math.max(2, r * 0.07);
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * 6.2832;
+      x.beginPath();
+      x.moveTo(Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35);
+      x.lineTo(Math.cos(a) * r * 0.82, Math.sin(a) * r * 0.82);
+      x.stroke();
+    }
+    x.beginPath();
+    x.arc(0, 0, r * 0.82, 0, 6.2832);
+    x.lineWidth = 2;
+    x.stroke();
+    x.fillStyle = "rgba(255,240,200,.18)";
+    x.beginPath();
+    x.arc(-r * 0.2, -r * 0.25, r * 0.5, 3.6, 5.2);
+    x.lineTo(0, 0);
+    x.fill();
+    gearCache.set(key, c);
+    return c;
+  }
+  function drawGear(ctx2, x, y, r, teeth, rot, kind, alpha = 1, dpr2 = 1) {
+    const spr = gearSprite(r, teeth, kind, dpr2), s2 = spr.width / dpr2;
+    ctx2.save();
+    ctx2.globalAlpha = alpha;
+    ctx2.translate(x, y);
+    ctx2.rotate(rot);
+    ctx2.drawImage(spr, -s2 / 2, -s2 / 2, s2, s2);
+    ctx2.restore();
+  }
+  function pipe(ctx2, pts, w = 12, kind = "copper") {
+    ctx2.save();
+    ctx2.lineCap = "round";
+    ctx2.lineJoin = "round";
+    const path = () => {
+      ctx2.beginPath();
+      ctx2.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++)
+        ctx2.lineTo(pts[i][0], pts[i][1]);
+    };
+    const cols = kind === "copper" ? ["#2a130a", C.copper0, C.copper1, C.copper2] : ["#1a1208", C.brass0, C.brass1, C.brass2];
+    path();
+    ctx2.strokeStyle = cols[0];
+    ctx2.lineWidth = w + 4;
+    ctx2.stroke();
+    path();
+    ctx2.strokeStyle = cols[1];
+    ctx2.lineWidth = w;
+    ctx2.stroke();
+    path();
+    ctx2.strokeStyle = cols[2];
+    ctx2.lineWidth = w * 0.62;
+    ctx2.stroke();
+    path();
+    ctx2.strokeStyle = cols[3];
+    ctx2.lineWidth = w * 0.18;
+    ctx2.globalAlpha = 0.7;
+    ctx2.translate(-w * 0.12, -w * 0.12);
+    ctx2.stroke();
+    ctx2.restore();
+  }
+  function flange(ctx2, x, y, w = 18, h = 7) {
+    ctx2.save();
+    rr(ctx2, x - w / 2, y - h / 2, w, h, 2);
+    ctx2.fillStyle = brassGrad(ctx2, x - w / 2, y, x + w / 2, y);
+    ctx2.fill();
+    ctx2.strokeStyle = "rgba(0,0,0,.6)";
+    ctx2.lineWidth = 1;
+    ctx2.stroke();
+    ctx2.restore();
+  }
+  function flowDots(ctx2, x0, y0, x1, y1, t, amount, col = "rgba(240,246,242,0.85)") {
+    if (amount <= 0.02)
+      return;
+    const len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(len / 14));
+    ctx2.fillStyle = col;
+    for (let i = 0; i < n; i++) {
+      const f = (i / n + t * (0.4 + amount * 0.9)) % 1;
+      ctx2.globalAlpha = Math.min(1, amount * 1.2) * 0.8;
+      ctx2.beginPath();
+      ctx2.arc(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, 1.6 + amount * 1.6, 0, 6.2832);
+      ctx2.fill();
+    }
+    ctx2.globalAlpha = 1;
+  }
+  function glassShine(ctx2, x, y, w, h, r = 6) {
+    ctx2.save();
+    rr(ctx2, x, y, w, h, r);
+    ctx2.clip();
+    const g = ctx2.createLinearGradient(x, y, x + w, y + h);
+    g.addColorStop(0, "rgba(255,255,255,.22)");
+    g.addColorStop(0.35, "rgba(255,255,255,.04)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx2.fillStyle = g;
+    ctx2.fillRect(x, y, w, h);
+    ctx2.restore();
+  }
+  function icon(ctx2, name, x, y, s2, col = C.cream) {
+    ctx2.save();
+    ctx2.translate(x, y);
+    ctx2.fillStyle = col;
+    ctx2.strokeStyle = col;
+    ctx2.lineWidth = Math.max(1.5, s2 * 0.1);
+    ctx2.lineJoin = "round";
+    ctx2.lineCap = "round";
+    const h = s2 / 2;
+    if (name === "cross") {
+      const t = s2 * 0.26;
+      ctx2.fillRect(-t / 2, -h, t, s2);
+      ctx2.fillRect(-h, -t / 2, s2, t);
+    } else if (name === "house") {
+      ctx2.beginPath();
+      ctx2.moveTo(-h, 0);
+      ctx2.lineTo(0, -h);
+      ctx2.lineTo(h, 0);
+      ctx2.closePath();
+      ctx2.fill();
+      ctx2.fillRect(-h * 0.7, 0, s2 * 0.7, h);
+      ctx2.fillStyle = "#2a2119";
+      ctx2.fillRect(-h * 0.2, h * 0.15, h * 0.4, h * 0.85);
+    } else if (name === "factory") {
+      ctx2.beginPath();
+      ctx2.moveTo(-h, h);
+      ctx2.lineTo(-h, -h * 0.1);
+      ctx2.lineTo(-h * 0.3, h * 0.25);
+      ctx2.lineTo(-h * 0.3, -h * 0.1);
+      ctx2.lineTo(h * 0.3, h * 0.25);
+      ctx2.lineTo(h * 0.3, -h * 0.1);
+      ctx2.lineTo(h, h * 0.25);
+      ctx2.lineTo(h, h);
+      ctx2.closePath();
+      ctx2.fill();
+      ctx2.fillRect(h * 0.35, -h, h * 0.4, h * 1.1);
+    } else if (name === "filter") {
+      ctx2.beginPath();
+      ctx2.arc(0, h * 0.2, h * 0.75, 0, 6.2832);
+      ctx2.stroke();
+      ctx2.beginPath();
+      ctx2.moveTo(-h * 0.5, h * 0.2);
+      ctx2.lineTo(h * 0.5, h * 0.2);
+      ctx2.moveTo(-h * 0.35, -h * 0.15);
+      ctx2.lineTo(h * 0.35, -h * 0.15);
+      ctx2.moveTo(-h * 0.35, h * 0.55);
+      ctx2.lineTo(h * 0.35, h * 0.55);
+      ctx2.stroke();
+    } else if (name === "person") {
+      ctx2.beginPath();
+      ctx2.arc(0, -h * 0.5, h * 0.38, 0, 6.2832);
+      ctx2.fill();
+      ctx2.beginPath();
+      ctx2.arc(0, h * 0.95, h * 0.85, Math.PI, 0);
+      ctx2.fill();
+    } else if (name === "coal") {
+      ctx2.beginPath();
+      ctx2.moveTo(-h, h * 0.6);
+      ctx2.lineTo(-h * 0.6, -h * 0.3);
+      ctx2.lineTo(0, -h * 0.9);
+      ctx2.lineTo(h * 0.7, -h * 0.2);
+      ctx2.lineTo(h, h * 0.6);
+      ctx2.closePath();
+      ctx2.fill();
+      ctx2.strokeStyle = "rgba(255,255,255,.35)";
+      ctx2.beginPath();
+      ctx2.moveTo(-h * 0.2, -h * 0.5);
+      ctx2.lineTo(0, 0);
+      ctx2.lineTo(h * 0.4, -h * 0.1);
+      ctx2.stroke();
+    } else if (name === "pause") {
+      ctx2.fillRect(-h * 0.55, -h * 0.7, h * 0.4, s2 * 0.7);
+      ctx2.fillRect(h * 0.15, -h * 0.7, h * 0.4, s2 * 0.7);
+    } else if (name === "shovel") {
+      ctx2.beginPath();
+      ctx2.moveTo(-h * 0.2, -h);
+      ctx2.lineTo(h * 0.2, h * 0.1);
+      ctx2.stroke();
+      ctx2.beginPath();
+      ctx2.moveTo(-h * 0.1, h * 0.05);
+      ctx2.lineTo(h * 0.7, h * 0.2);
+      ctx2.lineTo(h * 0.45, h * 0.95);
+      ctx2.lineTo(-h * 0.5, h * 0.7);
+      ctx2.closePath();
+      ctx2.fill();
+    } else if (name === "drop") {
+      ctx2.beginPath();
+      ctx2.moveTo(0, -h);
+      ctx2.quadraticCurveTo(h, h * 0.3, 0, h);
+      ctx2.quadraticCurveTo(-h, h * 0.3, 0, -h);
+      ctx2.fill();
+    }
+    ctx2.restore();
+  }
+  function text(ctx2, str, x, y, size, col = C.text, align = "left", weight = "bold", stroke = true) {
+    ctx2.font = `${weight} ${size}px Georgia, "Times New Roman", serif`;
+    ctx2.textAlign = align;
+    ctx2.textBaseline = "middle";
+    if (stroke) {
+      ctx2.lineWidth = 3;
+      ctx2.strokeStyle = "rgba(0,0,0,.65)";
+      ctx2.lineJoin = "round";
+      ctx2.strokeText(str, x, y);
+    }
+    ctx2.fillStyle = col;
+    ctx2.fillText(str, x, y);
+  }
+  function sans(ctx2, str, x, y, size, col = C.text, align = "left", weight = "600") {
+    ctx2.font = `${weight} ${size}px system-ui, "Segoe UI", Roboto, Arial, sans-serif`;
+    ctx2.textAlign = align;
+    ctx2.textBaseline = "middle";
+    ctx2.fillStyle = col;
+    ctx2.fillText(str, x, y);
+  }
+  function wrap(ctx2, str, maxW) {
+    const words = str.split(" "), lines = [];
+    let cur = "";
+    for (const w of words) {
+      const t = cur ? cur + " " + w : w;
+      if (ctx2.measureText(t).width > maxW && cur) {
+        lines.push(cur);
+        cur = w;
+      } else
+        cur = t;
+    }
+    if (cur)
+      lines.push(cur);
+    return lines;
+  }
+
+  // src/render.js
+  var TAU = Math.PI * 2;
+  var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function makeBackground(W, H, dpr2, scale) {
+    const c = document.createElement("canvas");
+    c.width = Math.ceil(W * scale * dpr2);
+    c.height = Math.ceil(H * scale * dpr2);
+    const x = c.getContext("2d");
+    x.scale(scale * dpr2, scale * dpr2);
+    const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#1b1511");
+    g.addColorStop(1, "#0f0b09");
+    x.fillStyle = g;
+    x.fillRect(0, 0, W, H);
+    const rnd2 = makeRng(5);
+    const bw = 90, bh = 46;
+    for (let j = 0; j * bh < H + bh; j++)
+      for (let i = -1; i * bw < W + bw; i++) {
+        const ox = j % 2 * bw / 2, px = i * bw + ox, py = j * bh;
+        const v = rnd2() * 10;
+        x.fillStyle = `rgb(${34 + v},${27 + v * 0.8},${22 + v * 0.6})`;
+        x.fillRect(px + 1, py + 1, bw - 2, bh - 2);
+        x.fillStyle = "rgba(255,230,180,.035)";
+        x.fillRect(px + 1, py + 1, bw - 2, 2);
+        x.fillStyle = "rgba(0,0,0,.25)";
+        x.fillRect(px + 1, py + bh - 3, bw - 2, 2);
+      }
+    const vg = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.78);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,.65)");
+    x.fillStyle = vg;
+    x.fillRect(0, 0, W, H);
+    return c;
+  }
+  function makeCity(width, h, seed = 11) {
+    const rnd2 = makeRng(seed);
+    const blds = [];
+    let x = -10;
+    const hospAt = width * 0.16, factAt = width * 0.84;
+    while (x < width + 10) {
+      const w = 26 + rnd2() * 34, special = x < hospAt && x + w > hospAt ? "hosp" : x < factAt && x + w > factAt ? "fact" : null;
+      const bh = special ? h * 0.8 : 20 + rnd2() * (h - 34);
+      const b = { x, w, h: bh, special, wins: [], roof: rnd2() < 0.5 ? 1 : 0 };
+      const cols = Math.max(1, Math.floor((w - 8) / 9)), rows = Math.max(1, Math.floor((bh - 8) / 11));
+      const d = special === "hosp" ? 0 : special === "fact" ? 2 : 1;
+      for (let r = 0; r < rows; r++)
+        for (let q = 0; q < cols; q++)
+          b.wins.push({ x: 5 + q * 9 + (w - 8 - cols * 9) / 2 + 2, y: 6 + r * 11, rank: rnd2(), d });
+      blds.push(b);
+      x += w + 2 + rnd2() * 4;
+    }
+    return { blds, hospAt, factAt, width, h };
+  }
+  function drawCity(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2, city: city2 } = R;
+    const y0 = L2.sky.y, h = L2.sky.h, w = L2.fullW;
+    ctx2.save();
+    ctx2.translate(-L2.offX, 0);
+    ctx2.beginPath();
+    ctx2.rect(0, y0, w, h);
+    ctx2.clip();
+    const smog = s2.smog / 100;
+    const g = ctx2.createLinearGradient(0, y0, 0, y0 + h);
+    g.addColorStop(0, mix([14, 24, 34], [44, 36, 28], smog));
+    g.addColorStop(1, mix([52, 66, 74], [92, 76, 56], smog));
+    ctx2.fillStyle = g;
+    ctx2.fillRect(0, y0, w, h);
+    if (!R.reduced) {
+      ctx2.fillStyle = "rgba(255,245,220,.5)";
+      const rn = makeRng(3);
+      for (let i = 0; i < 26; i++) {
+        const sx = rn() * w, sy = y0 + rn() * h * 0.5;
+        if (rn() < 1 - smog)
+          ctx2.fillRect(sx, sy, 1.4, 1.4);
+      }
+    }
+    const base = y0 + h;
+    const popF = vis2.popShown / POP_START;
+    for (const b of city2.blds) {
+      const bx = b.x, by = base - b.h;
+      ctx2.fillStyle = b.special === "hosp" ? "#2d2a2c" : "#1d1814";
+      ctx2.fillRect(bx, by, b.w, b.h);
+      ctx2.fillStyle = "rgba(255,230,180,.06)";
+      ctx2.fillRect(bx, by, b.w, 2);
+      if (b.roof) {
+        ctx2.beginPath();
+        ctx2.moveTo(bx - 1, by);
+        ctx2.lineTo(bx + b.w / 2, by - 7);
+        ctx2.lineTo(bx + b.w + 1, by);
+        ctx2.fill();
+      }
+      for (const wn of b.wins) {
+        const lit = clamp((popF - wn.rank) * 18, 0, 1);
+        const sat = vis2.satShown[wn.d];
+        const a = lit * (0.25 + 0.75 * sat);
+        if (a < 0.03) {
+          ctx2.fillStyle = "#0d0a08";
+          ctx2.fillRect(bx + wn.x, by + wn.y, 5, 6);
+          continue;
+        }
+        ctx2.fillStyle = wn.d === 0 ? `rgba(220,245,230,${0.2 + a * 0.8})` : `rgba(255,${190 + sat * 30 | 0},${100 + sat * 30 | 0},${0.2 + a * 0.8})`;
+        ctx2.fillRect(bx + wn.x, by + wn.y, 5, 6);
+      }
+      if (b.special === "hosp") {
+        const cx = bx + b.w / 2, cy = by + 8;
+        const aa = 0.35 + 0.65 * vis2.satShown[0];
+        ctx2.fillStyle = `rgba(230,70,60,${aa})`;
+        ctx2.fillRect(cx - 2, cy - 6, 4, 12);
+        ctx2.fillRect(cx - 6, cy - 2, 12, 4);
+      }
+      if (b.special === "fact") {
+        ctx2.fillStyle = "#17120f";
+        ctx2.fillRect(bx + b.w - 12, by - 14, 7, 16);
+        ctx2.fillRect(bx + 4, by - 9, 6, 11);
+      }
+    }
+    if (!R.reduced) {
+      ctx2.fillStyle = "rgba(240,245,250,.55)";
+      for (const f of vis2.snow)
+        ctx2.fillRect(f.x % w, y0 + f.y, f.s, f.s);
+    }
+    ctx2.fillStyle = `rgba(70,60,50,${smog * 0.45})`;
+    ctx2.fillRect(0, y0, w, h);
+    ctx2.restore();
+    ctx2.fillStyle = brassGrad(ctx2, 0, y0 + h, 0, y0 + h + 6);
+    ctx2.fillRect(-L2.offX, y0 + h, w, 5);
+    ctx2.fillStyle = "rgba(0,0,0,.5)";
+    ctx2.fillRect(-L2.offX, y0 + h + 5, w, 2);
+    ctx2.fillStyle = "rgba(0,0,0,.35)";
+    ctx2.fillRect(-L2.offX, y0 - 2, w, 2);
+  }
+  function mix(a, b, t) {
+    return `rgb(${a[0] + (b[0] - a[0]) * t | 0},${a[1] + (b[1] - a[1]) * t | 0},${a[2] + (b[2] - a[2]) * t | 0})`;
+  }
+  function drawHUD(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2 } = R;
+    const h = L2.hud;
+    ctx2.fillStyle = "#17110d";
+    ctx2.fillRect(-L2.offX, 0, L2.fullW, h.h);
+    ctx2.fillStyle = brassGrad(ctx2, 0, h.h - 4, 0, h.h);
+    ctx2.fillRect(-L2.offX, h.h - 3, L2.fullW, 3);
+    const N = NIGHTS[s2.night] || NIGHTS[NIGHTS.length - 1];
+    const tN = s2.tut && s2.tut.active ? 0 : s2.t / N.dur;
+    const portrait = L2.portrait, fs = portrait ? 13 : 17;
+    const nightLabel = portrait ? `\u041D\u043E\u0447\u044C ${s2.night + 1}/10` : `\u041D\u043E\u0447\u044C ${s2.night + 1} \u0438\u0437 10 \xB7 ${N.name}`;
+    text(ctx2, nightLabel, 12, h.h / 2 - 1, fs, C.cream);
+    const px = portrait ? 12 : 12, pw = portrait ? 120 : 220;
+    if (!portrait) {
+    }
+    const barY = h.h - 9;
+    rr(ctx2, px, barY, portrait ? 130 : 260, 5, 2.5);
+    ctx2.fillStyle = "rgba(0,0,0,.55)";
+    ctx2.fill();
+    if (!(s2.tut && s2.tut.active)) {
+      rr(ctx2, px, barY, Math.max(4, (portrait ? 130 : 260) * clamp(tN, 0, 1)), 5, 2.5);
+      ctx2.fillStyle = C.brass1;
+      ctx2.fill();
+    }
+    const pr = L2.pause.x - 8;
+    const popStr = String(Math.round(vis2.popShown));
+    const popCol = vis2.popShown / POP_START > 0.9 ? C.cream : vis2.popShown / POP_START > 0.8 ? C.yellow : C.red;
+    const coalCol = s2.coal < 6 ? C.red : s2.coal < 14 ? C.yellow : C.cream;
+    if (portrait) {
+      icon(ctx2, "coal", pr - 128, h.h / 2, 14, coalCol);
+      text(ctx2, String(Math.floor(s2.coal)), pr - 118, h.h / 2, 14, coalCol, "left");
+      icon(ctx2, "person", pr - 66, h.h / 2, 14, popCol);
+      text(ctx2, popStr, pr - 56, h.h / 2, 14, popCol, "left");
+    } else {
+      sans(ctx2, "\u0423\u0413\u041E\u041B\u042C", pr - 270, h.h / 2 - 8, 11, C.dim, "left", "700");
+      icon(ctx2, "coal", pr - 266, h.h / 2 + 9, 14, coalCol);
+      text(ctx2, String(Math.floor(s2.coal)), pr - 252, h.h / 2 + 9, 17, coalCol, "left");
+      sans(ctx2, "\u0416\u0418\u0422\u0415\u041B\u0418", pr - 150, h.h / 2 - 8, 11, C.dim, "left", "700");
+      icon(ctx2, "person", pr - 146, h.h / 2 + 9, 14, popCol);
+      text(ctx2, popStr, pr - 132, h.h / 2 + 9, 17, popCol, "left");
+      if (R.reduced === false) {
+      }
+    }
+    const pb = L2.pause;
+    plate(ctx2, pb.x, pb.y, pb.w, pb.h, { r: 6, rivets: false, top: "#5a4a3b", bot: "#2b211a" });
+    icon(ctx2, "pause", pb.x + pb.w / 2, pb.y + pb.h / 2, 16, C.cream);
+  }
+  function gaugeLabels(r) {
+    const out = [], a0 = 0.75 * Math.PI, sw = 1.5 * Math.PI, rb = r - 22;
+    const r1 = rb - r * 0.07, r2 = r1 - r * 0.12, rn = r2 - r * 0.1, fs = Math.max(9, Math.round(r * 0.13));
+    for (let v = 0; v <= 100; v += 20) {
+      const a = a0 + v / 100 * sw;
+      out.push({ t: String(v), x: Math.cos(a) * rn, y: Math.sin(a) * rn, font: `bold ${fs}px Georgia, serif`, col: "#2a2119", kind: "tick" });
+    }
+    out.push({ t: "\u0414\u0410\u0412\u041B\u0415\u041D\u0418\u0415", x: 0, y: r * 0.55, font: `bold ${Math.max(9, Math.round(r * 0.12))}px Georgia, serif`, col: "#4a3a2a", kind: "word" });
+    out.push({ t: "\u0430\u0442\u043C", x: 0, y: r * 0.55 + Math.max(9, Math.round(r * 0.12)) + 4, font: `${Math.max(9, Math.round(r * 0.1))}px Georgia, serif`, col: "#4a3a2a", kind: "word" });
+    return out;
+  }
+  function drawGauge(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2 } = R;
+    const g = L2.gauge, r = g.r;
+    ctx2.save();
+    ctx2.translate(g.cx, g.cy);
+    ctx2.fillStyle = "rgba(0,0,0,.45)";
+    ctx2.beginPath();
+    ctx2.arc(3, 6, r + 4, 0, TAU);
+    ctx2.fill();
+    ctx2.fillStyle = brassGrad(ctx2, -r, -r, r, r);
+    ctx2.beginPath();
+    ctx2.arc(0, 0, r + 4, 0, TAU);
+    ctx2.fill();
+    ctx2.strokeStyle = "rgba(0,0,0,.6)";
+    ctx2.lineWidth = 2;
+    ctx2.stroke();
+    ctx2.fillStyle = "rgba(0,0,0,.55)";
+    ctx2.beginPath();
+    ctx2.arc(0, 0, r - 8, 0, TAU);
+    ctx2.fill();
+    const fg = ctx2.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+    fg.addColorStop(0, "#fff3d0");
+    fg.addColorStop(0.7, "#e4d3a4");
+    fg.addColorStop(1, "#bba978");
+    ctx2.fillStyle = fg;
+    ctx2.beginPath();
+    ctx2.arc(0, 0, r - 11, 0, TAU);
+    ctx2.fill();
+    const a0 = 0.75 * Math.PI, sw = 1.5 * Math.PI, ang = (v) => a0 + clamp(v, 0, 100) / 100 * sw;
+    const rb = r - 22;
+    const band = (v0, v1, col) => {
+      ctx2.beginPath();
+      ctx2.arc(0, 0, rb, ang(v0), ang(v1));
+      ctx2.strokeStyle = col;
+      ctx2.lineWidth = r * 0.11;
+      ctx2.lineCap = "butt";
+      ctx2.stroke();
+    };
+    band(0, P_GREEN[0], "#9d8f6a");
+    band(P_GREEN[0], P_GREEN[1], "#4d9a4a");
+    band(P_GREEN[1], P_VENT, "#d9a62c");
+    band(P_VENT, 100, "#c4402c");
+    ctx2.strokeStyle = "#2a2119";
+    ctx2.fillStyle = "#2a2119";
+    for (let v = 0; v <= 100; v += 5) {
+      const a2 = ang(v), big = v % 20 === 0, r1 = rb - r * 0.07, r2 = r1 - (big ? r * 0.12 : r * 0.06);
+      ctx2.lineWidth = big ? 2.2 : 1;
+      ctx2.beginPath();
+      ctx2.moveTo(Math.cos(a2) * r1, Math.sin(a2) * r1);
+      ctx2.lineTo(Math.cos(a2) * r2, Math.sin(a2) * r2);
+      ctx2.stroke();
+    }
+    const a = ang(vis2.needle);
+    ctx2.save();
+    ctx2.rotate(a);
+    ctx2.shadowColor = "rgba(0,0,0,.4)";
+    ctx2.shadowBlur = 4;
+    ctx2.shadowOffsetY = 3;
+    ctx2.fillStyle = "#7a1f12";
+    ctx2.beginPath();
+    ctx2.moveTo(-r * 0.2, -3);
+    ctx2.lineTo(rb - 2, -1.2);
+    ctx2.lineTo(rb + 4, 0);
+    ctx2.lineTo(rb - 2, 1.2);
+    ctx2.lineTo(-r * 0.2, 3);
+    ctx2.closePath();
+    ctx2.fill();
+    ctx2.restore();
+    ctx2.fillStyle = brassGrad(ctx2, -8, -8, 8, 8);
+    ctx2.beginPath();
+    ctx2.arc(0, 0, r * 0.1, 0, TAU);
+    ctx2.fill();
+    ctx2.strokeStyle = "#000";
+    ctx2.lineWidth = 1;
+    ctx2.stroke();
+    for (const lb of gaugeLabels(r)) {
+      ctx2.font = lb.font;
+      ctx2.textAlign = "center";
+      ctx2.textBaseline = "middle";
+      ctx2.fillStyle = lb.col;
+      ctx2.fillText(lb.t, lb.x, lb.y);
+    }
+    glassShine(ctx2, -r + 12, -r + 12, r * 2 - 24, r - 10, r * 0.6);
+    if (s2.danger > 0) {
+      ctx2.beginPath();
+      ctx2.arc(0, 0, r + 8, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(s2.danger / 2.5, 0, 1));
+      ctx2.strokeStyle = C.red;
+      ctx2.lineWidth = 6;
+      ctx2.stroke();
+    }
+    ctx2.restore();
+    const lab = s2.P > P_VENT ? "\u041F\u0420\u0415\u0414\u041E\u0425\u0420\u0410\u041D\u0418\u0422\u0415\u041B\u042C \u0421\u0420\u0410\u0411\u041E\u0422\u0410\u041B" : s2.P < P_GREEN[0] ? "\u041C\u0430\u043B\u043E \u043F\u0430\u0440\u0430" : s2.P > P_GREEN[1] ? "\u0412\u044B\u0441\u043E\u043A\u043E\u0435" : "\u0412 \u043D\u043E\u0440\u043C\u0435";
+    const lc = s2.P > P_VENT ? C.red : s2.P < P_GREEN[0] ? C.yellow : s2.P > P_GREEN[1] ? C.yellow : C.green;
+    const ly = g.cy + r + (L2.portrait ? 14 : 18);
+    text(ctx2, lab, g.cx, ly, L2.portrait ? 12 : 14, lc, "center");
+  }
+  function drawBoiler(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2, time: time2 } = R;
+    const t = L2.tank;
+    pipe(ctx2, L2.tankLink, L2.portrait ? 8 : 10, "brass");
+    const tr = L2.trunk;
+    pipe(ctx2, tr, L2.portrait ? 12 : 14, "copper");
+    const tw = L2.portrait ? 12 : 14;
+    ctx2.save();
+    ctx2.fillStyle = "rgba(0,0,0,.5)";
+    rr(ctx2, t.x + 4, t.y + 6, t.w, t.h, 18);
+    ctx2.fill();
+    rr(ctx2, t.x, t.y, t.w, t.h, 18);
+    const g = ctx2.createLinearGradient(t.x, 0, t.x + t.w, 0);
+    g.addColorStop(0, C.copper0);
+    g.addColorStop(0.18, C.copper2);
+    g.addColorStop(0.45, C.copper1);
+    g.addColorStop(1, "#3d1c0c");
+    ctx2.fillStyle = g;
+    ctx2.fill();
+    ctx2.lineWidth = 2;
+    ctx2.strokeStyle = "rgba(0,0,0,.7)";
+    ctx2.stroke();
+    ctx2.save();
+    rr(ctx2, t.x, t.y, t.w, t.h, 18);
+    ctx2.clip();
+    const bands = L2.portrait ? [0.3, 0.72] : [0.22, 0.5, 0.78];
+    for (const b of bands) {
+      const by = t.y + t.h * b;
+      ctx2.fillStyle = brassGrad(ctx2, t.x, by, t.x + t.w, by);
+      ctx2.fillRect(t.x, by - 4, t.w, 8);
+      ctx2.fillStyle = "rgba(0,0,0,.45)";
+      ctx2.fillRect(t.x, by + 4, t.w, 2);
+      for (let i = 0; i < 6; i++)
+        rivet(ctx2, t.x + 14 + i * (t.w - 28) / 5, by, 2.3);
+    }
+    const glow = clamp(s2.P / 100, 0, 1);
+    const gr = ctx2.createRadialGradient(t.x + t.w / 2, t.y + t.h * 0.6, 4, t.x + t.w / 2, t.y + t.h * 0.6, t.w * 0.8);
+    gr.addColorStop(0, `rgba(255,170,80,${0.05 + glow * 0.22})`);
+    gr.addColorStop(1, "rgba(255,170,80,0)");
+    ctx2.fillStyle = gr;
+    ctx2.fillRect(t.x, t.y, t.w, t.h);
+    ctx2.restore();
+    const wx = t.x + t.w * 0.5 - (L2.portrait ? 26 : 30), wy = t.y + t.h * (L2.portrait ? 0.34 : 0.28), ww = L2.portrait ? 52 : 60, wh = L2.portrait ? 34 : 58;
+    rr(ctx2, wx - 5, wy - 5, ww + 10, wh + 10, 8);
+    ctx2.fillStyle = brassGrad(ctx2, wx, wy, wx + ww, wy + wh);
+    ctx2.fill();
+    rr(ctx2, wx, wy, ww, wh, 5);
+    ctx2.fillStyle = "#10222a";
+    ctx2.fill();
+    ctx2.save();
+    rr(ctx2, wx, wy, ww, wh, 5);
+    ctx2.clip();
+    const lvl = 0.5 + 0.1 * Math.sin(time2 * 1.3) + glow * 0.1;
+    ctx2.fillStyle = "rgba(79,166,184,.75)";
+    ctx2.fillRect(wx, wy + wh * (1 - lvl), ww, wh * lvl);
+    if (!R.reduced) {
+      ctx2.fillStyle = "rgba(220,245,250,.6)";
+      for (let i = 0; i < 6; i++) {
+        const f = (time2 * (0.3 + s2.fire / 90) + i * 0.17) % 1;
+        ctx2.beginPath();
+        ctx2.arc(wx + 6 + i * 37 % (ww - 12), wy + wh - f * wh * lvl, 1.6 + i % 2, 0, TAU);
+        ctx2.fill();
+      }
+    }
+    ctx2.restore();
+    glassShine(ctx2, wx, wy, ww, wh, 5);
+    const vx = t.x + t.w * 0.72, vy = t.y - 2;
+    ctx2.fillStyle = brassGrad(ctx2, vx - 8, vy, vx + 8, vy);
+    ctx2.fillRect(vx - 6, vy - 12, 12, 14);
+    ctx2.fillRect(vx - 10, vy - 16, 20, 6);
+    ctx2.restore();
+    if (s2.venting)
+      R.fx.steam(vx, vy - 18, 1.2, { vy: -90, vx: 10, jx: 24, r: 6, grow: 40, life: 0.9, a: 0.55 });
+    const ch = L2.chimney;
+    ctx2.fillStyle = "#241c16";
+    ctx2.fillRect(ch.x - 9, ch.y - 22, 18, 24);
+    ctx2.fillStyle = brassGrad(ctx2, ch.x - 12, 0, ch.x + 12, 0);
+    ctx2.fillRect(ch.x - 12, ch.y - 26, 24, 6);
+  }
+  function flame(ctx2, x, y, w, h, t, k, seed) {
+    const n = 5;
+    for (let layer = 0; layer < 3; layer++) {
+      const cols = [C.flame0, C.flame1, C.flame2], sc = [1, 0.7, 0.4][layer];
+      ctx2.fillStyle = cols[layer];
+      ctx2.globalAlpha = 0.9;
+      for (let i = 0; i < n; i++) {
+        const fx2 = x + w * (i + 0.5) / n, ph = t * (4 + i) + seed + i * 1.7;
+        const hh = h * k * sc * (0.65 + 0.35 * Math.sin(ph) * Math.cos(ph * 0.7 + i));
+        const ww = w / n * (0.85 - layer * 0.15);
+        ctx2.beginPath();
+        ctx2.moveTo(fx2 - ww / 2, y);
+        ctx2.quadraticCurveTo(fx2 - ww * 0.45 + Math.sin(ph) * 3, y - hh * 0.55, fx2 + Math.sin(ph * 1.3) * 4, y - hh);
+        ctx2.quadraticCurveTo(fx2 + ww * 0.45 + Math.sin(ph) * 3, y - hh * 0.55, fx2 + ww / 2, y);
+        ctx2.closePath();
+        ctx2.fill();
+      }
+    }
+    ctx2.globalAlpha = 1;
+  }
+  function drawFurnace(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2, time: time2 } = R;
+    const f = L2.furnace;
+    plate(ctx2, f.x, f.y, f.w, f.h, { r: 10 });
+    const dx = f.x + 14, dy = f.y + (L2.portrait ? 12 : 22), dw = f.w - 28, dh = f.h - (L2.portrait ? 24 : 70);
+    rr(ctx2, dx - 4, dy - 4, dw + 8, dh + 8, 10);
+    ctx2.fillStyle = brassGrad(ctx2, dx, dy, dx + dw, dy + dh);
+    ctx2.fill();
+    rr(ctx2, dx, dy, dw, dh, 7);
+    ctx2.fillStyle = "#0a0605";
+    ctx2.fill();
+    const k = clamp(vis2.fireShown / 100, 0, 1);
+    ctx2.save();
+    rr(ctx2, dx, dy, dw, dh, 7);
+    ctx2.clip();
+    const gl = ctx2.createRadialGradient(dx + dw / 2, dy + dh, 4, dx + dw / 2, dy + dh, dw * 0.8);
+    gl.addColorStop(0, `rgba(255,150,40,${0.15 + k * 0.7})`);
+    gl.addColorStop(1, "rgba(255,90,20,0)");
+    ctx2.fillStyle = gl;
+    ctx2.fillRect(dx, dy, dw, dh);
+    ctx2.fillStyle = "#15100d";
+    ctx2.beginPath();
+    ctx2.moveTo(dx, dy + dh);
+    for (let i = 0; i <= 12; i++)
+      ctx2.lineTo(dx + dw * i / 12, dy + dh - 5 - i * 7 % 5);
+    ctx2.lineTo(dx + dw, dy + dh);
+    ctx2.fill();
+    if (k > 0.02)
+      flame(ctx2, dx + 4, dy + dh - 3, dw - 8, dh * 0.95, R.reduced ? time2 * 0.5 : time2, Math.min(1, 0.15 + k * 0.9), 1.3);
+    ctx2.fillStyle = `rgba(255,${80 + k * 100 | 0},20,${0.3 + k * 0.5})`;
+    for (let i = 0; i < 7; i++)
+      ctx2.fillRect(dx + 6 + i * (dw - 12) / 7, dy + dh - 6, 8, 3);
+    ctx2.restore();
+    rr(ctx2, dx, dy, dw, dh, 7);
+    ctx2.lineWidth = 2;
+    ctx2.strokeStyle = "rgba(0,0,0,.7)";
+    ctx2.stroke();
+    const by = f.y + f.h - (L2.portrait ? 0 : 38);
+    if (!L2.portrait) {
+      const bx = f.x + 18, bw = f.w - 36;
+      sans(ctx2, "\u0416\u0410\u0420 \u0422\u041E\u041F\u041A\u0418", bx, by + 6, 11, C.dim, "left", "700");
+      rr(ctx2, bx, by + 16, bw, 10, 5);
+      ctx2.fillStyle = "rgba(0,0,0,.6)";
+      ctx2.fill();
+      ctx2.save();
+      rr(ctx2, bx, by + 16, bw, 10, 5);
+      ctx2.clip();
+      ctx2.fillStyle = "rgba(127,208,121,.25)";
+      ctx2.fillRect(bx + bw * 0.25, by + 16, bw * 0.6, 10);
+      ctx2.fillStyle = k < 0.2 ? C.yellow : k > 0.85 ? C.red : C.copper2;
+      ctx2.fillRect(bx, by + 16, bw * k, 10);
+      ctx2.restore();
+      sans(ctx2, k < 0.2 ? "\u043E\u0441\u0442\u044B\u0432\u0430\u0435\u0442!" : k > 0.85 ? "\u043F\u0435\u0440\u0435\u0433\u0440\u0435\u0432" : "", bx + bw, by + 6, 11, k < 0.2 ? C.yellow : C.red, "right", "700");
+    }
+  }
+  function drawStoker(ctx2, R) {
+    const { s: s2, L: L2, time: time2, vis: vis2 } = R;
+    const f = L2.furnace;
+    const sx = f.x + (L2.portrait ? -18 : f.w - 36), sy = f.y + f.h - (L2.portrait ? 6 : 42);
+    if (L2.portrait)
+      return drawChildOnly(ctx2, R);
+    const swing = vis2.swing;
+    ctx2.save();
+    ctx2.translate(f.x + f.w + 26, f.y + f.h - 12);
+    ctx2.fillStyle = "#0c0907";
+    ctx2.beginPath();
+    ctx2.ellipse(0, -48, 12, 13, 0, 0, TAU);
+    ctx2.fill();
+    ctx2.beginPath();
+    ctx2.moveTo(-14, 0);
+    ctx2.quadraticCurveTo(-16, -30, 0, -34);
+    ctx2.quadraticCurveTo(16, -30, 14, 0);
+    ctx2.fill();
+    ctx2.strokeStyle = "#0c0907";
+    ctx2.lineWidth = 4;
+    ctx2.beginPath();
+    ctx2.moveTo(-6, -22);
+    ctx2.lineTo(-30 + swing * 16, -12 - swing * 8);
+    ctx2.stroke();
+    ctx2.lineWidth = 3;
+    ctx2.beginPath();
+    ctx2.moveTo(-30 + swing * 16, -12 - swing * 8);
+    ctx2.lineTo(-50 + swing * 30, -2 - swing * 12);
+    ctx2.stroke();
+    ctx2.restore();
+    drawChildOnly(ctx2, R);
+  }
+  function drawChildOnly(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2 } = R;
+    if (!s2.flags.timka)
+      return;
+    const f = L2.furnace;
+    const x = L2.portrait ? f.x + f.w - 18 : f.x + f.w - 4 + 66, y = f.y + f.h - 10;
+    ctx2.save();
+    ctx2.translate(x, y);
+    ctx2.fillStyle = "#16100c";
+    ctx2.beginPath();
+    ctx2.arc(0, -34, 8, 0, TAU);
+    ctx2.fill();
+    ctx2.beginPath();
+    ctx2.moveTo(-9, 0);
+    ctx2.quadraticCurveTo(-10, -22, 0, -24);
+    ctx2.quadraticCurveTo(10, -22, 9, 0);
+    ctx2.fill();
+    ctx2.strokeStyle = "#16100c";
+    ctx2.lineWidth = 3;
+    const sw = vis2.kidSwing;
+    ctx2.beginPath();
+    ctx2.moveTo(0, -18);
+    ctx2.lineTo(-18 + sw * 8, -8);
+    ctx2.stroke();
+    ctx2.restore();
+  }
+  function drawCoalAndShovel(ctx2, R) {
+    const { s: s2, L: L2, input: input2 } = R;
+    const sv = L2.shovel;
+    if (L2.coal) {
+      const c = L2.coal;
+      plate(ctx2, c.x, c.y, c.w, c.h, { r: 10 });
+      sans(ctx2, "\u0411\u0423\u041D\u041A\u0415\u0420", c.x + c.w / 2, c.y + 18, 12, C.dim, "center", "700");
+      const bx = c.x + 14, by = c.y + 34, bw = c.w - 28, bh = c.h - 74;
+      rr(ctx2, bx, by, bw, bh, 6);
+      ctx2.fillStyle = "#0b0807";
+      ctx2.fill();
+      const f = clamp(s2.coal / COAL_MAX, 0, 1) ** 0.8;
+      ctx2.save();
+      rr(ctx2, bx, by, bw, bh, 6);
+      ctx2.clip();
+      const top = by + bh * (1 - f);
+      ctx2.fillStyle = "#1d1815";
+      ctx2.fillRect(bx, top, bw, by + bh - top);
+      const rn = makeRng(9);
+      for (let i = 0; i < 60; i++) {
+        const px = bx + rn() * bw, py = top + rn() * (by + bh - top);
+        if (py < top + 2)
+          continue;
+        ctx2.fillStyle = `rgba(${80 + rn() * 60 | 0},${75 + rn() * 50 | 0},${70 + rn() * 50 | 0},.35)`;
+        ctx2.fillRect(px, py, 3 + rn() * 4, 2 + rn() * 3);
+      }
+      ctx2.fillStyle = "#2b2420";
+      for (let i = 0; i < 12; i++) {
+        ctx2.beginPath();
+        ctx2.arc(bx + (i + 0.5) * bw / 12, top + i * 5 % 4, 5, Math.PI, 0);
+        ctx2.fill();
+      }
+      ctx2.restore();
+      rr(ctx2, bx, by, bw, bh, 6);
+      ctx2.strokeStyle = "rgba(255,230,180,.25)";
+      ctx2.lineWidth = 1.5;
+      ctx2.stroke();
+      const cc = s2.coal < 6 ? C.red : s2.coal < 14 ? C.yellow : C.cream;
+      text(ctx2, String(Math.floor(s2.coal)), c.x + c.w / 2, c.y + c.h - 20, 22, cc, "center");
+    }
+    const pressed = input2.shovelDown > 0;
+    const cd = clamp(s2.shovelCd / SHOVEL_CD, 0, 1);
+    ctx2.save();
+    ctx2.translate(0, pressed ? 2 : 0);
+    rr(ctx2, sv.x, sv.y, sv.w, sv.h, 12);
+    ctx2.fillStyle = copperGrad(ctx2, sv.x, sv.y, sv.x + sv.w, sv.y + sv.h);
+    ctx2.fill();
+    ctx2.lineWidth = 2.5;
+    ctx2.strokeStyle = "rgba(0,0,0,.75)";
+    ctx2.stroke();
+    rr(ctx2, sv.x + 3, sv.y + 3, sv.w - 6, sv.h - 6, 10);
+    ctx2.strokeStyle = "rgba(255,230,180,.35)";
+    ctx2.lineWidth = 1.5;
+    ctx2.stroke();
+    if (cd > 0) {
+      ctx2.save();
+      rr(ctx2, sv.x, sv.y, sv.w, sv.h, 12);
+      ctx2.clip();
+      ctx2.fillStyle = "rgba(0,0,0,.45)";
+      ctx2.fillRect(sv.x, sv.y, sv.w * cd, sv.h);
+      ctx2.restore();
+    }
+    const noCoal = s2.coal < 1;
+    if (L2.portrait) {
+      icon(ctx2, "shovel", sv.x + 36, sv.y + sv.h / 2, 30, noCoal ? C.dim : "#2a1409");
+      text(ctx2, noCoal ? "\u0423\u0413\u041B\u042F \u041D\u0415\u0422" : "\u041F\u041E\u0414\u0411\u0420\u041E\u0421\u0418\u0422\u042C \u0423\u0413\u041E\u041B\u042C", sv.x + sv.w / 2 + 14, sv.y + sv.h / 2, 18, noCoal ? C.dim : "#2a1409", "center", "bold", false);
+    } else {
+      icon(ctx2, "shovel", sv.x + sv.w / 2, sv.y + sv.h / 2 - 28, 56, noCoal ? C.dim : "#2a1409");
+      text(ctx2, noCoal ? "\u0423\u0413\u041B\u042F \u041D\u0415\u0422" : "\u0423\u0413\u041E\u041B\u042C", sv.x + sv.w / 2, sv.y + sv.h / 2 + 22, 22, noCoal ? C.dim : "#2a1409", "center", "bold", false);
+      sans(ctx2, "[ \u041F\u0420\u041E\u0411\u0415\u041B ]", sv.x + sv.w / 2, sv.y + sv.h / 2 + 52, 13, "#2a1409", "center", "800");
+    }
+    ctx2.restore();
+  }
+  function drawColumns(ctx2, R) {
+    const { s: s2, L: L2, vis: vis2, input: input2, time: time2 } = R;
+    const m = L2.modules;
+    const col0 = column(L2, 0), col3 = column(L2, 3);
+    const my = L2.manifoldY;
+    const pw = L2.portrait ? 12 : 14;
+    pipe(ctx2, [[L2.trunk[1][0], my], [Math.max(col3.cx, L2.trunk[1][0]), my]], pw, "copper");
+    if (col0.cx < L2.trunk[1][0])
+      pipe(ctx2, [[col0.cx, my], [L2.trunk[1][0], my]], pw, "copper");
+    for (let i = 0; i < 4; i++) {
+      const c = column(L2, i);
+      pipe(ctx2, [[c.cx, my], [c.cx, m.y + 18]], L2.portrait ? 9 : 10, "copper");
+      flange(ctx2, c.cx, my + (m.y - my) * 0.5 + 1, 16, 6);
+      flowDots(ctx2, c.cx, my + 4, c.cx, m.y + 12, vis2.t * 1.4, s2.flow[i] / CAP[i] * 1.2);
+    }
+    flowDots(ctx2, L2.trunk[0][0], L2.trunk[0][1] - 4, L2.trunk[1][0], my, vis2.t * 1.2, clamp(s2.flow.reduce((a, b) => a + b, 0) / 10, 0, 1));
+    for (let i = 0; i < 4; i++)
+      drawColumn(ctx2, R, i);
+    for (const lk of s2.leaks) {
+      const c = column(L2, lk.pipe), lx = c.leak.x, ly = c.leak.y - (L2.portrait ? 2 : 0);
+      ctx2.save();
+      R.fx.steam(lx, ly - 4, 0.7, { vy: -70, vx: 0, jx: 40, r: 6, grow: 34, life: 0.9, a: 0.6 });
+      const pulse = R.reduced ? 1 : 0.8 + 0.2 * Math.sin(time2 * 6);
+      ctx2.fillStyle = `rgba(224,82,60,${0.9})`;
+      ctx2.beginPath();
+      ctx2.arc(lx, ly, 13 * pulse, 0, TAU);
+      ctx2.fill();
+      ctx2.lineWidth = 2.5;
+      ctx2.strokeStyle = "#fff3d0";
+      ctx2.stroke();
+      text(ctx2, "!", lx, ly + 1, 16, "#fff", "center", "bold", false);
+      ctx2.restore();
+    }
+  }
+  function drawColumn(ctx2, R, i) {
+    const { s: s2, L: L2, vis: vis2, input: input2, time: time2 } = R;
+    const c = column(L2, i), d = DISTRICTS[i];
+    const por = L2.portrait;
+    plate(ctx2, c.x, c.y, c.w, c.h, { r: 9, inset: 6, rr: 2, step: 60 });
+    const selected = input2.sel === i;
+    if (selected) {
+      rr(ctx2, c.x - 2, c.y - 2, c.w + 4, c.h + 4, 11);
+      ctx2.lineWidth = 3;
+      ctx2.strokeStyle = C.gold;
+      ctx2.stroke();
+    }
+    icon(ctx2, d.icon, c.cx, c.y + (por ? 17 : 21), por ? 17 : 22, C.cream);
+    text(ctx2, d.name, c.cx, c.y + (por ? 36 : 44), por ? 12 : 15, C.cream, "center");
+    if (!por) {
+      rr(ctx2, c.x + 8, c.y + 8, 20, 20, 5);
+      ctx2.fillStyle = "rgba(0,0,0,.55)";
+      ctx2.fill();
+      sans(ctx2, String(i + 1), c.x + 18, c.y + 18.5, 12, C.gold, "center", "800");
+    }
+    const tx = c.cx, y0 = c.ty0, y1 = c.ty1, tw = por ? 16 : 20;
+    rr(ctx2, tx - tw / 2, y0 - 6, tw, y1 - y0 + 12, tw / 2);
+    ctx2.fillStyle = "#0b0807";
+    ctx2.fill();
+    ctx2.strokeStyle = "rgba(255,230,180,.25)";
+    ctx2.lineWidth = 1.5;
+    ctx2.stroke();
+    const val = s2.valves[i], vy = y1 - (y1 - y0) * val;
+    ctx2.strokeStyle = "rgba(255,230,180,.25)";
+    ctx2.lineWidth = 1;
+    for (let k = 0; k <= 10; k++) {
+      const yy = y1 - (y1 - y0) * k / 10, lw = k % 5 === 0 ? 7 : 4;
+      ctx2.beginPath();
+      ctx2.moveTo(tx + tw / 2 + 3, yy);
+      ctx2.lineTo(tx + tw / 2 + 3 + lw, yy);
+      ctx2.stroke();
+    }
+    ctx2.save();
+    rr(ctx2, tx - tw / 2, y0 - 6, tw, y1 - y0 + 12, tw / 2);
+    ctx2.clip();
+    const sg = ctx2.createLinearGradient(0, vy, 0, y1);
+    sg.addColorStop(0, "rgba(235,245,240,.9)");
+    sg.addColorStop(1, "rgba(120,170,180,.55)");
+    ctx2.fillStyle = sg;
+    ctx2.fillRect(tx - tw / 2, vy, tw, y1 - vy + 8);
+    ctx2.restore();
+    const need = Math.min(1, s2.needNow[i] / CAP[i]), ny = y1 - (y1 - y0) * need;
+    const nCol = Math.abs(val - need) < 0.06 ? C.green : C.gold;
+    ctx2.fillStyle = nCol;
+    ctx2.beginPath();
+    ctx2.moveTo(tx - tw / 2 - 3, ny);
+    ctx2.lineTo(tx - tw / 2 - 12, ny - 6);
+    ctx2.lineTo(tx - tw / 2 - 12, ny + 6);
+    ctx2.closePath();
+    ctx2.fill();
+    ctx2.beginPath();
+    ctx2.moveTo(tx + tw / 2 + 3, ny);
+    ctx2.lineTo(tx + tw / 2 + 12, ny - 6);
+    ctx2.lineTo(tx + tw / 2 + 12, ny + 6);
+    ctx2.closePath();
+    ctx2.fill();
+    ctx2.fillRect(tx - tw / 2 - 3, ny - 1, tw + 6, 2);
+    if (!por && i === 0)
+      sans(ctx2, "\u043D\u0443\u0436\u043D\u043E", c.x + c.w - 6, ny - 11, 11, C.gold, "right", "700");
+    const wr = por ? 15 : 19;
+    ctx2.save();
+    ctx2.translate(tx, vy);
+    ctx2.rotate(val * 9 + (vis2.wheelKick[i] || 0));
+    ctx2.fillStyle = "rgba(0,0,0,.4)";
+    ctx2.beginPath();
+    ctx2.arc(2, 3, wr, 0, TAU);
+    ctx2.fill();
+    ctx2.strokeStyle = brassGrad(ctx2, -wr, -wr, wr, wr);
+    ctx2.lineWidth = 5;
+    ctx2.beginPath();
+    ctx2.arc(0, 0, wr - 3, 0, TAU);
+    ctx2.stroke();
+    ctx2.lineWidth = 3.4;
+    ctx2.strokeStyle = "#a98332";
+    for (let k = 0; k < 6; k++) {
+      const a = k / 6 * TAU;
+      ctx2.beginPath();
+      ctx2.moveTo(0, 0);
+      ctx2.lineTo(Math.cos(a) * (wr - 3), Math.sin(a) * (wr - 3));
+      ctx2.stroke();
+    }
+    ctx2.fillStyle = copperGrad(ctx2, -6, -6, 6, 6);
+    ctx2.beginPath();
+    ctx2.arc(0, 0, 5.5, 0, TAU);
+    ctx2.fill();
+    ctx2.strokeStyle = "#000";
+    ctx2.lineWidth = 1;
+    ctx2.stroke();
+    ctx2.fillStyle = C.red;
+    ctx2.fillRect(wr - 5, -1.5, 5, 3);
+    ctx2.restore();
+    if (selected) {
+      ctx2.beginPath();
+      ctx2.arc(tx, vy, wr + 4, 0, TAU);
+      ctx2.strokeStyle = "rgba(255,211,107,.7)";
+      ctx2.lineWidth = 2;
+      ctx2.stroke();
+    }
+    sans(ctx2, Math.round(val * 100) + "%", c.cx, y1 + (por ? 16 : 19), por ? 12 : 14, C.cream, "center", "700");
+    const sat = vis2.satShown[i];
+    const by = c.y + c.h - (por ? 30 : 34), bx = c.x + 8, bw = c.w - 16;
+    const satCol = sat >= 0.85 ? C.green : sat >= 0.6 ? C.yellow : C.red;
+    rr(ctx2, bx, by, bw, por ? 9 : 11, 4.5);
+    ctx2.fillStyle = "rgba(0,0,0,.6)";
+    ctx2.fill();
+    rr(ctx2, bx, by, Math.max(5, bw * sat), por ? 9 : 11, 4.5);
+    ctx2.fillStyle = satCol;
+    ctx2.fill();
+    ctx2.fillStyle = "rgba(255,255,255,.8)";
+    ctx2.fillRect(bx + bw * 0.85 - 0.5, by - 1, 1, (por ? 9 : 11) + 2);
+    const ly = by + (por ? 20 : 24);
+    if (i === 2) {
+      const fw = s2.fw / 100, wc = s2.burnT > 0 ? C.red : fw > 0.75 ? C.red : fw > 0.5 ? C.yellow : C.green;
+      meter(ctx2, bx, ly - 6, bw, por ? "\u0443\u0441\u0442\u0430\u043B." : "\u0443\u0441\u0442\u0430\u043B\u043E\u0441\u0442\u044C", fw, wc, por);
+    } else if (i === 3) {
+      const sm = s2.smog / 100;
+      meter(ctx2, bx, ly - 6, bw, "\u0434\u044B\u043C", sm, sm > 0.65 ? C.red : sm > 0.35 ? C.yellow : C.green, por);
+    } else if (i === 0)
+      sans(ctx2, sat > 0.85 ? "\u0442\u0435\u043F\u043B\u043E" : sat > 0.6 ? "\u043F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u043E" : "\u0412\u042B\u041C\u0418\u0420\u0410\u042E\u0422", c.cx, ly, por ? 11 : 13, satCol, "center", "700");
+    else
+      sans(ctx2, sat > 0.85 ? "\u0442\u0435\u043F\u043B\u043E" : sat > 0.6 ? "\u0437\u044F\u0431\u043A\u043E" : "\u0417\u0410\u041C\u0415\u0420\u0417\u0410\u042E\u0422", c.cx, ly, por ? 11 : 13, satCol, "center", "700");
+    if (i === 2 && s2.burnT > 0) {
+      sans(ctx2, "\u0421\u041C\u0415\u041D\u0410 \u041F\u0410\u041B\u0410", c.cx, c.y + (por ? 52 : 62), por ? 10 : 12, C.red, "center", "800");
+    }
+    if (R.tutHint === "v" + i)
+      pulseRing(ctx2, c.x - 3, c.y - 3, c.w + 6, c.h + 6, time2, R.reduced);
+  }
+  function meter(ctx2, x, y, w, label, v, col, por) {
+    sans(ctx2, label, x, y, por ? 10 : 12, C.dim, "left", "700");
+    const bx = x + (por ? 40 : 66), bw = w - (por ? 40 : 66);
+    rr(ctx2, bx, y - 4, bw, 9, 4.5);
+    ctx2.fillStyle = "rgba(0,0,0,.6)";
+    ctx2.fill();
+    rr(ctx2, bx, y - 4, Math.max(4, bw * clamp(v, 0, 1)), 9, 4.5);
+    ctx2.fillStyle = col;
+    ctx2.fill();
+  }
+  function pulseRing(ctx2, x, y, w, h, time2, reduced) {
+    ctx2.save();
+    const a = reduced ? 1 : 0.55 + 0.45 * Math.sin(time2 * 4);
+    rr(ctx2, x, y, w, h, 12);
+    ctx2.lineWidth = 4;
+    ctx2.strokeStyle = `rgba(255,211,107,${a})`;
+    ctx2.setLineDash([10, 6]);
+    ctx2.lineDashOffset = reduced ? 0 : -time2 * 20;
+    ctx2.stroke();
+    ctx2.restore();
+  }
+  function drawToast(ctx2, R, m, px, pw) {
+    const tt = R.toast, age = R.time - tt.t0;
+    const k = clamp(Math.min(age / 0.3, (tt.dur - age) / 0.8), 0, 1);
+    ctx2.save();
+    ctx2.globalAlpha = k;
+    text(ctx2, String(tt.title || "").toUpperCase(), px, m.y + 16, 11, tt.col || C.gold, "left", "bold", false);
+    const avail = m.h - 36;
+    let fs = 16, lines = [];
+    for (const f of [16, 14, 13, 12]) {
+      fs = f;
+      ctx2.font = `${f}px Georgia, serif`;
+      lines = wrap(ctx2, tt.text, pw);
+      if (lines.length * (f + 4) <= avail)
+        break;
+    }
+    const cap = Math.max(1, Math.floor(avail / (fs + 4)));
+    if (lines.length > cap) {
+      lines = lines.slice(0, cap);
+      let last2 = lines[cap - 1];
+      ctx2.font = `${fs}px Georgia, serif`;
+      while (last2.length > 3 && ctx2.measureText(last2 + "\u2026").width > pw)
+        last2 = last2.slice(0, -1);
+      lines[cap - 1] = last2.replace(/[\s,;:—-]+$/, "") + "\u2026";
+    }
+    lines.forEach((ln, i) => text(ctx2, ln, px, m.y + 34 + fs / 2 + i * (fs + 4), fs, C.cream, "left", "normal", false));
+    ctx2.restore();
+  }
+  function drawMessages(ctx2, R) {
+    const { s: s2, L: L2, log: log2, time: time2 } = R;
+    const m = L2.msg;
+    plate(ctx2, m.x, m.y, m.w, m.h, { r: 10, top: "#2c231b", bot: "#17110d", rivets: !L2.portrait });
+    const px = m.x + 14, pw = m.w - 28;
+    if (R.toast && time2 - R.toast.t0 < R.toast.dur) {
+      drawToast(ctx2, R, m, px, pw);
+      return;
+    }
+    const maxLines = Math.max(2, Math.floor((m.h - 20) / (L2.portrait ? 38 : 40)));
+    const shown = log2.slice(-maxLines);
+    let yy = m.y + 14;
+    const fs = L2.portrait ? 14 : 16;
+    if (!shown.length)
+      sans(ctx2, "\u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0437\u0435\u043B\u0451\u043D\u043E\u0439 \u0437\u043E\u043D\u0435. \u0411\u0435\u0440\u0435\u0433\u0438\u0442\u0435 \u043B\u044E\u0434\u0435\u0439.", px, m.y + 22, fs - 1, C.dim, "left", "600");
+    shown.forEach((e) => {
+      const age = time2 - e.at, a = e.kind === "talk" ? 1 : 1;
+      ctx2.globalAlpha = a * clamp(1 - (age - 20) / 8, 0.45, 1);
+      ctx2.font = `bold ${fs}px Georgia, serif`;
+      const who = e.who ? e.who + ": " : "";
+      const wW = ctx2.measureText(who).width;
+      ctx2.font = `${fs}px Georgia, serif`;
+      const lines = wrap(ctx2, e.text, pw - wW);
+      lines.slice(0, 2).forEach((ln, k) => {
+        if (k === 0 && who)
+          text(ctx2, who, px, yy + 9, fs, e.col || C.gold, "left", "bold", false);
+        text(ctx2, ln, px + (k === 0 ? wW : 0), yy + 9 + k * (fs + 3), fs, e.kind === "warn" ? C.yellow : C.cream, "left", "normal", false);
+      });
+      yy += (lines.length > 1 ? 2 : 1) * (fs + 3) + 6;
+      ctx2.globalAlpha = 1;
+    });
+  }
+  function drawBanner(ctx2, R) {
+    const b = R.banner;
+    if (!b)
+      return;
+    const age = R.time - b.at;
+    if (age > 4.5)
+      return;
+    const L2 = R.L;
+    const k = age < 0.4 ? age / 0.4 : age > 3.8 ? (4.5 - age) / 0.7 : 1;
+    const w = Math.min(L2.W - 24, 460), h = 40, x = (L2.W - w) / 2, y = L2.sky.y + L2.sky.h + 12 - (1 - k) * 30;
+    ctx2.save();
+    ctx2.globalAlpha = clamp(k, 0, 1);
+    rr(ctx2, x, y, w, h, 8);
+    ctx2.fillStyle = "rgba(32,22,14,.94)";
+    ctx2.fill();
+    ctx2.lineWidth = 2;
+    ctx2.strokeStyle = C.brass1;
+    ctx2.stroke();
+    icon(ctx2, "drop", x + 24, y + h / 2, 16, C.water);
+    text(ctx2, b.label, x + 44, y + h / 2, L2.portrait ? 14 : 16, C.cream, "left", "bold", false);
+    ctx2.restore();
+  }
+  function drawScene(ctx2, R) {
+    const { L: L2 } = R;
+    ctx2.save();
+    drawCity(ctx2, R);
+    ctx2.save();
+    ctx2.beginPath();
+    ctx2.rect(-L2.offX, L2.hud.h, L2.fullW, L2.chimney.y - L2.hud.h);
+    ctx2.clip();
+    R.fx.draw(ctx2, "smoke");
+    ctx2.restore();
+    for (const g of R.gears)
+      drawGear(ctx2, g.x, g.y, g.r, g.n, g.rot, g.kind, g.a, R.dpr * R.scale);
+    drawHUD(ctx2, R);
+    drawGauge(ctx2, R);
+    drawBoiler(ctx2, R);
+    drawFurnace(ctx2, R);
+    drawStoker(ctx2, R);
+    drawCoalAndShovel(ctx2, R);
+    drawColumns(ctx2, R);
+    drawMessages(ctx2, R);
+    if (R.tutHint === "shovel")
+      pulseRing(ctx2, L2.shovel.x - 3, L2.shovel.y - 3, L2.shovel.w + 6, L2.shovel.h + 6, R.time, R.reduced);
+    if (R.tutHint === "gauge")
+      pulseRing(ctx2, L2.gauge.cx - L2.gauge.r - 8, L2.gauge.cy - L2.gauge.r - 8, L2.gauge.r * 2 + 16, L2.gauge.r * 2 + 16, R.time, R.reduced);
+    if (R.tutHint === "leak")
+      for (const lk of R.s.leaks) {
+        const c = column(L2, lk.pipe);
+        pulseRing(ctx2, c.leak.x - 22, c.leak.y - 22, 44, 44, R.time, R.reduced);
+      }
+    drawBanner(ctx2, R);
+    R.fx.draw(ctx2, "main");
+    if (R.s.P > P_VENT - 4 || R.s.danger > 0) {
+      const k = clamp((R.s.P - (P_VENT - 4)) / 12, 0, 1);
+      const pulse = R.reduced ? 0.7 : 0.7 + 0.3 * Math.sin(R.time * 4);
+      const vg = ctx2.createRadialGradient(L2.W / 2, L2.H / 2, Math.min(L2.W, L2.H) * 0.4, L2.W / 2, L2.H / 2, Math.max(L2.W, L2.H) * 0.8);
+      vg.addColorStop(0, "rgba(200,40,20,0)");
+      vg.addColorStop(1, `rgba(200,40,20,${0.35 * k * pulse})`);
+      ctx2.fillStyle = vg;
+      ctx2.fillRect(0, 0, L2.W, L2.H);
+    }
+    ctx2.restore();
+  }
+
+  // src/fx.js
+  var MAX = 700;
+  var Fx = class {
+    constructor() {
+      this.p = [];
+      this.texts = [];
+      this.rng = makeRng(2024);
+      this.reduced = false;
+      this.shakeOn = true;
+      this.shakeAmt = 0;
+    }
+    clear() {
+      this.p.length = 0;
+      this.texts.length = 0;
+      this.shakeAmt = 0;
+    }
+    get density() {
+      return this.reduced ? 0.35 : 1;
+    }
+    add(o) {
+      if (this.p.length < (this.reduced ? 100 : MAX))
+        this.p.push(o);
+    }
+    steam(x, y, n = 1, o = {}) {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+      const r = this.rng;
+      n = Math.ceil(n * this.density);
+      for (let i = 0; i < n; i++) {
+        this.add({
+          k: "steam",
+          x: x + (r() - 0.5) * ((_a = o.spread) != null ? _a : 6),
+          y,
+          vx: ((_b = o.vx) != null ? _b : 0) + (r() - 0.5) * ((_c = o.jx) != null ? _c : 18),
+          vy: ((_d = o.vy) != null ? _d : -40) * (0.6 + r() * 0.8),
+          r: ((_e = o.r) != null ? _e : 7) * (0.7 + r() * 0.6),
+          grow: (_f = o.grow) != null ? _f : 18,
+          life: 0,
+          max: ((_g = o.life) != null ? _g : 1.1) * (0.7 + r() * 0.6),
+          a: (_h = o.a) != null ? _h : 0.5,
+          col: (_i = o.col) != null ? _i : "236,242,238"
+        });
+      }
+    }
+    sparks(x, y, n = 10, o = {}) {
+      var _a, _b, _c, _d;
+      const r = this.rng;
+      n = Math.ceil(n * this.density);
+      for (let i = 0; i < n; i++) {
+        const a = ((_a = o.dir) != null ? _a : -Math.PI / 2) + (r() - 0.5) * ((_b = o.cone) != null ? _b : 2.2), v = ((_c = o.v) != null ? _c : 160) * (0.4 + r());
+        this.add({ k: "spark", x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 1.6 + r() * 1.6, life: 0, max: 0.5 + r() * 0.5, g: 380, col: (_d = o.col) != null ? _d : "255,190,80" });
+      }
+    }
+    smoke(x, y, n = 1, a = 0.35) {
+      const r = this.rng;
+      n = Math.ceil(n * this.density);
+      for (let i = 0; i < n; i++)
+        this.add({ k: "smoke", x: x + (r() - 0.5) * 8, y, vx: 8 + r() * 10, vy: -(26 + r() * 18), r: 6, grow: 6, life: 0, max: 3 + r() * 1.4, a, col: "70,64,60" });
+    }
+    text(x, y, str, col = "#f1e6c8", size = 16) {
+      if (this.texts.length < 20)
+        this.texts.push({ x, y, str, col, size, life: 0, max: 1.6 });
+    }
+    shake(a) {
+      if (this.shakeOn && !this.reduced)
+        this.shakeAmt = Math.max(this.shakeAmt, a);
+    }
+    update(dt) {
+      for (let i = this.p.length - 1; i >= 0; i--) {
+        const q = this.p[i];
+        q.life += dt;
+        if (q.life >= q.max) {
+          this.p[i] = this.p[this.p.length - 1];
+          this.p.pop();
+          continue;
+        }
+        q.x += q.vx * dt;
+        q.y += q.vy * dt;
+        if (q.k === "spark")
+          q.vy += q.g * dt;
+        else {
+          q.r += q.grow * dt;
+          q.vx *= 1 - dt * 0.5;
+        }
+      }
+      for (let i = this.texts.length - 1; i >= 0; i--) {
+        const t = this.texts[i];
+        t.life += dt;
+        t.y -= 26 * dt;
+        if (t.life > t.max)
+          this.texts.splice(i, 1);
+      }
+      this.shakeAmt = Math.max(0, this.shakeAmt - dt * 2);
+    }
+    shakeOffset() {
+      if (this.shakeAmt <= 0 || this.reduced || !this.shakeOn)
+        return [0, 0];
+      const a = this.shakeAmt * this.shakeAmt * 10, r = this.rng;
+      return [(r() - 0.5) * a, (r() - 0.5) * a];
+    }
+    // pass: 'smoke' — только дым трубы (рисуется под HUD и котлом); иначе — всё остальное
+    draw(ctx2, pass) {
+      const smokePass = pass === "smoke";
+      for (const q of this.p) {
+        if (q.k === "smoke" !== smokePass)
+          continue;
+        const f = q.life / q.max;
+        if (q.k === "spark") {
+          ctx2.fillStyle = `rgba(${q.col},${1 - f})`;
+          ctx2.fillRect(q.x - q.r / 2, q.y - q.r / 2, q.r, q.r);
+        } else {
+          const a = q.a * Math.sin(Math.min(1, f * 6) * Math.PI / 2) * (1 - f);
+          ctx2.fillStyle = `rgba(${q.col},${a.toFixed(3)})`;
+          ctx2.beginPath();
+          ctx2.arc(q.x, q.y, q.r, 0, 6.2832);
+          ctx2.fill();
+        }
+      }
+      if (smokePass)
+        return;
+      ctx2.textAlign = "center";
+      ctx2.textBaseline = "middle";
+      for (const t of this.texts) {
+        const f = t.life / t.max;
+        ctx2.globalAlpha = 1 - f * f;
+        ctx2.font = `bold ${t.size}px Georgia, serif`;
+        ctx2.lineWidth = 3;
+        ctx2.strokeStyle = "rgba(0,0,0,.7)";
+        ctx2.strokeText(t.str, t.x, t.y);
+        ctx2.fillStyle = t.col;
+        ctx2.fillText(t.str, t.x, t.y);
+      }
+      ctx2.globalAlpha = 1;
+    }
+  };
+
+  // src/audio.js
+  var DB_RANGE = 40;
+  function volCurve(v) {
+    v = Math.max(0, Math.min(1, +v || 0));
+    return v <= 1e-3 ? 0 : Math.pow(10, -(DB_RANGE / 20) * (1 - v));
+  }
+  var SFX_MAX = 2.2;
+  var MUSIC_MAX = 1.6;
+  var Sound = class {
+    // makeCtx — необязательная фабрика AudioContext (тесты подставляют мок или OfflineAudioContext)
+    constructor(makeCtx) {
+      this.makeCtx = makeCtx || null;
+      this.ctx = null;
+      this.enabled = true;
+      this.sfxVol = 0.7;
+      this.musicVol = 0.6;
+      this.master = null;
+      this.sfx = null;
+      this.music = null;
+      this.noiseBuf = null;
+      this.hiss = null;
+      this.rumble = null;
+      this.musicTimer = null;
+      this.step = 0;
+      this.nextT = 0;
+      this.musicOn = false;
+      this.rng = makeRng(77);
+      this.lastT = {};
+      this.gestured = false;
+      this.wantMusic = false;
+      this.primed = null;
+      this.keepEl = null;
+      this.onState = null;
+    }
+    ensure() {
+      if (this.dead)
+        return false;
+      if (this.ctx && this.ctx.state === "closed")
+        this.dropCtx();
+      if (this.ctx) {
+        if (this.ctx.state !== "running")
+          this.tryResume();
+        return !!this.ctx;
+      }
+      try {
+        if (this.makeCtx)
+          this.ctx = this.makeCtx();
+        else {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC)
+            return false;
+          this.ctx = new AC();
+        }
+      } catch (e) {
+        this.dead = true;
+        return false;
+      }
+      try {
+        const c = this.ctx;
+        if ("onstatechange" in c)
+          c.onstatechange = () => this.notify();
+        this.master = c.createGain();
+        this.sfx = c.createGain();
+        this.music = c.createGain();
+        const comp = c.createDynamicsCompressor();
+        this.sfx.connect(this.master);
+        this.music.connect(this.master);
+        this.master.connect(comp);
+        comp.connect(c.destination);
+        this.noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+        const d = this.noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++)
+          d[i] = this.rng() * 2 - 1;
+        this.applyVol(true);
+        this.buildLoops();
+        if (this.wantMusic && !this.musicOn)
+          this.startMusic();
+        if (c.state !== "running")
+          this.tryResume();
+        this.notify();
+        return true;
+      } catch (e) {
+        this.dead = true;
+        try {
+          this.ctx.close();
+        } catch (e2) {
+        }
+        this.ctx = null;
+        return false;
+      }
+    }
+    // ---- мобильный звук: жест, «разблокировка», режим «Без звука» на iOS, возобновление после сворачивания
+    get state() {
+      return this.dead ? "dead" : !this.ctx ? "none" : this.ctx.state;
+    }
+    // звук нужен (включён, игрок уже касался экрана), но контекст не играет — показать кнопку «Включить звук»
+    needsTap() {
+      return !this.dead && this.enabled && this.gestured && (!this.ctx || this.ctx.state !== "running");
+    }
+    notify() {
+      try {
+        if (this.onState)
+          this.onState(this.state);
+      } catch (e) {
+      }
+    }
+    dropCtx() {
+      try {
+        if (this.ctx) {
+          this.ctx.onstatechange = null;
+          this.ctx.close();
+        }
+      } catch (e) {
+      }
+      this.ctx = null;
+      this.master = this.sfx = this.music = this.hiss = this.rumble = null;
+      this.primed = null;
+      this.wantMusic = this.wantMusic || this.musicOn;
+      this.musicOn = false;
+      clearInterval(this.musicTimer);
+    }
+    tryResume() {
+      if (!this.ctx)
+        return;
+      try {
+        const pr = this.ctx.resume();
+        if (pr && pr.then)
+          pr.then(() => this.notify(), () => this.notify());
+        else
+          this.notify();
+      } catch (e) {
+        this.notify();
+      }
+    }
+    // вызывать ВНУТРИ жеста (pointerup / touchend / click / keydown): создаёт контекст, resume(), тихий буфер, keep-alive для iOS
+    unlock() {
+      this.gestured = true;
+      const ok = this.ensure();
+      this.prime();
+      return ok;
+    }
+    prime() {
+      if (!this.ctx || this.primed === this.ctx)
+        return;
+      this.primed = this.ctx;
+      try {
+        const c = this.ctx, b = c.createBuffer(1, 1, 22050), src = c.createBufferSource();
+        src.buffer = b;
+        src.connect(c.destination);
+        src.start(0);
+      } catch (e) {
+      }
+      this.keepAlive();
+    }
+    // iOS: переключатель «Без звука» глушит WebAudio, но не <audio> — тихий зацикленный элемент переводит страницу в «медиа»-сеанс
+    keepAlive() {
+      try {
+        if (typeof navigator !== "undefined" && navigator.audioSession)
+          navigator.audioSession.type = "playback";
+      } catch (e) {
+      }
+      try {
+        const nav = typeof navigator !== "undefined" ? navigator : {};
+        const ios = !!nav.audioSession || /iPhone|iPad|iPod/.test(nav.userAgent || "") || /Macintosh/.test(nav.userAgent || "") && nav.maxTouchPoints > 1;
+        const force = typeof window !== "undefined" ? window.__keepAlive : void 0;
+        if (force === false || !ios && !force)
+          return;
+        if (typeof Audio === "undefined" || typeof Blob === "undefined" || typeof URL === "undefined" || !URL.createObjectURL)
+          return;
+        if (!this.keepEl) {
+          const n = 4e3, buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
+          const w = (o, s2) => {
+            for (let i = 0; i < s2.length; i++)
+              buf[o + i] = s2.charCodeAt(i);
+          };
+          w(0, "RIFF");
+          dv.setUint32(4, 36 + n, true);
+          w(8, "WAVE");
+          w(12, "fmt ");
+          dv.setUint32(16, 16, true);
+          dv.setUint16(20, 1, true);
+          dv.setUint16(22, 1, true);
+          dv.setUint32(24, 8e3, true);
+          dv.setUint32(28, 8e3, true);
+          dv.setUint16(32, 1, true);
+          dv.setUint16(34, 8, true);
+          w(36, "data");
+          dv.setUint32(40, n, true);
+          buf.fill(128, 44);
+          const el = new Audio(URL.createObjectURL(new Blob([buf], { type: "audio/wav" })));
+          el.loop = true;
+          el.setAttribute("playsinline", "");
+          el.setAttribute("aria-hidden", "true");
+          this.keepEl = el;
+        }
+        const pr = this.keepEl.play();
+        if (pr && pr.catch)
+          pr.catch(() => {
+          });
+      } catch (e) {
+      }
+    }
+    // вернулись во вкладку / pageshow / focus: попробовать возобновить (вне жеста может не получиться — тогда покажем кнопку)
+    resumeIfNeeded() {
+      if (this.dead || !this.enabled || !this.gestured) {
+        this.notify();
+        return;
+      }
+      if (this.ctx && this.ctx.state === "closed") {
+        this.dropCtx();
+        this.notify();
+        return;
+      }
+      if (this.ctx && this.ctx.state !== "running")
+        this.tryResume();
+      else
+        this.notify();
+      if (this.keepEl && this.keepEl.paused) {
+        try {
+          const pr = this.keepEl.play();
+          if (pr && pr.catch)
+            pr.catch(() => {
+            });
+        } catch (e) {
+        }
+      }
+    }
+    // master — только общий выключатель; «Звуки» и «Музыка» — независимые узлы gain со своей кривой
+    applyVol(immediate) {
+      if (!this.ctx)
+        return;
+      const t = this.ctx.currentTime;
+      const put = (g, v, tc) => {
+        if (immediate) {
+          g.gain.cancelScheduledValues(t);
+          g.gain.setValueAtTime(v, t);
+        } else
+          g.gain.setTargetAtTime(v, t, tc);
+      };
+      put(this.master, this.enabled ? 1 : 0, 0.05);
+      put(this.sfx, volCurve(this.sfxVol) * SFX_MAX, 0.05);
+      put(this.music, volCurve(this.musicVol) * MUSIC_MAX, 0.05);
+    }
+    set(opts) {
+      Object.assign(this, opts);
+      this.applyVol();
+    }
+    noiseSrc(loop = false) {
+      const s2 = this.ctx.createBufferSource();
+      s2.buffer = this.noiseBuf;
+      s2.loop = loop;
+      if (!loop)
+        s2.loopStart = 0;
+      return s2;
+    }
+    // постоянные петли: шипение пара и гул котла
+    buildLoops() {
+      const c = this.ctx;
+      const n = this.noiseSrc(true);
+      const f = c.createBiquadFilter();
+      f.type = "bandpass";
+      f.frequency.value = 3200;
+      f.Q.value = 0.6;
+      const g = c.createGain();
+      g.gain.value = 0;
+      n.connect(f);
+      f.connect(g);
+      g.connect(this.sfx);
+      n.start();
+      this.hiss = { g, f };
+      const o1 = c.createOscillator(), o2 = c.createOscillator();
+      o1.type = "sawtooth";
+      o2.type = "triangle";
+      o1.frequency.value = 48;
+      o2.frequency.value = 71;
+      const lf = c.createBiquadFilter();
+      lf.type = "lowpass";
+      lf.frequency.value = 180;
+      const rg = c.createGain();
+      rg.gain.value = 0;
+      const lfo = c.createOscillator();
+      lfo.frequency.value = 6;
+      const lg = c.createGain();
+      lg.gain.value = 0.02;
+      lfo.connect(lg);
+      lg.connect(rg.gain);
+      o1.connect(lf);
+      o2.connect(lf);
+      lf.connect(rg);
+      rg.connect(this.sfx);
+      o1.start();
+      o2.start();
+      lfo.start();
+      this.rumble = { g: rg, o1, o2, lfo };
+    }
+    // непрерывное состояние: hiss 0..1, rumble 0..1 (зависит от давления)
+    ambient(hiss, rumble) {
+      if (!this.ctx)
+        return;
+      const t = this.ctx.currentTime;
+      this.hiss.g.gain.setTargetAtTime(this.enabled ? Math.min(0.5, hiss * 0.5) : 0, t, 0.08);
+      this.hiss.f.frequency.setTargetAtTime(2200 + hiss * 2800, t, 0.1);
+      this.rumble.g.gain.setTargetAtTime(Math.min(0.1, rumble * 0.1), t, 0.2);
+      this.rumble.o1.frequency.setTargetAtTime(42 + rumble * 22, t, 0.3);
+      this.rumble.lfo.frequency.setTargetAtTime(3 + rumble * 9, t, 0.3);
+    }
+    silence() {
+      this.ambient(0, 0);
+    }
+    // --- короткие эффекты
+    gate(name, ms) {
+      const n = performance.now();
+      if (this.lastT[name] && n - this.lastT[name] < ms)
+        return false;
+      this.lastT[name] = n;
+      return true;
+    }
+    env(g, t, a, peak, d) {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + a);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + a + d);
+    }
+    tone(freq, dur, type = "sine", vol = 0.3, when = 0, dest, slideTo) {
+      if (!this.ctx)
+        return;
+      const c = this.ctx, t = c.currentTime + when;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if (slideTo)
+        o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+      this.env(g, t, 6e-3, vol, dur);
+      o.connect(g);
+      g.connect(dest || this.sfx);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    noise(dur, freq, q, vol, when = 0, type = "bandpass", dest, fto) {
+      if (!this.ctx)
+        return;
+      const c = this.ctx, t = c.currentTime + when;
+      const s2 = this.noiseSrc();
+      s2.loopStart = 0;
+      const f = c.createBiquadFilter();
+      f.type = type;
+      f.frequency.setValueAtTime(freq, t);
+      if (fto)
+        f.frequency.exponentialRampToValueAtTime(fto, t + dur);
+      f.Q.value = q;
+      const g = c.createGain();
+      this.env(g, t, 0.01, vol, dur);
+      s2.connect(f);
+      f.connect(g);
+      g.connect(dest || this.sfx);
+      s2.start(t, this.rng() * 1.5, dur + 0.1);
+    }
+    play(name, arg) {
+      if (!this.ctx || !this.enabled)
+        return;
+      switch (name) {
+        case "click":
+          if (this.gate("click", 40)) {
+            this.tone(900, 0.05, "square", 0.08);
+            this.tone(1300, 0.04, "square", 0.05, 0.02);
+          }
+          break;
+        case "shovel":
+          this.noise(0.18, 600, 1.2, 0.5);
+          this.tone(120, 0.14, "triangle", 0.4, 0, null, 60);
+          this.tone(2400 + this.rng() * 600, 0.05, "square", 0.05, 0.03);
+          this.noise(0.5, 900, 0.5, 0.18, 0.08, "lowpass", null, 200);
+          break;
+        case "spill":
+          this.noise(0.25, 300, 0.7, 0.4);
+          this.tone(90, 0.2, "sawtooth", 0.15, 0, null, 50);
+          break;
+        case "nocoal":
+          if (this.gate("nocoal", 300)) {
+            this.tone(180, 0.15, "square", 0.18);
+            this.tone(140, 0.2, "square", 0.18, 0.12);
+          }
+          break;
+        case "valve":
+          if (this.gate("valve", 70)) {
+            const f = 160 + (arg || 0) * 220;
+            this.tone(f, 0.07, "triangle", 0.1);
+            this.noise(0.05, 2500, 3, 0.06);
+          }
+          break;
+        case "leak":
+          this.noise(0.5, 4500, 0.8, 0.25, 0, "highpass");
+          this.tone(720, 0.12, "square", 0.1);
+          this.tone(540, 0.16, "square", 0.1, 0.14);
+          break;
+        case "fix":
+          this.tone(260, 0.1, "triangle", 0.35, 0, null, 140);
+          this.noise(0.14, 1600, 2, 0.3);
+          this.tone(880, 0.12, "sine", 0.12, 0.08);
+          break;
+        case "vent":
+          if (this.gate("vent", 160))
+            this.noise(0.22, 5200, 0.7, 0.25, 0, "highpass");
+          break;
+        case "warn":
+          if (this.gate("warn", 900)) {
+            this.tone(660, 0.18, "square", 0.1);
+            this.tone(660, 0.18, "square", 0.1, 0.26);
+          }
+          break;
+        case "loss":
+          if (this.gate("loss", 900)) {
+            this.tone(70, 0.5, "sine", 0.35, 0, null, 40);
+          }
+          break;
+        case "collapse":
+          this.tone(110, 0.8, "sawtooth", 0.25, 0, null, 38);
+          this.noise(0.9, 800, 0.5, 0.4, 0, "lowpass", null, 120);
+          break;
+        case "boom":
+          this.noise(2.2, 400, 0.4, 0.9, 0, "lowpass", null, 60);
+          this.tone(60, 1.6, "sine", 0.9, 0, null, 24);
+          this.noise(1.4, 3e3, 0.6, 0.5, 0.05, "highpass");
+          break;
+        case "timka":
+          this.noise(0.14, 700, 1.2, 0.3);
+          this.tone(520, 0.08, "triangle", 0.12);
+          break;
+        case "tut":
+          this.tone(660, 0.12, "triangle", 0.22);
+          this.tone(990, 0.2, "triangle", 0.22, 0.1);
+          break;
+        case "event":
+          this.tone(330, 0.3, "sawtooth", 0.12, 0, null, 300);
+          this.tone(247, 0.4, "sawtooth", 0.1, 0.15);
+          break;
+        case "nightend":
+          [392, 494, 587, 784].forEach((f, i) => this.tone(f, 0.5, "triangle", 0.22, i * 0.13));
+          this.noise(0.8, 3e3, 0.5, 0.1, 0, "highpass");
+          break;
+        case "night":
+          this.tone(196, 0.9, "sawtooth", 0.12, 0, null, 150);
+          this.noise(0.7, 500, 0.5, 0.2, 0, "lowpass", null, 150);
+          break;
+        case "gear":
+          if (this.gate("gear", 90))
+            this.tone(1800 + this.rng() * 300, 0.025, "square", 0.04);
+          break;
+        case "end-good":
+          [262, 330, 392, 523, 659, 784].forEach((f, i) => {
+            this.tone(f, 1.2, "triangle", 0.2, i * 0.18);
+            this.tone(f * 2, 0.9, "sine", 0.07, i * 0.18);
+          });
+          break;
+        case "end-bitter":
+          [262, 311, 392, 466].forEach((f, i) => this.tone(f, 1.4, "triangle", 0.2, i * 0.3));
+          break;
+        case "end-fail":
+          [196, 185, 165, 131].forEach((f, i) => this.tone(f, 1.6, "sawtooth", 0.14, i * 0.4));
+          break;
+      }
+    }
+    // --- музыка: минорная паровая «шарманка» с поршневым ритмом
+    startMusic() {
+      this.wantMusic = true;
+      if (!this.ctx || this.musicOn)
+        return;
+      this.musicOn = true;
+      this.step = 0;
+      this.nextT = this.ctx.currentTime + 0.1;
+      this.musicTimer = setInterval(() => this.schedule(), 120);
+    }
+    stopMusic() {
+      this.wantMusic = false;
+      this.musicOn = false;
+      clearInterval(this.musicTimer);
+    }
+    setIntensity(x) {
+      this.intensity = x;
+    }
+    schedule() {
+      if (!this.ctx || !this.musicOn)
+        return;
+      const c = this.ctx, bpm = 92 + (this.intensity || 0) * 22, sp = 60 / bpm / 2;
+      while (this.nextT < c.currentTime + 0.4) {
+        const st = this.step % 64, bar = Math.floor(st / 8) % 8, t = this.nextT;
+        const prog = [57, 53, 48, 55, 57, 53, 52, 55];
+        const root = prog[bar] - 24;
+        if (st % 4 === 0)
+          this.mtone(midi(root), sp * 3.6, "triangle", 0.28, t);
+        if (st % 8 === 4)
+          this.mtone(midi(root + 7), sp * 2, "triangle", 0.16, t);
+        if (st % 4 === 0)
+          this.mnoise(0.1, 220, 0.5, 0.5, t, "lowpass");
+        if (st % 2 === 1)
+          this.mnoise(0.05, 7e3, 0.7, 0.08, t, "highpass");
+        if (st % 8 === 6)
+          this.mnoise(0.09, 1600, 1, 0.12, t, "bandpass");
+        const chord = [0, 3 + (bar === 1 || bar === 2 || bar === 3 || bar === 5 || bar === 7 ? 1 : 0), 7];
+        const arp = [0, 2, 1, 2, 0, 1, 2, 1][st % 8];
+        const nn = prog[bar] + chord[arp] + (st % 16 >= 8 ? 12 : 0);
+        this.mtone(midi(nn), sp * 0.9, "square", 0.055, t, 1500);
+        if (st >= 32) {
+          const mel = [[0, 7, 0, 3, 0, 0, 5, 3], [3, 0, 5, 0, 7, 0, 5, 0], [7, 0, 0, 5, 3, 0, 2, 0], [0, 0, 3, 5, 7, 0, 0, 0]][bar % 4][st % 8];
+          if (mel || st % 8 === 0) {
+            if (!(mel === 0 && st % 8 !== 0))
+              this.mtone(midi(prog[bar] + 12 + mel), sp * 1.7, "sawtooth", 0.07, t, 1900);
+          }
+        }
+        this.nextT += sp;
+        this.step++;
+      }
+    }
+    mtone(f, dur, type, vol, t, lp) {
+      const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+      o.type = type;
+      o.frequency.value = f;
+      let out = g;
+      if (lp) {
+        const fl = c.createBiquadFilter();
+        fl.type = "lowpass";
+        fl.frequency.value = lp;
+        g.connect(fl);
+        out = fl;
+      }
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      o.connect(g);
+      out.connect(this.music);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    mnoise(dur, freq, q, vol, t, type) {
+      const c = this.ctx, s2 = this.noiseSrc(), f = c.createBiquadFilter(), g = c.createGain();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 6e-3);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      s2.connect(f);
+      f.connect(g);
+      g.connect(this.music);
+      s2.start(t, this.rng() * 1.5, dur + 0.1);
+    }
+  };
+  for (const name of ["applyVol", "set", "ambient", "silence", "play", "startMusic", "unlock", "prime", "keepAlive", "tryResume", "resumeIfNeeded", "stopMusic", "setIntensity", "schedule"]) {
+    const orig = Sound.prototype[name];
+    Sound.prototype[name] = function(...args) {
+      try {
+        return orig.apply(this, args);
+      } catch (e) {
+        this.errors = (this.errors || 0) + 1;
+        return void 0;
+      }
+    };
+  }
+  function midi(n) {
+    return 440 * Math.pow(2, (n - 69) / 12);
+  }
+
+  // src/bot.js
+  function botAct(s2, skill = "good", opts = {}) {
+    var _a, _b;
+    if (s2.phase === "summary") {
+      continueSummary(s2);
+      return;
+    }
+    if (s2.phase === "card") {
+      chooseCard(s2, pickChoice(s2, opts));
+      return;
+    }
+    if (s2.phase !== "night")
+      return;
+    if (skill === "idle")
+      return;
+    const react = (_a = opts.react) != null ? _a : skill === "good" ? 0.35 : 0.9;
+    s2._botT = s2._botT || 0;
+    if (s2.tut && s2.tut.active) {
+      const id = TUTORIAL[s2.tut.step].id;
+      const want2 = [0, 1, 2, 3].map((d) => Math.min(1, needNow(s2, d) / CAP[d]));
+      if (id === "shovel" || id === "pressure") {
+        if (s2.fire < 30)
+          shovel(s2);
+        return;
+      }
+      if (s2.fire < 35)
+        shovel(s2);
+      if (id === "hosp")
+        setValve(s2, 0, want2[0]);
+      if (id === "home") {
+        setValve(s2, 0, want2[0]);
+        setValve(s2, 1, want2[1]);
+      }
+      if (id === "fact") {
+        setValve(s2, 2, want2[2]);
+      }
+      if (id === "scrub") {
+        setValve(s2, 3, want2[3]);
+      }
+      if (id === "leak") {
+        if (s2.leaks.length)
+          fixLeak(s2, null);
+      }
+      return;
+    }
+    if (skill === "reckless") {
+      if (s2.fire < 98)
+        shovel(s2);
+      for (let i = 0; i < 4; i++)
+        setValve(s2, i, 0);
+      if (s2.leaks.length)
+        fixLeak(s2, null);
+      return;
+    }
+    if (skill === "bad") {
+      if (s2.fire < 90)
+        shovel(s2);
+      setValve(s2, 0, 0.2);
+      setValve(s2, 1, 0.3);
+      setValve(s2, 2, 1);
+      setValve(s2, 3, 0);
+      return;
+    }
+    if (s2.clock - s2._botT < react)
+      return;
+    s2._botT = s2.clock;
+    const need = [0, 1, 2, 3].map((d) => needNow(s2, d));
+    const want = need.map((n, d) => Math.min(1, n / CAP[d]));
+    const aim = skill === "good" ? 1 : skill === "stingy" ? (_b = opts.aim) != null ? _b : 0.62 : 0.85;
+    setValve(s2, 0, Math.min(1, want[0] * aim * 1.05));
+    setValve(s2, 1, Math.min(1, want[1] * aim * 1));
+    const coalLow = s2.coal < 18;
+    let fact = want[2] * (coalLow ? 1 : 0.8);
+    if (!opts.pusher) {
+      if (s2.fw > 70)
+        fact = want[2] * 0.4;
+      else if (s2.fw > 55 && !coalLow)
+        fact = want[2] * 0.6;
+      if (s2.burnT > 0)
+        fact = 0.3;
+    } else
+      fact = want[2] * 1.1;
+    setValve(s2, 2, Math.min(1, fact));
+    setValve(s2, 3, Math.min(1, want[3] * (s2.smog > 25 ? 1.3 : 1) * (skill === "good" ? 1 : 0.6)));
+    if (s2.leaks.length && s2.leaks[0].age > react)
+      fixLeak(s2, null);
+    const target = skill === "good" ? 56 : 48;
+    const flowTot = s2.flow.reduce((a, b) => a + b, 0);
+    const wantFire = Math.min(80, flowTot / 0.16 + (target - s2.P) * 1.4 + 6);
+    if (s2.fire < wantFire - 7 && s2.P < 80)
+      shovel(s2);
+  }
+  function pickChoice(s2, opts) {
+    const c = s2.card.id;
+    const p = opts.policy || "good";
+    const table = {
+      good: { timka: "ration", shift: "refuse", brown: "decline", sloboda: "aid" },
+      greedy: { timka: "help", shift: "extend", brown: "accept", sloboda: "keep" },
+      smoky: { timka: "ration", shift: "refuse", brown: "accept", sloboda: "aid" },
+      iron: { timka: "help", shift: "extend", brown: "decline", sloboda: "aid" }
+    };
+    return (table[p] || table.good)[c];
+  }
+
+  // src/coach.js
+  var COACH = { WINDOW: 20, NEED: 3, COOLDOWN: 45, CAT_COOLDOWN: 90, PER_NIGHT: 3, STALL: 25, STALL_COOLDOWN: 40, RING: 7 };
+  var NAMES = ["\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044F", "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u043E\u0432", "\u0417\u0430\u0432\u043E\u0434\u0430", "\u0424\u0438\u043B\u044C\u0442\u0440\u043E\u0432"];
+  var NAMES_NOM = ["\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C", "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u044B", "\u0417\u0430\u0432\u043E\u0434", "\u0424\u0438\u043B\u044C\u0442\u0440\u044B"];
+  var HINTS = {
+    valve_close: (i) => ({ text: `\u0412\u0435\u043D\u0442\u0438\u043B\u044C ${NAMES[i]} \u043F\u043E\u0447\u0442\u0438 \u0437\u0430\u043A\u0440\u044B\u0442, \u0430 \u043B\u044E\u0434\u044F\u043C \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043F\u0430\u0440\u0430. \u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0435\u0433\u043E \u0434\u043E \u0437\u043E\u043B\u043E\u0442\u043E\u0439 \u043E\u0442\u043C\u0435\u0442\u043A\u0438.`, ring: "v" + i }),
+    valve_open: (i) => ({ text: `${NAMES_NOM[i]} \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u0430\u0440\u0430, \u0447\u0435\u043C \u043D\u0443\u0436\u043D\u043E, \u2014 \u043B\u0438\u0448\u043D\u0435\u0435 \u0443\u0445\u043E\u0434\u0438\u0442 \u0432\u043F\u0443\u0441\u0442\u0443\u044E. \u041F\u0440\u0438\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0434\u043E \u043E\u0442\u043C\u0435\u0442\u043A\u0438.`, ring: "v" + i }),
+    shovel_waste: () => ({ text: "\u0422\u043E\u043F\u043A\u0430 \u0443\u0436\u0435 \u043F\u043E\u043B\u043D\u0430 \u2014 \u0443\u0433\u043E\u043B\u044C \u0432\u044B\u0441\u044B\u043F\u0430\u0435\u0442\u0441\u044F. \u041F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0439\u0442\u0435, \u043A\u043E\u0433\u0434\u0430 \u0436\u0430\u0440 \u043E\u043F\u0443\u0441\u043A\u0430\u0435\u0442\u0441\u044F.", ring: "shovel" }),
+    p_high: () => ({ text: "\u0414\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0443 \u043A\u0440\u0430\u0441\u043D\u043E\u0439 \u0447\u0435\u0440\u0442\u044B! \u041F\u0440\u0438\u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u0438 \u0438 \u043D\u0435 \u043F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0433\u043E\u043B\u044C, \u043F\u043E\u043A\u0430 \u0441\u0442\u0440\u0435\u043B\u043A\u0430 \u043D\u0435 \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F \u0432 \u0437\u0435\u043B\u0451\u043D\u0443\u044E \u0437\u043E\u043D\u0443.", ring: "gauge" }),
+    p_low: () => ({ text: "\u0414\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442, \u0442\u043E\u043F\u043A\u0430 \u043E\u0441\u0442\u044B\u0432\u0430\u0435\u0442 \u2014 \u043F\u043E\u0434\u0431\u0440\u043E\u0441\u044C\u0442\u0435 \u0443\u0433\u043E\u043B\u044C (\u041F\u0420\u041E\u0411\u0415\u041B).", ring: "shovel" }),
+    leak: () => ({ text: "\u0423\u0442\u0435\u0447\u043A\u0430 \u043F\u0430\u0440\u0430! \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043E\u0431\u043B\u0430\u0447\u043A\u043E \u043D\u0430\u0434 \u0442\u0440\u0443\u0431\u043E\u0439 (\u0438\u043B\u0438 F), \u0447\u0442\u043E\u0431\u044B \u0437\u0430\u0442\u043A\u043D\u0443\u0442\u044C \u0435\u0451.", ring: "leak" }),
+    smog: () => ({ text: "\u0413\u043E\u0440\u043E\u0434 \u0437\u0430\u0434\u044B\u0445\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0434\u044B\u043C\u0430. \u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0424\u0438\u043B\u044C\u0442\u0440\u043E\u0432 \u0434\u043E \u043E\u0442\u043C\u0435\u0442\u043A\u0438.", ring: "v3" })
+  };
+  var Coach = class {
+    constructor(opts = {}) {
+      this.o = __spreadValues(__spreadValues({}, COACH), opts);
+      this.reset();
+    }
+    reset() {
+      this.streak = [];
+      this.lastHint = -1e9;
+      this.catLast = {};
+      this.nightCount = 0;
+      this.night = -1;
+      this.prev = null;
+      this.sampleT = 0;
+      this.cond = { p_high: 0, p_low: 0, leak: 0, smog: 0 };
+      this.ringId = null;
+      this.ringUntil = -1;
+      this.stepKey = null;
+      this.stepAt = 0;
+      this.stallLast = -1e9;
+      this.shown = 0;
+    }
+    ring(clock) {
+      return clock < this.ringUntil ? this.ringId : null;
+    }
+    good() {
+      this.streak.length = 0;
+    }
+    bad(clock, cat, i = 0) {
+      this.streak.push({ t: clock, cat, i });
+      this.streak = this.streak.filter((x) => clock - x.t <= this.o.WINDOW);
+    }
+    // события симуляции: 'shovel' {good}, 'spill', 'fix'
+    onEvent(e, s2) {
+      const c = s2.clock;
+      if (e.type === "shovel") {
+        if (e.good === false)
+          this.bad(c, "shovel_waste");
+        else if (s2.fire < 60)
+          this.good();
+      } else if (e.type === "spill")
+        this.bad(c, "shovel_waste");
+      else if (e.type === "fix")
+        this.good();
+    }
+    // вызывать каждый шаг симуляции в фазе «ночь». Возвращает подсказку {text, ring, cat} или null.
+    update(s2, dt) {
+      var _a;
+      const c = s2.clock;
+      if (s2.night !== this.night) {
+        this.night = s2.night;
+        this.nightCount = 0;
+        this.streak = [];
+        this.prev = s2.valves.slice();
+        this.sampleT = c;
+        this.cond = { p_high: 0, p_low: 0, leak: 0, smog: 0 };
+      }
+      if (!this.prev) {
+        this.prev = s2.valves.slice();
+        this.sampleT = c;
+      }
+      if (c - this.sampleT >= 0.3) {
+        for (let i = 0; i < 4; i++) {
+          const d = s2.valves[i] - this.prev[i];
+          if (Math.abs(d) < 0.04)
+            continue;
+          const m = Math.min(1, s2.needNow[i] / CAP[i]), from = this.prev[i];
+          if (m <= 0.02)
+            continue;
+          if (d < 0 && from < m - 0.06 && s2.sat[i] < 0.85)
+            this.bad(c, "valve_close", i);
+          else if (d > 0 && from > m + 0.2)
+            this.bad(c, "valve_open", i);
+          else if (d > 0 && from < m - 0.04 || d < 0 && from > m + 0.1)
+            this.good();
+          this.prev[i] = s2.valves[i];
+        }
+        for (let i = 0; i < 4; i++)
+          if (Math.abs(s2.valves[i] - this.prev[i]) < 0.04 && c - this.sampleT > 1.2)
+            this.prev[i] = s2.valves[i];
+        this.sampleT = c;
+      }
+      const cond = (k, on, period, cat) => {
+        if (!on) {
+          this.cond[k] = 0;
+          return;
+        }
+        this.cond[k] += dt;
+        if (this.cond[k] >= period) {
+          this.cond[k] -= period;
+          this.bad(c, cat, k === "smog" ? 3 : 0);
+        }
+      };
+      cond("p_high", s2.P >= 90, 6, "p_high");
+      cond("p_low", s2.P < 12 && s2.fire < 25 && s2.coal >= 1 && !(s2.tut && s2.tut.active), 8, "p_low");
+      cond("leak", s2.leaks.length > 0 && !(s2.tut && s2.tut.active), 7, "leak");
+      cond("smog", s2.smog > 70 && s2.valves[3] < Math.min(1, s2.needNow[3] / CAP[3]) - 0.1, 8, "smog");
+      this.streak = this.streak.filter((x) => c - x.t <= this.o.WINDOW);
+      if (this.streak.length >= this.o.NEED && c - this.lastHint >= this.o.COOLDOWN && this.nightCount < this.o.PER_NIGHT) {
+        const last2 = this.streak[this.streak.length - 1];
+        if (c - ((_a = this.catLast[last2.cat + last2.i]) != null ? _a : -1e9) >= this.o.CAT_COOLDOWN)
+          return this.fire(c, last2.cat, last2.i);
+      }
+      if (s2.tut && s2.tut.active) {
+        const step2 = s2.tut.step;
+        if (this.stepKey !== step2) {
+          this.stepKey = step2;
+          this.stepAt = c;
+        }
+        if (c - this.stepAt >= this.o.STALL && c - this.stallLast >= this.o.STALL_COOLDOWN && c - this.lastHint >= 8) {
+          const T = TUTORIAL[step2];
+          this.stallLast = c;
+          if (T && T.hint)
+            return this.fire(c, "stall", 0, { text: T.text, ring: T.hint }, true);
+        }
+      }
+      return null;
+    }
+    fire(c, cat, i, custom, noCount) {
+      const h = custom || HINTS[cat](i);
+      this.lastHint = c;
+      this.catLast[cat + i] = c;
+      if (!noCount) {
+        this.nightCount++;
+        this.streak = [];
+      }
+      this.ringId = h.ring;
+      this.ringUntil = c + this.o.RING;
+      this.shown++;
+      return { text: h.text, ring: h.ring, cat };
+    }
+  };
+
+  // src/notes.js
+  var NOTES = {
+    FIRST: 45,
+    // не раньше чем через 45 с после начала ночи
+    QUIET_HINT: 15,
+    // тишина после подсказки тренера
+    QUIET_ALARM: 12,
+    // и после аварийных событий (утечка, падение, сброс)
+    DEFAULT_GAP: 150,
+    MIN_GAP: 60,
+    MAX_GAP: 900,
+    // интервал между заметками (сервер может задать свой через next_s)
+    PER_NIGHT: 3,
+    MAX_PER_NIGHT: 6,
+    RETRY: 60,
+    // после ошибки сети/лимита — не раньше чем через минуту
+    SHOW: 14,
+    // сколько секунд заметка висит в панели
+    FAILS_OFF: 4
+    // после стольких сбоев подряд до конца ночи не спрашиваем
+  };
+  function isCrisis(s2) {
+    return s2.leaks.length > 0 || s2.P >= 85 || s2.P < 12 && s2.fire < 25 || s2.danger > 0 || s2.burnT > 0 || s2.venting;
+  }
+  var Notes = class {
+    constructor(opts = {}) {
+      this.o = __spreadValues(__spreadValues({}, NOTES), opts);
+      this.reset();
+    }
+    reset() {
+      this.t = 0;
+      this.night = -1;
+      this.nightT = 0;
+      this.count = 0;
+      this.nextAt = 0;
+      this.busy = false;
+      this.enabled = true;
+      this.gap = this.o.DEFAULT_GAP;
+      this.perNight = this.o.PER_NIGHT;
+      this.fails = 0;
+      this.lastHint = -1e9;
+      this.lastAlarm = -1e9;
+      this.ev = {};
+      this.shown = 0;
+      this.token = 0;
+    }
+    noteHint() {
+      this.lastHint = this.t;
+    }
+    onEvent(e) {
+      const t = this.t;
+      if (e.type === "leak" || e.type === "spill" || e.type === "collapse" || e.type === "vent")
+        this.lastAlarm = t;
+      if (e.type === "fix")
+        this.ev.leak = t;
+      if (e.type === "collapse")
+        this.ev.collapse = t;
+      if (e.type === "loss")
+        this.ev.loss = t;
+      if (e.type === "vent")
+        this.ev.vent = t;
+    }
+    // Какую ситуацию описать (null — сейчас не время).
+    situation(s2) {
+      if (isCrisis(s2))
+        return null;
+      const t = this.t, recent = (k, w) => this.ev[k] != null && t - this.ev[k] <= w;
+      if (recent("collapse", 60))
+        return "collapse";
+      if (recent("loss", 40))
+        return "pop_loss";
+      if (recent("vent", 40) || s2.P > P_GREEN[1])
+        return "pressure_high";
+      if (recent("leak", 30))
+        return "leak";
+      if (s2.coal < 18)
+        return "coal_low";
+      if (s2.smog > 60)
+        return "smog_high";
+      if (this.nightT < 100)
+        return "night_start";
+      return "calm";
+    }
+    // Вызывать каждый шаг в фазе «ночь». Возвращает {s: ситуация, n: ночь} если пора запросить заметку, иначе null.
+    update(s2, dt) {
+      if (s2.phase !== "night")
+        return null;
+      if (s2.night !== this.night) {
+        this.night = s2.night;
+        this.nightT = 0;
+        this.count = 0;
+        this.fails = 0;
+        this.nextAt = Math.max(this.nextAt, this.t + this.o.FIRST);
+      }
+      this.t += dt;
+      this.nightT += dt;
+      if (!this.enabled || this.busy || this.count >= this.perNight || this.fails >= this.o.FAILS_OFF)
+        return null;
+      if (s2.tut && s2.tut.active)
+        return null;
+      if (this.nightT < this.o.FIRST || this.t < this.nextAt)
+        return null;
+      if (this.t - this.lastHint < this.o.QUIET_HINT || this.t - this.lastAlarm < this.o.QUIET_ALARM)
+        return null;
+      const sit = this.situation(s2);
+      if (!sit)
+        return null;
+      this.busy = true;
+      this.token++;
+      return { s: sit, n: Math.max(1, Math.min(10, (s2.night | 0) + 1)), token: this.token };
+    }
+    // Ответ сервера (r — результат net.call). Возвращает текст для показа или null.
+    accept(r, req, s2) {
+      if (!req || req.token !== this.token)
+        return null;
+      this.busy = false;
+      const d = r && r.ok && r.data;
+      if (!d || typeof d !== "object") {
+        this.fails++;
+        this.nextAt = this.t + this.o.RETRY;
+        return null;
+      }
+      if (d.enabled === false) {
+        this.enabled = false;
+        return null;
+      }
+      this.fails = 0;
+      const num = (v, lo, hi, def) => typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def;
+      this.gap = num(d.next_s, this.o.MIN_GAP, this.o.MAX_GAP, this.o.DEFAULT_GAP);
+      this.perNight = Math.round(num(d.per_night, 1, this.o.MAX_PER_NIGHT, this.o.PER_NIGHT));
+      const text2 = typeof d.note === "string" ? d.note.trim() : "";
+      if (!text2 || text2.length > 300) {
+        this.nextAt = this.t + num(d.retry_s, 10, 300, this.o.RETRY);
+        return null;
+      }
+      if (s2 && (s2.phase !== "night" || isCrisis(s2) || this.t - this.lastHint < 5)) {
+        this.nextAt = this.t + 20;
+        return null;
+      }
+      this.count++;
+      this.shown++;
+      this.nextAt = this.t + this.gap;
+      return text2;
+    }
+    fail() {
+      this.busy = false;
+      this.fails++;
+      this.nextAt = this.t + this.o.RETRY;
+    }
+  };
+
+  // src/net.js
+  var BASE = "https://185-255-133-179.sslip.io/steam/api/g" ? "https://185-255-133-179.sslip.io/steam/api/g".replace(/\/+$/, "") : "/api/g";
+  var TIMEOUT = 3e3;
+  function call(path, body, opts = {}) {
+    if (typeof fetch !== "function")
+      return Promise.resolve(null);
+    const limit = Math.min(opts.timeout || TIMEOUT, TIMEOUT);
+    const ctl = typeof AbortController === "function" ? new AbortController() : null;
+    let timer = 0;
+    const deadline = new Promise((res) => {
+      timer = setTimeout(() => {
+        try {
+          if (ctl)
+            ctl.abort();
+        } catch (e) {
+        }
+        res(null);
+      }, limit);
+    });
+    const req = (async () => {
+      try {
+        const r = await fetch(BASE + path, {
+          method: body === void 0 ? "GET" : "POST",
+          signal: ctl ? ctl.signal : void 0,
+          cache: "no-store",
+          credentials: "omit",
+          keepalive: !!opts.keepalive,
+          headers: body === void 0 ? void 0 : { "content-type": "application/json" },
+          body: body === void 0 ? void 0 : JSON.stringify(body)
+        });
+        let j = null;
+        try {
+          j = await r.json();
+        } catch (e) {
+        }
+        return { ok: r.ok, status: r.status, data: j };
+      } catch (e) {
+        return null;
+      }
+    })();
+    return Promise.race([req, deadline]).then((v) => {
+      clearTimeout(timer);
+      return v;
+    }, () => {
+      clearTimeout(timer);
+      return null;
+    });
+  }
+  function deviceInfo(nav = typeof navigator !== "undefined" ? navigator : {}, scr = typeof screen !== "undefined" ? screen : {}, win = typeof window !== "undefined" ? window : {}) {
+    const ua = nav.userAgent || "";
+    const platform = /Android/i.test(ua) ? "android" : /iPhone|iPad|iPod/i.test(ua) || /Macintosh/i.test(ua) && nav.maxTouchPoints > 1 ? "ios" : /Windows/i.test(ua) ? "windows" : /Macintosh|Mac OS/i.test(ua) ? "mac" : /Linux|X11|CrOS/i.test(ua) ? "linux" : "other";
+    const m = ua.match(/(Edg|OPR|Firefox|FxiOS|CriOS|SamsungBrowser|Chrome|Version)\/(\d+)/);
+    const names = { Edg: "Edge", OPR: "Opera", FxiOS: "Firefox", CriOS: "Chrome", Version: "Safari" };
+    const browser = m ? `${names[m[1]] || m[1]}/${m[2]}` : /Safari/.test(ua) ? "Safari" : "other";
+    const sw = Math.round(win.innerWidth || scr.width || 0), sh = Math.round(win.innerHeight || scr.height || 0);
+    return { platform, sw, sh, touch: !!(nav.maxTouchPoints > 0), ua: `${browser} ${platform}` };
+  }
+  var Run = class {
+    constructor(enabled) {
+      this.enabled = enabled;
+      this.token = null;
+      this.sent = 0;
+      this.pending = null;
+    }
+    async begin() {
+      this.token = null;
+      this.pending = call("/run", {}).then((r) => {
+        this.token = r && r.ok && r.data && r.data.token ? r.data.token : null;
+        return this.token;
+      });
+      return this.pending;
+    }
+    get online() {
+      return !!this.token;
+    }
+    async event(type, data) {
+      if (!this.enabled())
+        return false;
+      if (this.pending)
+        await this.pending;
+      if (!this.token)
+        return false;
+      const r = await call("/event", { token: this.token, type, data }, { keepalive: true });
+      if (r && r.ok) {
+        this.sent++;
+        return true;
+      }
+      return false;
+    }
+    async submit(result, nick, pid) {
+      if (this.pending)
+        await this.pending;
+      if (!this.token)
+        return null;
+      return call("/score", __spreadValues({ token: this.token, pid, nick }, result));
+    }
+  };
+  async function fetchBoard(board) {
+    const r = await call("/leaderboard?board=" + encodeURIComponent(board) + "&limit=20");
+    return r && r.ok && r.data && Array.isArray(r.data.entries) ? r.data.entries : null;
+  }
+  function randomId() {
+    const a = new Uint8Array(12);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues)
+      crypto.getRandomValues(a);
+    else
+      for (let i = 0; i < a.length; i++)
+        a[i] = Math.random() * 256;
+    return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // src/score.js
+  var ENDING_BONUS = { light: 300, smoke: 150, iron: 150, cold: 50, boom: 0, silence: 0 };
+  function computeScore({ nights, pop, ending, burnouts = 0, smog = 0 }) {
+    return Math.max(0, nights * 100 + Math.round(pop / 2) + (ENDING_BONUS[ending] || 0) - burnouts * 25 - smog);
+  }
+  function nightsDone(s2) {
+    return s2.ending === "boom" || s2.ending === "silence" ? Math.min(s2.night, 9) : 10;
+  }
+  function runResult(s2, smogAvgFn, durS) {
+    const nights = nightsDone(s2), pop = Math.max(0, Math.min(1e3, Math.round(s2.pop)));
+    const burnouts = Math.min(60, s2.burnouts | 0), smog = Math.max(0, Math.min(100, Math.round(smogAvgFn(s2))));
+    return { ending: s2.ending, nights, pop, burnouts, smog, duration_s: Math.round(durS * 10) / 10, score: computeScore({ nights, pop, ending: s2.ending, burnouts, smog }) };
+  }
+
+  // src/main.js
+  var DT = 1 / 60;
+  var SAVE_KEY = "last-boiler-save-v1";
+  var SET_KEY = "last-boiler-settings-v1";
+  var META_KEY = "last-boiler-meta-v1";
+  var NICK_KEY = "last-boiler-nick-v1";
+  var PID_KEY = "last-boiler-pid-v1";
+  var $ = (id) => document.getElementById(id);
+  var params = new URLSearchParams(location.search);
+  var DEBUG = params.has("debug");
+  var canvas = $("game");
+  var ctx = canvas.getContext("2d");
+  var sound = new Sound();
+  var fx = new Fx();
+  var mq = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+  var store = {
+    get(k) {
+      try {
+        return localStorage.getItem(k);
+      } catch (e) {
+        return null;
+      }
+    },
+    set(k, v) {
+      try {
+        localStorage.setItem(k, v);
+      } catch (e) {
+      }
+    },
+    del(k) {
+      try {
+        localStorage.removeItem(k);
+      } catch (e) {
+      }
+    }
+  };
+  var settings = { stats: true, sound: true, sfx: 70, music: 60, reduce: mq.matches, shake: true };
+  try {
+    const saved = JSON.parse(store.get(SET_KEY) || "{}");
+    if (saved.sfx === void 0 && saved.vol !== void 0) {
+      saved.sfx = saved.vol;
+      if (saved.music !== void 0)
+        saved.music = Math.min(100, saved.music + 10);
+    }
+    delete saved.vol;
+    Object.assign(settings, saved);
+  } catch (e) {
+  }
+  for (const k of ["sfx", "music"])
+    settings[k] = Math.max(0, Math.min(100, +settings[k] || 0));
+  var meta = { endings: [], plays: 0 };
+  try {
+    Object.assign(meta, JSON.parse(store.get(META_KEY) || "{}"));
+  } catch (e) {
+  }
+  var s = createState(1);
+  var ui = "title";
+  var prevUi = "title";
+  var snap = null;
+  var log = [];
+  var banner = null;
+  var time = 0;
+  var acc = 0;
+  var last = 0;
+  var endTimer = 0;
+  var view = { portrait: false, scale: 1, W: 1100, H: 700 };
+  var L = makeLayout(1100, 700, false);
+  var dpr = 1;
+  var bg = null;
+  var city = null;
+  var input = { sel: 0, drag: -1, shovelDown: 0, hover: null };
+  var vis = { needle: 22, fireShown: 0, satShown: [1, 1, 1, 1], popShown: POP_START, swing: 0, kidSwing: 0, wheelKick: [0, 0, 0, 0], snow: [], t: 0, shakeKick: 0 };
+  var speedParam = DEBUG ? Math.max(1, Math.min(60, +(params.get("speed") || 1))) : 1;
+  var dbg = { bot: null, botOpts: {}, speed: speedParam };
+  var rnd = makeRng(99);
+  for (let i = 0; i < 70; i++)
+    vis.snow.push({ x: rnd() * 1400, y: rnd() * 90, s: 1 + rnd() * 1.6, v: 8 + rnd() * 16, dx: 6 + rnd() * 10 });
+  var gears = [];
+  var run = new Run(() => settings.stats);
+  var playTime = 0;
+  var boardAvailable = false;
+  var boardCur = "score";
+  var submitted = false;
+  var vstat = { sum: [0, 0, 0, 0], t: 0, moves: 0, prev: [0, 0, 0, 0], moving: false };
+  function resetRunStats() {
+    playTime = 0;
+    submitted = false;
+    vstat.sum = [0, 0, 0, 0];
+    vstat.t = 0;
+    vstat.moves = 0;
+    vstat.prev = s.valves.slice();
+    vstat.moving = false;
+  }
+  var avgValves = () => vstat.sum.map((x) => Math.round(vstat.t > 0 ? x / vstat.t * 1e3 : 0) / 1e3);
+  function startRun() {
+    resetRunStats();
+    run.begin().then((tk) => {
+      if (tk)
+        run.event("start", deviceInfo());
+      updateBoardBtn();
+    });
+  }
+  function applySettings() {
+    sound.set({ enabled: settings.sound, sfxVol: settings.sfx / 100, musicVol: settings.music / 100 });
+    fx.reduced = settings.reduce;
+    fx.shakeOn = settings.shake;
+    document.documentElement.classList.toggle("reduce", settings.reduce);
+    store.set(SET_KEY, JSON.stringify(settings));
+  }
+  function resize() {
+    const cr = canvas.getBoundingClientRect();
+    const cssW = Math.max(1, Math.round(cr.width || window.innerWidth)), cssH = Math.max(1, Math.round(cr.height || window.innerHeight));
+    const small = Math.min(cssW, cssH) < 700;
+    dpr = Math.min(window.devicePixelRatio || 1, small ? 2 : 2.5);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    view = viewFor(cssW, cssH);
+    L = makeLayout(view.W, view.H, view.portrait);
+    view.W = L.fullW;
+    bg = makeBackground(cssW / view.scale, cssH / view.scale, dpr, view.scale);
+    city = makeCity(L.fullW, L.sky.h);
+    gears = makeGears();
+  }
+  function makeGears() {
+    const g = [], r = makeRng(31);
+    const P = view.portrait;
+    const spots = P ? [[28, 330, 22, 10, "brass", 1], [372, 360, 26, 11, "iron", -1], [30, 820, 26, 11, "copper", 1], [374, 700, 18, 9, "brass", -1]] : [[24, 150, 34, 12, "brass", 1], [58, 188, 22, 9, "iron", -1], [L.W - 20, 300, 40, 14, "iron", 1], [L.W - 24, 612, 34, 12, "brass", -1], [540, 680, 26, 10, "copper", 1], [300, 436, 18, 8, "brass", -1], [L.W - 56, 660, 20, 9, "copper", 1]];
+    for (const [x, y, rad, n, kind, dir] of spots)
+      g.push({ x, y, r: rad, n, kind, dir, rot: r() * 6, a: 0.85 });
+    return g;
+  }
+  function say(who, text2, kind = "info", col) {
+    log.push({ who, text: text2, kind, col, at: time });
+    if (log.length > 12)
+      log.shift();
+    $("sr-status").textContent = (who ? who + ": " : "") + text2;
+  }
+  var coach = new Coach();
+  var toast = null;
+  function showToast(title, text2, col, dur) {
+    toast = { title, text: text2, col, t0: time, dur };
+    $("sr-status").textContent = title + ": " + text2;
+  }
+  var notes = new Notes();
+  function showHint(h) {
+    notes.noteHint();
+    showToast("\u041F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430", h.text, "#9fd8a6", 9);
+  }
+  function requestNote(req) {
+    call(`/note?s=${encodeURIComponent(req.s)}&n=${req.n}`).then((r) => {
+      const txt = notes.accept(r, req, s);
+      if (txt)
+        showToast("\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u043C\u0435\u0445\u0430\u043D\u0438\u043A\u0430", txt, "#e0b866", Math.min(20, Math.max(9, 6 + txt.length / 14)));
+    }, () => notes.fail());
+  }
+  var PIPE_NAMES = ["\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044F", "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u043E\u0432", "\u0417\u0430\u0432\u043E\u0434\u0430", "\u0424\u0438\u043B\u044C\u0442\u0440\u043E\u0432"];
+  function handleEvents() {
+    for (const e of s.events) {
+      coach.onEvent(e, s);
+      notes.onEvent(e);
+      switch (e.type) {
+        case "shovel":
+          sound.play("shovel");
+          vis.swing = 1;
+          {
+            const f = L.furnace;
+            fx.sparks(f.x + f.w * 0.5, f.y + f.h * 0.6, 12, { v: 140 });
+            fx.steam(f.x + f.w * 0.5, f.y + 20, 2, { vy: -50 });
+          }
+          break;
+        case "spill":
+          sound.play("spill");
+          say("", "\u0422\u043E\u043F\u043A\u0430 \u043F\u0435\u0440\u0435\u043F\u043E\u043B\u043D\u0435\u043D\u0430 \u2014 \u0443\u0433\u043E\u043B\u044C \u0432\u044B\u0441\u044B\u043F\u0430\u0435\u0442\u0441\u044F!", "warn");
+          fx.text(L.furnace.x + L.furnace.w / 2, L.furnace.y, "\u041F\u0435\u0440\u0435\u0431\u043E\u0440!", "#f0c24a", 16);
+          vis.swing = 1;
+          break;
+        case "nocoal":
+          sound.play("nocoal");
+          fx.text(L.shovel.x + L.shovel.w / 2, L.shovel.y - 6, "\u041D\u0435\u0442 \u0443\u0433\u043B\u044F!", "#e0523c", 16);
+          break;
+        case "leak":
+          sound.play("leak");
+          say("", `\u0423\u0442\u0435\u0447\u043A\u0430 \u043F\u0430\u0440\u0430 \u0432 \u0442\u0440\u0443\u0431\u0435 ${PIPE_NAMES[e.pipe]}!`, "warn");
+          break;
+        case "fix": {
+          sound.play("fix");
+          const c = column(L, e.pipe);
+          fx.sparks(c.leak.x, c.leak.y, 10, { col: "240,220,150", v: 120 });
+          fx.text(c.leak.x, c.leak.y - 14, "\u0417\u0430\u0434\u0435\u043B\u0430\u043D\u043E", "#9be08f", 14);
+          break;
+        }
+        case "vent":
+          sound.play("vent");
+          break;
+        case "timka":
+          sound.play("timka");
+          vis.kidSwing = 1;
+          break;
+        case "tutstep":
+          sound.play("tut");
+          break;
+        case "collapse":
+          sound.play("collapse");
+          fx.shake(0.8);
+          say("\u0420\u0430\u0431\u043E\u0447\u0438\u0435", "\u0421\u043C\u0435\u043D\u0430 \u043D\u0435 \u0432\u044B\u0434\u0435\u0440\u0436\u0430\u043B\u0430! \u0417\u0430\u0432\u043E\u0434 \u0432\u0441\u0442\u0430\u043B \u043D\u0430 8 \u0441\u0435\u043A\u0443\u043D\u0434.", "warn", "#e0523c");
+          {
+            const c = column(L, 2);
+            fx.steam(c.cx, c.y + 60, 14, { vy: -90, r: 10, grow: 40 });
+          }
+          break;
+        case "loss":
+          sound.play("loss");
+          break;
+        case "talk":
+          say(e.who, e.text, "talk");
+          break;
+        case "event":
+          sound.play("event");
+          banner = { label: e.label, at: time };
+          say("", e.label + ".", "warn");
+          break;
+        case "night":
+          sound.play("night");
+          log = [];
+          toast = null;
+          break;
+        case "nightend":
+          sound.play("nightend");
+          break;
+        case "ending":
+          sound.play(e.id === "boom" ? "boom" : "warn");
+          if (e.id === "boom") {
+            fx.shake(1.2);
+            const g = L.gauge;
+            for (let k = 0; k < 6; k++)
+              fx.steam(L.tank.x + L.tank.w / 2, L.tank.y + L.tank.h / 2, 30, { spread: 160, vy: -140, jx: 220, r: 16, grow: 80, life: 2.2, a: 0.8 });
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    s.events.length = 0;
+  }
+  function saveGame() {
+    if (s.phase === "ended")
+      return;
+    const str = serialize(s);
+    store.set(SAVE_KEY, str);
+  }
+  function hasSave() {
+    return !!store.get(SAVE_KEY);
+  }
+  function loadGame() {
+    try {
+      const o = deserialize(store.get(SAVE_KEY));
+      if (!o || o.v !== 1)
+        return false;
+      s = o;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  var lastPhase = null;
+  var lastNight = -1;
+  function trackPhase() {
+    if (s.phase !== lastPhase || s.night !== lastNight) {
+      lastPhase = s.phase;
+      lastNight = s.night;
+      if (s.phase === "night" && s.t === 0) {
+        snap = serialize(s);
+        saveGame();
+      } else if (s.phase === "summary" || s.phase === "card") {
+        saveGame();
+        if (s.phase === "summary" && s.summary)
+          run.event("night_end", nightPayload(s.summary));
+      } else if (s.phase === "ended") {
+        store.del(SAVE_KEY);
+        recordEnding();
+      }
+      routeUi();
+    }
+  }
+  function nightPayload(m) {
+    return { night: m.night, ok: true, pop: m.pop, lost: m.lost, coal: Math.max(0, Math.min(99, Math.floor(s.coal))), smog: m.smog, fw: m.fw, burnouts: Math.min(60, m.burnouts | 0), dur_s: Math.round(playTime * 10) / 10, valves: avgValves(), moves: vstat.moves };
+  }
+  function endingResult() {
+    return runResult(s, smogAvg, playTime);
+  }
+  function recordEnding() {
+    const r = endingResult();
+    run.event("ending", { ending: r.ending, nights: r.nights, pop: r.pop, burnouts: r.burnouts, smog: r.smog, dur_s: r.duration_s, score: r.score, valves: avgValves(), moves: vstat.moves });
+    if (!meta.endings.includes(s.ending))
+      meta.endings.push(s.ending);
+    meta.plays++;
+    store.set(META_KEY, JSON.stringify(meta));
+  }
+  var screens = ["title", "prologue", "pause", "settings", "help", "card", "summary", "ending", "board"];
+  function show(id) {
+    for (const k of screens)
+      $(k).hidden = k !== id;
+    if (id) {
+      const first = $(id).querySelector(".btn.primary, .choice");
+      if (first)
+        setTimeout(() => first.focus({ preventScroll: true }), 30);
+    } else if (document.activeElement && document.activeElement !== document.body)
+      document.activeElement.blur();
+  }
+  function routeUi() {
+    if (ui === "play" || ui === "card" || ui === "summary") {
+      if (s.phase === "night") {
+        ui = "play";
+        show(null);
+      } else if (s.phase === "summary") {
+        ui = "summary";
+        renderSummary();
+        show("summary");
+      } else if (s.phase === "card") {
+        ui = "card";
+        renderCard();
+        show("card");
+      } else if (s.phase === "ended") {
+        endTimer = s.ending === "boom" ? 2.4 : 0.8;
+        ui = "play";
+        show(null);
+      }
+    }
+  }
+  var pillTimer = 0;
+  function updatePill() {
+    const need = sound.needsTap();
+    const b = $("b-snd");
+    if (b.hidden === need)
+      b.hidden = !need;
+    const st = $("o-sndstate");
+    if (st)
+      st.textContent = !settings.sound ? "\u0417\u0432\u0443\u043A \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D." : sound.state === "running" ? "\u0417\u0432\u0443\u043A \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442." : sound.state === "dead" ? "\u0417\u0432\u0443\u043A \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D \u0432 \u044D\u0442\u043E\u043C \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435." : "\u0417\u0432\u0443\u043A \u0436\u0434\u0451\u0442 \u043A\u0430\u0441\u0430\u043D\u0438\u044F \u044D\u043A\u0440\u0430\u043D\u0430 \u2014 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0437\u0432\u0443\u043A\xBB.";
+  }
+  function schedulePill(ms = 700) {
+    clearTimeout(pillTimer);
+    pillTimer = setTimeout(updatePill, ms);
+  }
+  function updateTitle() {
+    $("b-continue").hidden = !hasSave();
+    const n = meta.endings.length;
+    $("t-endings").textContent = n ? `\u041E\u0442\u043A\u0440\u044B\u0442\u043E \u043A\u043E\u043D\u0446\u043E\u0432\u043E\u043A: ${n} \u0438\u0437 ${Object.keys(ENDINGS).length}` : "\u0414\u0435\u0441\u044F\u0442\u044C \u043D\u043E\u0447\u0435\u0439. \u0428\u0435\u0441\u0442\u044C \u0441\u0443\u0434\u0435\u0431.";
+  }
+  function newGame() {
+    coach.reset();
+    notes.reset();
+    toast = null;
+    s = createState(Math.random() * 2 ** 31 | 0 || 1);
+    lastPhase = null;
+    lastNight = -1;
+    log = [];
+    fx.clear();
+    banner = null;
+    vis.satShown = [1, 1, 1, 1];
+    vis.popShown = POP_START;
+    vis.needle = s.P;
+    vis.fireShown = 0;
+    store.del(SAVE_KEY);
+    show("prologue");
+    ui = "prologue";
+    startRun();
+  }
+  function startPlay() {
+    sound.ensure();
+    sound.startMusic();
+    beginPlayFromState();
+  }
+  function beginPlayFromState() {
+    var _a;
+    s.phase === "night" && s.t === 0 && snap == null && (snap = serialize(s));
+    lastPhase = null;
+    lastNight = -1;
+    ui = "play";
+    trackPhase();
+    if (s.phase === "night") {
+      ui = "play";
+      show(null);
+    }
+    if (s.night === 0 && s.t === 0 && !((_a = s.tut) == null ? void 0 : _a.done))
+      say("\u0410\u0433\u0430\u0444\u044C\u044F", "\u0422\u043E\u043F\u043A\u0430 \u043E\u0441\u0442\u044B\u043B\u0430. \u0413\u043E\u0440\u043E\u0434 \u0436\u0434\u0451\u0442 \u0442\u0435\u043F\u043B\u0430.", "talk", "#e39a62");
+  }
+  function continueGame() {
+    coach.reset();
+    notes.reset();
+    toast = null;
+    if (!loadGame()) {
+      newGame();
+      return;
+    }
+    log = [];
+    fx.clear();
+    banner = null;
+    vis.satShown = s.sat.slice();
+    vis.popShown = s.pop;
+    vis.needle = s.P;
+    vis.fireShown = s.fire;
+    sound.ensure();
+    sound.startMusic();
+    startRun();
+    snap = s.phase === "night" ? serialize(s) : snap;
+    lastPhase = null;
+    lastNight = -1;
+    ui = "play";
+    trackPhase();
+    routeUi();
+    if (s.phase === "night")
+      show(null);
+  }
+  function retryNight() {
+    if (!snap)
+      return;
+    s = deserialize(snap);
+    log = [];
+    fx.clear();
+    banner = null;
+    lastPhase = null;
+    lastNight = -1;
+    vis.satShown = s.sat.slice();
+    vis.popShown = s.pop;
+    vis.needle = s.P;
+    vis.fireShown = s.fire;
+    ui = "play";
+    trackPhase();
+    show(null);
+  }
+  function goMenu() {
+    stopToTitle();
+  }
+  function stopToTitle() {
+    if (s.phase !== "ended")
+      saveGame();
+    ui = "title";
+    updateTitle();
+    show("title");
+  }
+  function openOverlay(id) {
+    prevUi = ui;
+    ui = id;
+    show(id);
+  }
+  function closeOverlay() {
+    ui = prevUi;
+    if (ui === "play")
+      show(null);
+    else
+      show(ui);
+    if (ui === "title")
+      updateTitle();
+  }
+  function pauseGame() {
+    if (ui !== "play")
+      return;
+    ui = "pause";
+    show("pause");
+    sound.silence();
+  }
+  function resumeGame() {
+    ui = "play";
+    show(null);
+  }
+  function renderCard() {
+    const c = s.card;
+    $("c-who").textContent = c.who;
+    $("c-h").textContent = c.title;
+    $("c-text").textContent = c.text;
+    const box = $("c-opts");
+    box.innerHTML = "";
+    c.options.forEach((o, i) => {
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.type = "button";
+      b.innerHTML = `<kbd>${i + 1}</kbd><b></b><span></span>`;
+      b.querySelector("b").textContent = o.label;
+      b.querySelector("span").textContent = o.hint;
+      b.addEventListener("click", () => pickCard(o.key));
+      box.appendChild(b);
+    });
+  }
+  function pickCard(key) {
+    if (s.phase !== "card")
+      return;
+    sound.play("click");
+    chooseCard(s, key);
+    handleEvents();
+    trackPhase();
+  }
+  var NIGHT_LINES = [
+    "\u041F\u0435\u0440\u0432\u0430\u044F \u043D\u043E\u0447\u044C \u043F\u043E\u0437\u0430\u0434\u0438. \u0413\u043E\u0440\u043E\u0434 \u0437\u0430\u043F\u043E\u043C\u043D\u0438\u0442, \u043A\u0430\u043A \u0432\u044B \u0440\u0430\u0441\u0442\u043E\u043F\u0438\u043B\u0438 \u0410\u0433\u0430\u0444\u044C\u044E.",
+    "\u0423\u0442\u0440\u043E. \u0418\u043D\u0435\u0439 \u043D\u0430 \u043E\u043A\u043D\u0430\u0445 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E \u0442\u0430\u0435\u0442.",
+    "\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u043F\u0435\u0440\u0435\u0436\u0438\u043B \u043B\u0438\u0445\u043E\u0440\u0430\u0434\u043A\u0443.",
+    "\u0421\u043C\u0435\u043D\u0430 \u0432\u0435\u0440\u043D\u0443\u043B\u0430\u0441\u044C \u0434\u043E\u043C\u043E\u0439. \u041D\u0435 \u0432\u0441\u0435 \u2014 \u0441\u0432\u043E\u0438\u043C \u0448\u0430\u0433\u043E\u043C.",
+    "\u0414\u044B\u043C \u043E\u0441\u0435\u043B \u043D\u0430 \u043A\u0440\u044B\u0448\u0430\u0445. \u0414\u043E\u043A\u0442\u043E\u0440 \u0418\u0432\u0438\u043D\u0430 \u043A\u0430\u0448\u043B\u044F\u0435\u0442 \u0432 \u0440\u0443\u043A\u0430\u0432.",
+    "\u041C\u0435\u0442\u0435\u043B\u044C \u0441\u0442\u0438\u0445\u043B\u0430. \u0421\u043B\u043E\u0431\u043E\u0434\u0430 \u0441\u0447\u0438\u0442\u0430\u0435\u0442 \u043F\u0435\u0447\u0438.",
+    "\u041B\u0451\u0434 \u043D\u0430 \u043A\u0440\u044B\u0448\u0430\u0445. \u041B\u0451\u0434 \u043D\u0430 \u043E\u043A\u043D\u0430\u0445. \u041B\u0451\u0434 \u0432\u043D\u0443\u0442\u0440\u0438.",
+    "\u0421\u0442\u044B\u043B\u044B\u0439 \u0447\u0430\u0441 \u043F\u0440\u043E\u0448\u0451\u043B. \u0414\u043E \u043E\u0431\u043E\u0437\u0430 \u2014 \u0434\u0432\u0435 \u043D\u043E\u0447\u0438.",
+    "\u0412\u0435\u0442\u0435\u0440 \u0443\u043D\u0451\u0441 \u043E\u0441\u0442\u0430\u0442\u043A\u0438 \u043C\u0435\u0442\u0435\u043B\u0438. \u041F\u043E\u0447\u0442\u0438 \u0434\u043E\u0448\u043B\u0438.",
+    ""
+  ];
+  function renderSummary() {
+    const m = s.summary;
+    const N = NIGHTS[m.night];
+    $("su-n").textContent = `\u041D\u043E\u0447\u044C ${m.night + 1} \u0438\u0437 ${NIGHTS.length}`;
+    $("su-h").textContent = m.night + 1 === NIGHTS.length ? "\u0420\u0430\u0441\u0441\u0432\u0435\u0442. \u041E\u0431\u043E\u0437 \u0443 \u0432\u043E\u0440\u043E\u0442" : "\u0420\u0430\u0441\u0441\u0432\u0435\u0442 \xB7 " + N.name;
+    const cls = (v, a, b) => v <= a ? "ok" : v <= b ? "warn" : "bad";
+    const items = [
+      ["\u0416\u0438\u0442\u0435\u043B\u0435\u0439", `${m.pop}`, m.pop / POP_START > 0.9 ? "ok" : m.pop / POP_START > 0.8 ? "warn" : "bad"],
+      ["\u041F\u043E\u0442\u0435\u0440\u044F\u043D\u043E \u0437\u0430 \u043D\u043E\u0447\u044C", m.lost ? `\u2212${m.lost}` : "0", m.lost === 0 ? "ok" : cls(m.lost, 15, 40)],
+      ["\u0423\u0433\u043E\u043B\u044C \u0432 \u0431\u0443\u043D\u043A\u0435\u0440\u0435", `${Math.floor(s.coal)} (${m.coalDelta >= 0 ? "+" : ""}${m.coalDelta})`, s.coal > 12 ? "ok" : s.coal > 5 ? "warn" : "bad"],
+      ["\u0414\u044B\u043C \u043D\u0430\u0434 \u0433\u043E\u0440\u043E\u0434\u043E\u043C", `${m.smog}%`, cls(m.smog, 25, 50)],
+      ["\u0423\u0441\u0442\u0430\u043B\u043E\u0441\u0442\u044C \u0441\u043C\u0435\u043D\u044B", `${m.fw}%`, cls(m.fw, 45, 70)],
+      ["\u041F\u0430\u0434\u0435\u043D\u0438\u0439 \u0441\u043C\u0435\u043D\u044B", `${m.burnouts}`, m.burnouts === 0 ? "ok" : "bad"]
+    ];
+    $("su-stats").innerHTML = items.map(([a, b, c]) => `<div class="stat"><small>${a}</small><strong class="${c}"></strong></div>`).join("");
+    [...$("su-stats").querySelectorAll("strong")].forEach((el, i) => {
+      el.textContent = items[i][1];
+    });
+    let txt = NIGHT_LINES[m.night] || "";
+    if (m.lost > 25)
+      txt = "\u042D\u0442\u0430 \u043D\u043E\u0447\u044C \u0437\u0430\u0431\u0440\u0430\u043B\u0430 \u043B\u044E\u0434\u0435\u0439. \u0418\u0445 \u0438\u043C\u0435\u043D\u0430 \u0432\u0430\u043C \u0441\u043A\u0430\u0436\u0435\u0442 \u0434\u043E\u043A\u0442\u043E\u0440 \u0418\u0432\u0438\u043D\u0430 \u2014 \u043A\u043E\u0433\u0434\u0430 \u0441\u043C\u043E\u0436\u0435\u0442.";
+    else if (m.burnouts > 0 && m.night > 2)
+      txt = "\u0420\u0430\u0431\u043E\u0447\u0438\u0435 \u043D\u0435 \u0437\u0430\u0431\u0443\u0434\u0443\u0442 \u044D\u0442\u0443 \u043D\u043E\u0447\u044C. \u0417\u0430\u0432\u043E\u0434 \u2014 \u043D\u0435 \u0431\u0435\u0437\u0434\u043E\u043D\u043D\u044B\u0439 \u043A\u043E\u043B\u043E\u0434\u0435\u0446.";
+    $("su-text").textContent = txt;
+    $("b-next").textContent = m.night + 1 >= NIGHTS.length ? "\u0412\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044C \u043E\u0431\u043E\u0437" : "\u0414\u0430\u043B\u044C\u0448\u0435";
+  }
+  function renderEnding() {
+    const e = ENDINGS[s.ending];
+    const tone = e.tone;
+    const el = $("ending");
+    el.className = "screen tone-" + tone;
+    $("e-kicker").textContent = "\u0424\u0438\u043D\u0430\u043B \xB7 " + (tone === "good" ? "\u043B\u0443\u0447\u0448\u0430\u044F \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0430" : tone === "fail" ? "\u043A\u0430\u0442\u0430\u0441\u0442\u0440\u043E\u0444\u0430" : "\u0433\u043E\u0440\u044C\u043A\u0430\u044F \u043F\u0440\u0430\u0432\u0434\u0430");
+    $("e-h").textContent = e.title;
+    $("e-text").innerHTML = e.lines.map((l) => "<p></p>").join("");
+    [...$("e-text").querySelectorAll("p")].forEach((p, i) => {
+      p.textContent = e.lines[i];
+    });
+    const alive = Math.round(s.pop), tl = Math.round(toll(s)), sm = Math.round(smogAvg(s));
+    const rr2 = endingResult();
+    const items = [["\u0421\u0447\u0451\u0442", String(rr2.score)], ["\u0412\u0440\u0435\u043C\u044F \u0438\u0433\u0440\u044B", Math.floor(playTime / 60) + ":" + String(Math.floor(playTime % 60)).padStart(2, "0")], ["\u0412\u044B\u0436\u0438\u043B\u043E \u0436\u0438\u0442\u0435\u043B\u0435\u0439", `${alive} \u0438\u0437 ${POP_START}`], ["\u0426\u0435\u043D\u0430 \u0441\u043C\u0435\u043D\u044B", s.burnouts ? `${s.burnouts} \u043F\u0430\u0434\u0435\u043D\u0438\u0439` : tl > 25 ? "\u0442\u044F\u0436\u0451\u043B\u0430\u044F" : "\u043D\u0435\u0431\u043E\u043B\u044C\u0448\u0430\u044F"], ["\u0421\u0440\u0435\u0434\u043D\u0438\u0439 \u0434\u044B\u043C", sm + "%"], ["\u041D\u043E\u0447\u0435\u0439 \u043F\u0435\u0440\u0435\u0436\u0438\u0442\u043E", `${Math.min(s.night + (s.phase === "ended" && s.ending !== "boom" && s.ending !== "silence" ? 1 : 0), 10)} \u0438\u0437 10`]];
+    $("e-stats").innerHTML = items.map(() => '<div class="stat"><small></small><strong></strong></div>').join("");
+    [...$("e-stats").querySelectorAll(".stat")].forEach((el2, i) => {
+      el2.querySelector("small").textContent = items[i][0];
+      el2.querySelector("strong").textContent = items[i][1];
+    });
+    const left = Object.keys(ENDINGS).length - meta.endings.length;
+    const hints = { light: "\u042D\u0442\u043E \u043B\u0443\u0447\u0448\u0430\u044F \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0430. \u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u0446\u0435\u043D\u044B \u0442\u043E\u0436\u0435 \u0435\u0441\u0442\u044C \u2014 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u044C \xAB\u0432\u044B\u0433\u043E\u0434\u043D\u044B\u0435\xBB \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435, \u0447\u0435\u043C \u043F\u043B\u0430\u0442\u044F\u0442 \u0434\u0440\u0443\u0433\u0438\u0435.", smoke: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043E\u0442\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u043E\u0442 \u0431\u0443\u0440\u043E\u0433\u043E \u0443\u0433\u043B\u044F \u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0444\u0438\u043B\u044C\u0442\u0440\u044B \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C\u0438.", iron: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043D\u0435 \u043F\u0440\u043E\u0434\u043B\u0435\u0432\u0430\u0442\u044C \u0441\u043C\u0435\u043D\u0443 \u0438 \u0434\u0430\u0442\u044C \u0443\u0441\u0442\u0430\u043B\u043E\u0441\u0442\u0438 \u043E\u0441\u0442\u044B\u0442\u044C: \u0441\u043D\u0438\u0436\u0430\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0437\u0430\u0432\u043E\u0434\u0430, \u043A\u043E\u0433\u0434\u0430 \u0448\u043A\u0430\u043B\u0430 \u043A\u0440\u0430\u0441\u043D\u0430\u044F.", cold: "\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0438 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0432\u0430\u0436\u043D\u0435\u0435 \u0432\u0441\u0435\u0433\u043E. \u041D\u0435 \u0436\u0430\u043B\u0435\u0439\u0442\u0435 \u0438\u043C \u043F\u0430\u0440\u0430.", boom: "\u0421\u043B\u0435\u0434\u0438\u0442\u0435 \u0437\u0430 \u0441\u0442\u0440\u0435\u043B\u043A\u043E\u0439: \u0432 \u043A\u0440\u0430\u0441\u043D\u043E\u0439 \u0437\u043E\u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0434\u0432\u0443\u0445 \u0441\u0435\u043A\u0443\u043D\u0434 \u2014 \u0432\u0437\u0440\u044B\u0432. \u041D\u0435 \u043F\u0435\u0440\u0435\u0431\u0430\u0440\u0449\u0438\u0432\u0430\u0439\u0442\u0435 \u0441 \u0443\u0433\u043B\u0451\u043C.", silence: "\u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0445\u043E\u0442\u044F \u0431\u044B \u0433\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0438 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0432 \u0442\u0435\u043F\u043B\u0435 \u2014 \u0438 \u0443\u0442\u0435\u0447\u043A\u0438 \u0437\u0430\u0434\u0435\u043B\u044B\u0432\u0430\u0439\u0442\u0435 \u0441\u0440\u0430\u0437\u0443." };
+    $("e-hint").textContent = hints[s.ending] + (left > 0 ? `  \u041E\u0442\u043A\u0440\u044B\u0442\u043E \u043A\u043E\u043D\u0446\u043E\u0432\u043E\u043A: ${meta.endings.length} \u0438\u0437 ${Object.keys(ENDINGS).length}.` : "  \u0412\u044B \u043E\u0442\u043A\u0440\u044B\u043B\u0438 \u0432\u0441\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438.");
+    sound.play(tone === "good" ? "end-good" : tone === "fail" ? "end-fail" : "end-bitter");
+    setupRank();
+  }
+  function setupRank() {
+    const box = $("e-rank");
+    box.hidden = true;
+    $("e-nick").value = store.get(NICK_KEY) || "";
+    $("b-submit").disabled = false;
+    $("e-rank-msg").textContent = "";
+    run.pending ? run.pending.then(() => {
+      box.hidden = !run.online;
+    }) : box.hidden = !run.online;
+  }
+  function playerId() {
+    let id = store.get(PID_KEY);
+    if (!id || !/^[0-9a-f]{24}$/.test(id)) {
+      id = randomId();
+      store.set(PID_KEY, id);
+    }
+    return id;
+  }
+  async function submitScore() {
+    if (submitted)
+      return;
+    const nick = $("e-nick").value.trim();
+    store.set(NICK_KEY, nick);
+    const btn = $("b-submit"), msg = $("e-rank-msg");
+    btn.disabled = true;
+    msg.textContent = "\u041E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u043C\u2026";
+    const r = await run.submit(endingResult(), nick, playerId());
+    if (r && r.ok && r.data && r.data.ok) {
+      submitted = true;
+      msg.textContent = `\u0417\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u043A\u0430\u043A \xAB${r.data.nick}\xBB. \u041C\u0435\u0441\u0442\u043E: ${r.data.rank.score} \u043F\u043E \u043E\u0447\u043A\u0430\u043C, ${r.data.rank.survival} \u043F\u043E \u0432\u044B\u0436\u0438\u0432\u0430\u043D\u0438\u044E.`;
+      btn.hidden = true;
+      boardAvailable = true;
+      openBoard("score");
+    } else {
+      btn.disabled = false;
+      msg.textContent = !r ? "\u041D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438 \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C \u0440\u0435\u0439\u0442\u0438\u043D\u0433\u0430. \u0418\u0433\u0440\u0430 \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u043D\u0435 \u0441\u0442\u0440\u0430\u0434\u0430\u0435\u0442 \u2014 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435." : r.status === 429 ? "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E. \u041F\u043E\u0434\u043E\u0436\u0434\u0438\u0442\u0435 \u043C\u0438\u043D\u0443\u0442\u0443." : r.status === 409 ? "\u042D\u0442\u043E\u0442 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0443\u0436\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D." : r.status === 422 ? "\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043F\u0440\u0438\u043D\u044F\u043B \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 (\u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043F\u0440\u0430\u0432\u0434\u043E\u043F\u043E\u0434\u043E\u0431\u0438\u044F)." : "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.";
+    }
+  }
+  function updateBoardBtn() {
+    $("b-board").hidden = !boardAvailable;
+  }
+  async function openBoard(which) {
+    if (ui !== "board")
+      openOverlay("board");
+    boardCur = which || boardCur;
+    document.querySelectorAll("#board .tab").forEach((b) => {
+      const on = b.dataset.board === boardCur;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-selected", on);
+    });
+    const list = $("lb-list"), msg = $("lb-msg");
+    list.textContent = "";
+    msg.textContent = "\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C\u2026";
+    const entries = await fetchBoard(boardCur);
+    if (ui !== "board")
+      return;
+    if (!entries) {
+      msg.textContent = "\u0420\u0435\u0439\u0442\u0438\u043D\u0433 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D.";
+      return;
+    }
+    msg.textContent = entries.length ? "" : "\u041F\u043E\u043A\u0430 \u043F\u0443\u0441\u0442\u043E \u2014 \u0441\u0442\u0430\u043D\u044C\u0442\u0435 \u043F\u0435\u0440\u0432\u044B\u043C.";
+    entries.forEach((e, i) => {
+      const li = document.createElement("li");
+      const nick = document.createElement("b");
+      nick.textContent = String(e.nick);
+      const sc = document.createElement("span");
+      sc.textContent = boardCur === "score" ? `${e.score} \u043E\u0447\u043A.` : `${e.nights} \u043D\u043E\u0447. \xB7 ${e.pop} \u0436\u0438\u0442.`;
+      const sub = document.createElement("small");
+      sub.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} \xB7 ${boardCur === "score" ? `${e.nights} \u043D\u043E\u0447.` : `${e.score} \u043E\u0447\u043A.`}`;
+      li.append(nick, sc, sub);
+      list.append(li);
+    });
+  }
+  function wire() {
+    const click = (id, fn) => $(id).addEventListener("click", () => {
+      sound.ensure();
+      sound.play("click");
+      fn();
+    });
+    click("b-new", newGame);
+    click("b-continue", continueGame);
+    click("b-board", () => openBoard("score"));
+    click("b-lbclose", closeOverlay);
+    click("b-submit", submitScore);
+    document.querySelectorAll("#board .tab").forEach((b) => b.addEventListener("click", () => {
+      sound.ensure();
+      sound.play("click");
+      openBoard(b.dataset.board);
+    }));
+    $("o-stats").addEventListener("change", (e) => {
+      settings.stats = e.target.checked;
+      applySettings();
+    });
+    click("b-help", () => openOverlay("help"));
+    click("b-settings", () => openOverlay("settings"));
+    click("b-start", startPlay);
+    click("b-resume", resumeGame);
+    click("b-retry", retryNight);
+    click("b-menu", goMenu);
+    click("b-pset", () => openOverlay("settings"));
+    click("b-phelp", () => openOverlay("help"));
+    click("b-sclose", closeOverlay);
+    click("b-hclose", closeOverlay);
+    click("b-next", () => {
+      continueSummary(s);
+      handleEvents();
+      trackPhase();
+    });
+    click("b-again", () => {
+      newGame();
+    });
+    click("b-emenu", () => {
+      ui = "title";
+      updateTitle();
+      show("title");
+    });
+    click("b-wipe", () => {
+      if (confirm("\u0421\u0442\u0435\u0440\u0435\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438?")) {
+        store.del(SAVE_KEY);
+        meta = { endings: [], plays: 0 };
+        store.set(META_KEY, JSON.stringify(meta));
+        updateTitle();
+      }
+    });
+    $("o-sound").addEventListener("change", (e) => {
+      settings.sound = e.target.checked;
+      applySettings();
+      sound.ensure();
+      sound.play("click");
+    });
+    $("o-sfx").addEventListener("input", (e) => {
+      settings.sfx = +e.target.value;
+      applySettings();
+      sound.ensure();
+      sound.play("valve", 0.5);
+    });
+    $("o-music").addEventListener("input", (e) => {
+      settings.music = +e.target.value;
+      applySettings();
+    });
+    $("o-reduce").addEventListener("change", (e) => {
+      settings.reduce = e.target.checked;
+      applySettings();
+    });
+    $("o-shake").addEventListener("change", (e) => {
+      settings.shake = e.target.checked;
+      applySettings();
+    });
+    $("o-sound").checked = settings.sound;
+    $("o-stats").checked = settings.stats;
+    $("o-sfx").value = settings.sfx;
+    $("o-music").value = settings.music;
+    $("o-reduce").checked = settings.reduce;
+    $("o-shake").checked = settings.shake;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        pauseGame();
+        sound.silence();
+      }
+    });
+    window.addEventListener("blur", () => {
+      if (ui === "play")
+        pauseGame();
+    });
+    ["pointerup", "touchend", "click", "keydown"].forEach((ev) => document.addEventListener(ev, () => {
+      sound.unlock();
+      schedulePill();
+    }, { capture: true, passive: true }));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        sound.resumeIfNeeded();
+        schedulePill();
+      }
+    });
+    window.addEventListener("pageshow", () => {
+      sound.resumeIfNeeded();
+      schedulePill();
+    });
+    window.addEventListener("focus", () => {
+      sound.resumeIfNeeded();
+      schedulePill();
+    });
+    sound.onState = () => updatePill();
+    $("b-snd").addEventListener("click", () => {
+      sound.unlock();
+      sound.play("click");
+      schedulePill(300);
+    });
+    setInterval(updatePill, 1500);
+    document.addEventListener("gesturestart", (e) => e.preventDefault());
+    if (window.visualViewport)
+      window.visualViewport.addEventListener("resize", resize);
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", () => setTimeout(resize, 120));
+    if (mq.addEventListener)
+      mq.addEventListener("change", (e) => {
+        settings.reduce = e.matches;
+        $("o-reduce").checked = e.matches;
+        applySettings();
+      });
+  }
+  function toLogical(ev) {
+    const r = canvas.getBoundingClientRect();
+    return [(ev.clientX - r.left) / view.scale - L.offX, (ev.clientY - r.top) / view.scale];
+  }
+  var inRect = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  function pauseHit() {
+    const p = L.pause, m = Math.max(p.w, 46 / view.scale), cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+    return { x: cx - m / 2, y: Math.max(0, cy - m / 2), w: m, h: m };
+  }
+  function leakR() {
+    return Math.max(32, 23 / view.scale);
+  }
+  function hitPause(x, y) {
+    const r = pauseHit();
+    return x >= r.x && x <= r.x + r.w + 12 && y >= r.y && y <= r.y + r.h;
+  }
+  function valveFromY(i, y) {
+    const c = column(L, i);
+    return Math.max(0, Math.min(1, (c.ty1 - y) / (c.ty1 - c.ty0)));
+  }
+  function setV(i, v) {
+    v = Math.round(v * 100) / 100;
+    if (Math.abs(v - s.valves[i]) < 5e-3)
+      return;
+    setValve(s, i, v);
+    sound.play("valve", v);
+    vis.wheelKick[i] += (v - s.valves[i]) * 3;
+  }
+  canvas.addEventListener("pointerdown", (ev) => {
+    var _a;
+    sound.ensure();
+    if (ui !== "play")
+      return;
+    const [x, y] = toLogical(ev);
+    (_a = canvas.setPointerCapture) == null ? void 0 : _a.call(canvas, ev.pointerId);
+    if (hitPause(x, y)) {
+      pauseGame();
+      return;
+    }
+    for (const lk of s.leaks) {
+      const c = column(L, lk.pipe);
+      if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR()) {
+        fixLeak(s, lk.id);
+        handleEvents();
+        return;
+      }
+    }
+    if (inRect(x, y, L.shovel)) {
+      input.shovelDown = 0.15;
+      shovel(s);
+      handleEvents();
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const c = column(L, i);
+      if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) {
+        input.sel = i;
+        if (y > c.y + c.head - 6 && y < c.ty1 + 22) {
+          input.drag = i;
+          setV(i, valveFromY(i, y));
+        }
+        return;
+      }
+    }
+  });
+  canvas.addEventListener("pointermove", (ev) => {
+    if (ui !== "play")
+      return;
+    const [x, y] = toLogical(ev);
+    if (input.drag >= 0) {
+      setV(input.drag, valveFromY(input.drag, y));
+      return;
+    }
+    let over = inRect(x, y, L.shovel) || hitPause(x, y);
+    for (const lk of s.leaks) {
+      const c = column(L, lk.pipe);
+      if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR())
+        over = true;
+    }
+    for (let i = 0; i < 4 && !over; i++) {
+      const c = column(L, i);
+      if (x >= c.x && x <= c.x + c.w && y >= c.ty0 - 20 && y <= c.ty1 + 20)
+        over = true;
+    }
+    canvas.style.cursor = over ? "pointer" : "default";
+  });
+  var endDrag = () => {
+    input.drag = -1;
+  };
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("wheel", (ev) => {
+    if (ui !== "play")
+      return;
+    const [x, y] = toLogical(ev);
+    for (let i = 0; i < 4; i++) {
+      const c = column(L, i);
+      if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) {
+        adjustValve(s, i, ev.deltaY < 0 ? 0.05 : -0.05);
+        input.sel = i;
+        ev.preventDefault();
+      }
+    }
+  }, { passive: false });
+  window.addEventListener("keydown", (ev) => {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey)
+      return;
+    const k = ev.key;
+    sound.ensure();
+    if (k === "m" || k === "M" || k === "\u044C" || k === "\u042C") {
+      settings.sound = !settings.sound;
+      $("o-sound").checked = settings.sound;
+      applySettings();
+      return;
+    }
+    if (ui === "card") {
+      if (k === "1" || k === "2") {
+        const o = s.card.options[+k - 1];
+        if (o) {
+          ev.preventDefault();
+          pickCard(o.key);
+        }
+      }
+      return;
+    }
+    if (ui === "settings" || ui === "help" || ui === "board") {
+      if (k === "Escape")
+        closeOverlay();
+      return;
+    }
+    if (ui === "pause") {
+      if (k === "Escape" || k === "p" || k === "P" || k === "\u0437" || k === "\u0417")
+        resumeGame();
+      return;
+    }
+    if (ui !== "play")
+      return;
+    if (k === "Escape" || k === "p" || k === "P" || k === "\u0437" || k === "\u0417") {
+      pauseGame();
+      return;
+    }
+    if (k === " " || k === "Spacebar") {
+      ev.preventDefault();
+      if (!ev.repeat || true) {
+        input.shovelDown = 0.15;
+        shovel(s);
+        handleEvents();
+      }
+      return;
+    }
+    if (k >= "1" && k <= "4") {
+      input.sel = +k - 1;
+      return;
+    }
+    const nav = { ArrowLeft: -1, ArrowRight: 1, a: -1, d: 1, \u0444: -1, \u0432: 1 };
+    if (nav[k] !== void 0) {
+      ev.preventDefault();
+      input.sel = (input.sel + nav[k] + 4) % 4;
+      return;
+    }
+    const ud = { ArrowUp: 1, ArrowDown: -1, w: 1, s: -1, \u0446: 1, \u044B: -1, PageUp: 5, PageDown: -5 };
+    if (ud[k] !== void 0) {
+      ev.preventDefault();
+      const i = input.sel, before = s.valves[i];
+      adjustValve(s, i, ud[k] * (ev.shiftKey ? 0.2 : 0.05));
+      if (s.valves[i] !== before) {
+        sound.play("valve", s.valves[i]);
+        vis.wheelKick[i] += ud[k] * 0.3;
+      }
+      return;
+    }
+    if (k === "f" || k === "F" || k === "\u0430" || k === "\u0410" || k === "Enter") {
+      if (fixLeak(s, null))
+        handleEvents();
+    }
+  });
+  function update(dt) {
+    if (s.phase === "night") {
+      let ch = false;
+      for (let i = 0; i < 4; i++) {
+        vstat.sum[i] += s.valves[i] * dt;
+        if (Math.abs(s.valves[i] - vstat.prev[i]) > 4e-3) {
+          ch = true;
+          vstat.prev[i] = s.valves[i];
+        }
+      }
+      vstat.t += dt;
+      if (ch && !vstat.moving)
+        vstat.moves++;
+      vstat.moving = ch;
+    }
+    if (dbg.bot && s.phase === "night") {
+      botAct(s, dbg.bot, dbg.botOpts);
+    }
+    step(s, dt);
+    if (s.phase === "night") {
+      const h = coach.update(s, dt);
+      if (h)
+        showHint(h);
+      const q = notes.update(s, dt);
+      if (q)
+        requestNote(q);
+    }
+    if (s.shake > 0.6) {
+      fx.shake(s.shake);
+    }
+    handleEvents();
+    trackPhase();
+  }
+  function visUpdate(dt, playing) {
+    vis.t += dt;
+    time += dt;
+    const k = Math.min(1, dt * 7);
+    vis.needle += (s.P - vis.needle) * k;
+    vis.fireShown += (s.fire - vis.fireShown) * Math.min(1, dt * 10);
+    for (let i = 0; i < 4; i++) {
+      vis.satShown[i] += (s.sat[i] - vis.satShown[i]) * Math.min(1, dt * 6);
+      vis.wheelKick[i] *= Math.max(0, 1 - dt * 10);
+    }
+    vis.popShown += (s.pop - vis.popShown) * Math.min(1, dt * 3);
+    vis.swing = Math.max(0, vis.swing - dt * 4);
+    vis.kidSwing = Math.max(0, vis.kidSwing - dt * 4);
+    input.shovelDown = Math.max(0, input.shovelDown - dt);
+    const steamUse = s.flow.reduce((a, b) => a + b, 0);
+    const sp = fx.reduced ? 0.15 : 1;
+    for (const g of gears)
+      g.rot += g.dir * dt * (0.15 + steamUse * 0.07 + s.P * 4e-3) * (12 / g.n) * sp * (playing ? 1 : 0.3);
+    for (const f of vis.snow) {
+      f.y += f.v * dt * (1 + s.smog / 200);
+      f.x += f.dx * dt;
+      if (f.y > 90) {
+        f.y = 0;
+        f.x = rnd() * 1400;
+      }
+    }
+    fx.update(dt);
+  }
+  var fxAcc = 0;
+  function render() {
+    const cssW = canvas.width / dpr, cssH = canvas.height / dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (bg)
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+    const [sx, sy] = fx.shakeOffset();
+    ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, (L.offX * view.scale + sx) * dpr, sy * dpr);
+    fxAcc += 1;
+    const R = { s, L, vis, input, log, toast, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: fxAcc % 6 === 0 };
+    drawScene(ctx, R);
+  }
+  function ambient() {
+    if (ui !== "play") {
+      sound.ambient(0, 0.02);
+      return;
+    }
+    const flow = s.flow.reduce((a, b) => a + b, 0);
+    const hiss = Math.min(1, flow / 12 + s.leaks.length * 0.35 + (s.venting ? 0.5 : 0));
+    sound.ambient(hiss * 0.8, s.P / 100);
+    sound.setIntensity(Math.min(1, Math.max(0, (s.P - 40) / 50) + (s.leaks.length ? 0.2 : 0)));
+  }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dtReal = Math.min(0.1, (now - last) / 1e3 || 0);
+    last = now;
+    const playing = ui === "play";
+    if (playing)
+      playTime += dtReal;
+    if (playing) {
+      acc += dtReal * dbg.speed;
+      let n = 0;
+      while (acc >= DT && n < 60 * dbg.speed + 5) {
+        update(DT);
+        acc -= DT;
+        n++;
+        if (ui !== "play") {
+          acc = 0;
+          break;
+        }
+      }
+    } else
+      acc = 0;
+    if (s.phase === "ended" && ui === "play") {
+      endTimer -= dtReal;
+      if (endTimer <= 0 && endTimer > -50) {
+        endTimer = -100;
+        ui = "ending";
+        renderEnding();
+        show("ending");
+      }
+    }
+    visUpdate(dtReal, playing);
+    if (playing && s.fire > 8 && Math.random() < 0.2 + s.fire / 400) {
+      fx.smoke(L.chimney.x, L.chimney.y - 28, 1, 0.22 + s.smog / 250 + (s.flags.brown ? 0.08 : 0));
+    }
+    ambient();
+    render();
+  }
+  if (DEBUG) {
+    window.__game = {
+      get pill() {
+        return !$("b-snd").hidden;
+      },
+      updatePill,
+      get toast() {
+        return toast;
+      },
+      get notes() {
+        return notes;
+      },
+      get s() {
+        return s;
+      },
+      get ui() {
+        return ui;
+      },
+      get L() {
+        return L;
+      },
+      get view() {
+        return view;
+      },
+      get run() {
+        return run;
+      },
+      resize,
+      pauseHit,
+      setBot(skill, opts) {
+        dbg.bot = skill;
+        dbg.botOpts = opts || {};
+      },
+      setSpeed(v) {
+        dbg.speed = v;
+      },
+      setUiState: (u) => {
+        ui = u;
+      },
+      input,
+      settings,
+      meta,
+      log,
+      fx,
+      sound,
+      jump(night, flags) {
+        s = createState(5, { skipTutorial: night > 0 });
+        if (flags)
+          Object.assign(s.flags, flags);
+        s.coal = 30;
+        lastPhase = null;
+        lastNight = -1;
+        log = [];
+        fx.clear();
+        snap = null;
+        beginNight(s, night);
+        ui = "play";
+        trackPhase();
+        show(null);
+      }
+    };
+  }
+  function init() {
+    wire();
+    applySettings();
+    resize();
+    updateTitle();
+    show("title");
+    fetchBoard("score").then((e) => {
+      boardAvailable = e !== null;
+      updateBoardBtn();
+    });
+    requestAnimationFrame((t) => {
+      last = t;
+      frame(t);
+    });
+    window.__gameReady = true;
+    if (window.__bootReady)
+      window.__bootReady();
+  }
+  init();
+})();
