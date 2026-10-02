@@ -105,8 +105,7 @@ function drawHUD(ctx, R) {
   if (!portrait) { /* прогресс под заголовком */ }
   const barY = h.h - 9;
   rr(ctx, px, barY, portrait ? 130 : 260, 5, 2.5); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fill();
-  if (s.tut && s.tut.active) { sans(ctx, 'ОБУЧЕНИЕ', px + (portrait ? 132 : 264), barY + 3, 10, C.gold, 'left', '700'); }
-  else { rr(ctx, px, barY, Math.max(4, (portrait ? 130 : 260) * clamp(tN, 0, 1)), 5, 2.5); ctx.fillStyle = C.brass1; ctx.fill(); }
+  if (!(s.tut && s.tut.active)) { rr(ctx, px, barY, Math.max(4, (portrait ? 130 : 260) * clamp(tN, 0, 1)), 5, 2.5); ctx.fillStyle = C.brass1; ctx.fill(); }
   void pw;
   // население и уголь
   const pr = L.pause.x - 8;
@@ -446,14 +445,6 @@ function drawMessages(ctx, R) {
   const { s, L, log, time } = R; const m = L.msg;
   plate(ctx, m.x, m.y, m.w, m.h, { r: 10, top: '#2c231b', bot: '#17110d', rivets: !L.portrait });
   const px = m.x + 14, pw = m.w - 28;
-  if (s.tut && s.tut.active) {
-    const step = TUTORIAL[s.tut.step];
-    sans(ctx, `ОБУЧЕНИЕ · шаг ${Math.min(s.tut.step + 1, TUTORIAL.length - 1)} из ${TUTORIAL.length - 1}`, px, m.y + 18, L.portrait ? 12 : 13, C.gold, 'left', '800');
-    const fs = L.portrait ? 16 : 19; ctx.font = `bold ${fs}px Georgia, serif`;
-    const lines = wrap(ctx, step.text, pw);
-    lines.slice(0, 4).forEach((ln, k) => text(ctx, ln, px, m.y + 42 + k * (fs + 5), fs, C.cream, 'left', 'bold', false));
-    return;
-  }
   const maxLines = Math.max(2, Math.floor((m.h - 20) / (L.portrait ? 38 : 40)));
   const shown = log.slice(-maxLines);
   let yy = m.y + 14; const fs = L.portrait ? 14 : 16;

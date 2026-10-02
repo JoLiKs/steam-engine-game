@@ -13,6 +13,7 @@
 <body>
 <canvas id="game" aria-label="Игровое поле: котёл, манометр и вентили" role="img"></canvas>
 <div id="sr-status" class="sr-only" aria-live="polite"></div>
+<button id="b-snd" class="snd-pill" type="button" hidden>🔇 Включить звук</button>
 
 <section id="title" class="screen" aria-labelledby="t-h">
   <div class="panel title-panel">
@@ -60,6 +61,7 @@
   <div class="panel">
     <h2 id="s-h">Настройки</h2>
     <label class="row"><span>Звук включён</span><input type="checkbox" id="o-sound" checked></label>
+    <p class="small" id="o-sndstate" aria-live="polite"></p>
     <label class="row"><span>Звуки</span><input type="range" id="o-sfx" min="0" max="100" value="70" aria-label="Громкость звуков (не влияет на музыку)"></label>
     <label class="row"><span>Музыка</span><input type="range" id="o-music" min="0" max="100" value="60" aria-label="Громкость музыки"></label>
     <label class="row"><span>Меньше движения</span><input type="checkbox" id="o-reduce"></label>

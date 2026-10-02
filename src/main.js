@@ -7,6 +7,7 @@ import { Fx } from './fx.js';
 import { Sound } from './audio.js';
 import { botAct } from './bot.js';
 import { makeRng } from './rng.js';
+import { Coach } from './coach.js';
 import { Run, deviceInfo, fetchBoard, randomId } from './net.js';
 import { runResult } from './score.js';
 
@@ -97,10 +98,13 @@ function say(who, text, kind = 'info', col) {
   log.push({ who, text, kind, col, at: time }); if (log.length > 12) log.shift();
   $('sr-status').textContent = (who ? who + ': ' : '') + text;
 }
+const coach = new Coach();
+function showHint(h) { say('Подсказка', h.text, 'talk', '#9fd8a6'); }
 const PIPE_NAMES = ['Госпиталя', 'Кварталов', 'Завода', 'Фильтров'];
 
 function handleEvents() {
   for (const e of s.events) {
+    coach.onEvent(e, s);
     switch (e.type) {
       case 'shovel': sound.play('shovel'); vis.swing = 1; { const f = L.furnace; fx.sparks(f.x + f.w * 0.5, f.y + f.h * 0.6, 12, { v: 140 }); fx.steam(f.x + f.w * 0.5, f.y + 20, 2, { vy: -50 }); } break;
       case 'spill': sound.play('spill'); say('', 'Топка переполнена — уголь высыпается!', 'warn'); fx.text(L.furnace.x + L.furnace.w / 2, L.furnace.y, 'Перебор!', '#f0c24a', 16); vis.swing = 1; break;
@@ -166,12 +170,21 @@ function routeUi() {
 }
 function setUi(u) { ui = u; if (u === 'play') show(null); else show(u === 'title' ? 'title' : u); }
 
+// индикатор звука: если звук включён, а контекст не играет (нужен тап) — ненавязчивая кнопка «Включить звук»
+let pillTimer = 0;
+function updatePill() {
+  const need = sound.needsTap();
+  const b = $('b-snd'); if (b.hidden === need) b.hidden = !need;
+  const st = $('o-sndstate'); if (st) st.textContent = !settings.sound ? 'Звук выключен.' : sound.state === 'running' ? 'Звук работает.' : sound.state === 'dead' ? 'Звук недоступен в этом браузере.' : 'Звук ждёт касания экрана — нажмите «Включить звук».';
+}
+function schedulePill(ms = 700) { clearTimeout(pillTimer); pillTimer = setTimeout(updatePill, ms); }   // даём resume() время завершиться, чтобы кнопка не мигала
 function updateTitle() {
   $('b-continue').hidden = !hasSave();
   const n = meta.endings.length;
-  $('t-endings').textContent = n ? `Открыто концовок: ${n} из ${Object.keys(ENDINGS).length}` : 'Пять минут обучения. Десять ночей. Шесть судеб.';
+  $('t-endings').textContent = n ? `Открыто концовок: ${n} из ${Object.keys(ENDINGS).length}` : 'Десять ночей. Шесть судеб.';
 }
 function newGame() {
+  coach.reset();
   s = createState((Math.random() * 2 ** 31) | 0 || 1); lastPhase = null; lastNight = -1;
   log = []; fx.clear(); banner = null; vis.satShown = [1, 1, 1, 1]; vis.popShown = POP_START; vis.needle = s.P; vis.fireShown = 0;
   store.del(SAVE_KEY); show('prologue'); ui = 'prologue'; startRun();
@@ -187,6 +200,7 @@ function beginPlayFromState() {
   if (s.night === 0 && s.t === 0 && !s.tut?.done) say('Агафья', 'Топка остыла. Город ждёт тепла.', 'talk', '#e39a62');
 }
 function continueGame() {
+  coach.reset();
   if (!loadGame()) { newGame(); return; }
   log = []; fx.clear(); banner = null; vis.satShown = s.sat.slice(); vis.popShown = s.pop; vis.needle = s.P; vis.fireShown = s.fire;
   sound.ensure(); sound.startMusic(); startRun();
@@ -325,7 +339,15 @@ function wire() {
   $('o-sound').checked = settings.sound; $('o-stats').checked = settings.stats; $('o-sfx').value = settings.sfx; $('o-music').value = settings.music; $('o-reduce').checked = settings.reduce; $('o-shake').checked = settings.shake;
   document.addEventListener('visibilitychange', () => { if (document.hidden) { pauseGame(); sound.silence(); } });
   window.addEventListener('blur', () => { if (ui === 'play') pauseGame(); });
-  ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => sound.ensure(), { capture: true, passive: true }));   // iOS/Android: аудио стартует с первого касания
+  // iOS/Android: контекст создаётся и возобновляется ВНУТРИ жеста. На iOS «жест» — это touchend/click (не touchstart/pointerdown), в Chrome — pointerup(touch)/touchend/click/keydown.
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => { sound.unlock(); schedulePill(); }, { capture: true, passive: true }));
+  // свернули/заблокировали и вернулись: контекст мог стать suspended/interrupted — пробуем вернуть, иначе покажем кнопку
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { sound.resumeIfNeeded(); schedulePill(); } });
+  window.addEventListener('pageshow', () => { sound.resumeIfNeeded(); schedulePill(); });
+  window.addEventListener('focus', () => { sound.resumeIfNeeded(); schedulePill(); });
+  sound.onState = () => updatePill();
+  $('b-snd').addEventListener('click', () => { sound.unlock(); sound.play('click'); schedulePill(300); });
+  setInterval(updatePill, 1500);
   document.addEventListener('gesturestart', e => e.preventDefault());
   if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
   window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 120));
@@ -407,6 +429,7 @@ function update(dt) {
   }
   if (dbg.bot && s.phase === 'night') { botAct(s, dbg.bot, dbg.botOpts); }
   step(s, dt);
+  if (s.phase === 'night') { const h = coach.update(s, dt); if (h) showHint(h); }
   if (s.shake > 0.6) { fx.shake(s.shake); }
   handleEvents();
   trackPhase();
@@ -432,9 +455,8 @@ function render() {
   if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
   const [sx, sy] = fx.shakeOffset();
   ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, (L.offX * view.scale + sx) * dpr, sy * dpr);
-  const tut = s.tut && s.tut.active ? TUTORIAL[s.tut.step] : null;
   fxAcc += 1;
-  const R = { s, L, vis, input, log, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: tut ? tut.hint : null, fxTick: (fxAcc % 6) === 0 };
+  const R = { s, L, vis, input, log, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: (fxAcc % 6) === 0 };
   drawScene(ctx, R);
   void cssW; void cssH;
 }
@@ -468,6 +490,7 @@ function frame(now) {
 // ---------- тестовые крючки (только с ?debug)
 if (DEBUG) {
   window.__game = {
+    get pill() { return !$('b-snd').hidden; }, updatePill,
     get s() { return s; }, get ui() { return ui; }, get L() { return L; }, get view() { return view; }, get run() { return run; }, resize, pauseHit,
     setBot(skill, opts) { dbg.bot = skill; dbg.botOpts = opts || {}; }, setSpeed(v) { dbg.speed = v; },
     setUiState: (u) => { ui = u; }, input, settings, meta, log, fx, sound,

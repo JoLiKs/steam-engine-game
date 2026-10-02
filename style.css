@@ -66,3 +66,6 @@ kbd{display:inline-block;min-width:22px;padding:1px 6px;margin:0 2px;border-radi
 .btn,.choice,.tab,.link,input[type=checkbox]{touch-action:manipulation}
 @media (prefers-reduced-motion:reduce){.screen{animation:none}.btn{transition:none}}
 .reduce .screen{animation:none}
+
+.snd-pill{position:fixed;left:50%;top:calc(var(--sa-t) + 58px);transform:translateX(-50%);z-index:8;min-height:44px;padding:8px 18px;border-radius:22px;border:2px solid var(--brass-d);background:rgba(36,26,19,.94);color:var(--cream);font:inherit;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5);-webkit-tap-highlight-color:transparent}
+.snd-pill[hidden]{display:none}

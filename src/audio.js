@@ -18,16 +18,19 @@ export class Sound {
     this.master = null; this.sfx = null; this.music = null; this.noiseBuf = null;
     this.hiss = null; this.rumble = null; this.musicTimer = null; this.step = 0; this.nextT = 0;
     this.musicOn = false; this.rng = makeRng(77); this.lastT = {};
+    this.gestured = false; this.wantMusic = false; this.primed = null; this.keepEl = null; this.onState = null;
   }
   ensure() {
     if (this.dead) return false;
-    if (this.ctx) { if (this.ctx.state === 'suspended') { try { const pr = this.ctx.resume(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { /* аудио недоступно — игра идёт без звука */ } } return !!this.ctx; }
+    if (this.ctx && this.ctx.state === 'closed') this.dropCtx();            // iOS иногда закрывает контекст — создадим заново на жесте
+    if (this.ctx) { if (this.ctx.state !== 'running') this.tryResume(); return !!this.ctx; }
     try {
       if (this.makeCtx) this.ctx = this.makeCtx();
       else { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; this.ctx = new AC(); }
     } catch (e) { this.dead = true; return false; }
     try {
       const c = this.ctx;
+      if ('onstatechange' in c) c.onstatechange = () => this.notify();       // suspended/interrupted/running → индикатор «Включить звук»
       this.master = c.createGain(); this.sfx = c.createGain(); this.music = c.createGain();
       const comp = c.createDynamicsCompressor();
       this.sfx.connect(this.master); this.music.connect(this.master); this.master.connect(comp); comp.connect(c.destination);
@@ -36,10 +39,69 @@ export class Sound {
       for (let i = 0; i < d.length; i++) d[i] = this.rng() * 2 - 1;
       this.applyVol(true);
       this.buildLoops();
+      if (this.wantMusic && !this.musicOn) this.startMusic();               // контекст пересоздан — вернуть музыку
+      if (c.state !== 'running') this.tryResume();                          // iOS: контекст, созданный даже в жесте, бывает suspended
+      this.notify();
       return true;
     } catch (e) {   // частичная инициализация (редкие/старые реализации WebAudio): без звука, но игра идёт
       this.dead = true; try { this.ctx.close(); } catch (e2) { /* */ } this.ctx = null; return false;
     }
+  }
+  // ---- мобильный звук: жест, «разблокировка», режим «Без звука» на iOS, возобновление после сворачивания
+  get state() { return this.dead ? 'dead' : !this.ctx ? 'none' : this.ctx.state; }
+  // звук нужен (включён, игрок уже касался экрана), но контекст не играет — показать кнопку «Включить звук»
+  needsTap() { return !this.dead && this.enabled && this.gestured && (!this.ctx || this.ctx.state !== 'running'); }
+  notify() { try { if (this.onState) this.onState(this.state); } catch (e) { /* */ } }
+  dropCtx() {
+    try { if (this.ctx) { this.ctx.onstatechange = null; this.ctx.close(); } } catch (e) { /* */ }
+    this.ctx = null; this.master = this.sfx = this.music = this.hiss = this.rumble = null; this.primed = null;
+    this.wantMusic = this.wantMusic || this.musicOn; this.musicOn = false; clearInterval(this.musicTimer);
+  }
+  tryResume() {
+    if (!this.ctx) return;
+    try { const pr = this.ctx.resume(); if (pr && pr.then) pr.then(() => this.notify(), () => this.notify()); else this.notify(); } catch (e) { this.notify(); }
+  }
+  // вызывать ВНУТРИ жеста (pointerup / touchend / click / keydown): создаёт контекст, resume(), тихий буфер, keep-alive для iOS
+  unlock() {
+    this.gestured = true;
+    const ok = this.ensure();
+    this.prime();
+    return ok;
+  }
+  prime() {
+    if (!this.ctx || this.primed === this.ctx) return;
+    this.primed = this.ctx;
+    try { const c = this.ctx, b = c.createBuffer(1, 1, 22050), src = c.createBufferSource(); src.buffer = b; src.connect(c.destination); src.start(0); } catch (e) { /* */ }   // классическая «разблокировка» iOS
+    this.keepAlive();
+  }
+  // iOS: переключатель «Без звука» глушит WebAudio, но не <audio> — тихий зацикленный элемент переводит страницу в «медиа»-сеанс
+  keepAlive() {
+    try { if (typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* Safari 16.4+ */ }
+    try {
+      // тихий <audio> нужен только на iOS/iPadOS (режим «Без звука»); на остальных платформах не рискуем лишним медиа-конвейером
+      const nav = typeof navigator !== 'undefined' ? navigator : {};
+      const ios = !!nav.audioSession || /iPhone|iPad|iPod/.test(nav.userAgent || '') || (/Macintosh/.test(nav.userAgent || '') && nav.maxTouchPoints > 1);
+      const force = typeof window !== 'undefined' ? window.__keepAlive : undefined;   // true/false — только для тестов
+      if (force === false || (!ios && !force)) return;
+      if (typeof Audio === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) return;
+      if (!this.keepEl) {
+        const n = 4000, buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
+        const w = (o, s) => { for (let i = 0; i < s.length; i++) buf[o + i] = s.charCodeAt(i); };
+        w(0, 'RIFF'); dv.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+        dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); w(36, 'data'); dv.setUint32(40, n, true);
+        buf.fill(128, 44);                                            // 8-бит PCM: 128 = тишина
+        const el = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+        el.loop = true; el.setAttribute('playsinline', ''); el.setAttribute('aria-hidden', 'true'); this.keepEl = el;
+      }
+      const pr = this.keepEl.play(); if (pr && pr.catch) pr.catch(() => {});
+    } catch (e) { /* без keep-alive просто остаёмся на WebAudio */ }
+  }
+  // вернулись во вкладку / pageshow / focus: попробовать возобновить (вне жеста может не получиться — тогда покажем кнопку)
+  resumeIfNeeded() {
+    if (this.dead || !this.enabled || !this.gestured) { this.notify(); return; }
+    if (this.ctx && this.ctx.state === 'closed') { this.dropCtx(); this.notify(); return; }
+    if (this.ctx && this.ctx.state !== 'running') this.tryResume(); else this.notify();
+    if (this.keepEl && this.keepEl.paused) { try { const pr = this.keepEl.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { /* */ } }
   }
   // master — только общий выключатель; «Звуки» и «Музыка» — независимые узлы gain со своей кривой
   applyVol(immediate) {
@@ -124,8 +186,8 @@ export class Sound {
     }
   }
   // --- музыка: минорная паровая «шарманка» с поршневым ритмом
-  startMusic() { if (!this.ctx || this.musicOn) return; this.musicOn = true; this.step = 0; this.nextT = this.ctx.currentTime + 0.1; this.musicTimer = setInterval(() => this.schedule(), 120); }
-  stopMusic() { this.musicOn = false; clearInterval(this.musicTimer); }
+  startMusic() { this.wantMusic = true; if (!this.ctx || this.musicOn) return; this.musicOn = true; this.step = 0; this.nextT = this.ctx.currentTime + 0.1; this.musicTimer = setInterval(() => this.schedule(), 120); }
+  stopMusic() { this.wantMusic = false; this.musicOn = false; clearInterval(this.musicTimer); }
   setIntensity(x) { this.intensity = x; }
   schedule() {
     if (!this.ctx || !this.musicOn) return;
@@ -168,7 +230,7 @@ export class Sound {
   }
 }
 // Звук никогда не должен ронять игру: любое исключение WebAudio в публичных методах глотается, а звук отключается.
-for (const name of ['applyVol', 'set', 'ambient', 'silence', 'play', 'startMusic', 'stopMusic', 'setIntensity', 'schedule']) {
+for (const name of ['applyVol', 'set', 'ambient', 'silence', 'play', 'startMusic', 'unlock', 'prime', 'keepAlive', 'tryResume', 'resumeIfNeeded', 'stopMusic', 'setIntensity', 'schedule']) {
   const orig = Sound.prototype[name];
   Sound.prototype[name] = function (...args) { try { return orig.apply(this, args); } catch (e) { this.errors = (this.errors || 0) + 1; return undefined; } };
 }
