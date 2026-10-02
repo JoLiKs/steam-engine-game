@@ -27,7 +27,7 @@ export class Fx {
   }
   smoke(x, y, n = 1, a = 0.35) {
     const r = this.rng; n = Math.ceil(n * this.density);
-    for (let i = 0; i < n; i++) this.add({ k: 'steam', x: x + (r() - 0.5) * 8, y, vx: 10 + r() * 14, vy: -(24 + r() * 24), r: 8, grow: 14, life: 0, max: 3 + r() * 2, a, col: '70,64,60' });
+    for (let i = 0; i < n; i++) this.add({ k: 'smoke', x: x + (r() - 0.5) * 8, y, vx: 10 + r() * 14, vy: -(24 + r() * 24), r: 8, grow: 14, life: 0, max: 3 + r() * 2, a, col: '70,64,60' });
   }
   text(x, y, str, col = '#f1e6c8', size = 16) { if (this.texts.length < 20) this.texts.push({ x, y, str, col, size, life: 0, max: 1.6 }); }
   shake(a) { if (this.shakeOn && !this.reduced) this.shakeAmt = Math.max(this.shakeAmt, a); }
@@ -48,8 +48,11 @@ export class Fx {
     const a = this.shakeAmt * this.shakeAmt * 10, r = this.rng;
     return [(r() - 0.5) * a, (r() - 0.5) * a];
   }
-  draw(ctx) {
+  // pass: 'smoke' — только дым трубы (рисуется под HUD и котлом); иначе — всё остальное
+  draw(ctx, pass) {
+    const smokePass = pass === 'smoke';
     for (const q of this.p) {
+      if ((q.k === 'smoke') !== smokePass) continue;
       const f = q.life / q.max;
       if (q.k === 'spark') {
         ctx.fillStyle = `rgba(${q.col},${1 - f})`; ctx.fillRect(q.x - q.r / 2, q.y - q.r / 2, q.r, q.r);
@@ -59,6 +62,7 @@ export class Fx {
         ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 6.2832); ctx.fill();
       }
     }
+    if (smokePass) return;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const t of this.texts) {
       const f = t.life / t.max; ctx.globalAlpha = 1 - f * f; ctx.font = `bold ${t.size}px Georgia, serif`;

@@ -184,3 +184,16 @@ test('раскладка: все элементы внутри холста на
     assert.ok(L.shovel.h >= 44 / v.scale * 0.9 || !v.portrait);
   }
 });
+
+// ---- счёт прохождения (общие векторы с backend)
+import { readFileSync } from 'node:fs';
+import { computeScore, nightsDone } from '../src/score.js';
+test('computeScore совпадает с общими векторами бэкенда', () => {
+  const vec = JSON.parse(readFileSync(new URL('./score_vectors.json', import.meta.url)));
+  for (const v of vec) assert.equal(computeScore(v), v.score, JSON.stringify(v));
+});
+test('nightsDone: взрыв/тишина — ночи до текущей, остальные — 10', () => {
+  assert.equal(nightsDone({ ending: 'boom', night: 4 }), 4);
+  assert.equal(nightsDone({ ending: 'silence', night: 9 }), 9);
+  assert.equal(nightsDone({ ending: 'light', night: 9 }), 10);
+});

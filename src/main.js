@@ -381,9 +381,8 @@ function frame(now) {
     if (endTimer <= 0 && endTimer > -50) { endTimer = -100; ui = 'ending'; renderEnding(); show('ending'); }
   }
   visUpdate(dtReal, playing);
-  // дым из трубы
-  if (playing && s.fire > 8 && Math.random() < 0.3 + s.fire / 200) { fx.smoke(L.chimney.x, L.chimney.y - 28, 1, 0.22 + s.smog / 250); }
-  if (playing && s.flags.brown && Math.random() < 0.1) fx.smoke(L.chimney.x, L.chimney.y - 28, 1, 0.3);
+  // дым из трубы — один шлейф (бурый уголь делает его чуть плотнее, а не добавляет второй)
+  if (playing && s.fire > 8 && Math.random() < 0.3 + s.fire / 200) { fx.smoke(L.chimney.x, L.chimney.y - 28, 1, 0.22 + s.smog / 250 + (s.flags.brown ? 0.08 : 0)); }
   ambient();
   render();
 }

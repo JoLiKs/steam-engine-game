@@ -16,7 +16,7 @@ export function makeLayout(fullW, H, portrait) {
       portrait, W, H, fullW, offX: (fullW - W) / 2,
       hud: { x: 0, y: 0, w: W, h: 46 },
       sky: { x: 0, y: 46, w: W, h: 78 },
-      gauge: { cx: 100, cy: 218, r: 76 },
+      gauge: { cx: 102, cy: 224, r: 84 },
       tank: { x: 200, y: 134, w: 190, h: 100 },
       furnace: { x: 200, y: 242, w: 190, h: 72 },
       coal: null,

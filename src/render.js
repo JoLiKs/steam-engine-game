@@ -78,8 +78,6 @@ function drawCity(ctx, R) {
       ctx.fillStyle = '#17120f'; ctx.fillRect(bx + b.w - 12, by - 14, 7, 16); ctx.fillRect(bx + 4, by - 9, 6, 11);
     }
   }
-  // дымок завода
-  if (R.fxTick && s.flow[2] > 0.3) R.fx.smoke(city.factAt + 12 - L.offX, base - 62 * (h / 88), 1, 0.22 + s.flow[2] / 12);
   // снег
   if (!R.reduced) { ctx.fillStyle = 'rgba(240,245,250,.55)'; for (const f of vis.snow) ctx.fillRect(f.x % w, y0 + f.y, f.s, f.s); }
   // пелена дыма
@@ -129,6 +127,16 @@ function drawHUD(ctx, R) {
 }
 
 // ------------------------------------------------------------ манометр
+// Все надписи на циферблате (координаты от центра). Отметки 0 и 100 стоят внизу по краям дуги,
+// слова — ниже них, где шкала не мешает, а стрелка (она не опускается ниже горизонтали) не проходит.
+export function gaugeLabels(r) {
+  const out = [], a0 = 0.75 * Math.PI, sw = 1.5 * Math.PI, rb = r - 22;
+  const r1 = rb - r * 0.07, r2 = r1 - r * 0.12, rn = r2 - r * 0.1, fs = Math.max(9, Math.round(r * 0.13));
+  for (let v = 0; v <= 100; v += 20) { const a = a0 + v / 100 * sw; out.push({ t: String(v), x: Math.cos(a) * rn, y: Math.sin(a) * rn, font: `bold ${fs}px Georgia, serif`, col: '#2a2119', kind: 'tick' }); }
+  out.push({ t: 'ДАВЛЕНИЕ', x: 0, y: r * 0.55, font: `bold ${Math.max(9, Math.round(r * 0.12))}px Georgia, serif`, col: '#4a3a2a', kind: 'word' });
+  out.push({ t: 'атм', x: 0, y: r * 0.55 + Math.max(9, Math.round(r * 0.12)) + 4, font: `${Math.max(9, Math.round(r * 0.1))}px Georgia, serif`, col: '#4a3a2a', kind: 'word' });
+  return out;
+}
 function drawGauge(ctx, R) {
   const { s, L, vis } = R; const g = L.gauge, r = g.r;
   ctx.save(); ctx.translate(g.cx, g.cy);
@@ -150,10 +158,7 @@ function drawGauge(ctx, R) {
   for (let v = 0; v <= 100; v += 5) {
     const a = ang(v), big = v % 20 === 0, r1 = rb - r * 0.07, r2 = r1 - (big ? r * 0.12 : r * 0.06);
     ctx.lineWidth = big ? 2.2 : 1; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2); ctx.stroke();
-    if (big) { ctx.font = `bold ${Math.round(r * 0.13)}px Georgia, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(v), Math.cos(a) * (r2 - r * 0.1), Math.sin(a) * (r2 - r * 0.1)); }
   }
-  ctx.font = `bold ${Math.round(r * 0.12)}px Georgia, serif`; ctx.textAlign = 'center'; ctx.fillStyle = '#4a3a2a';
-  ctx.fillText('ДАВЛЕНИЕ', 0, r * 0.38); ctx.font = `${Math.round(r * 0.1)}px Georgia, serif`; ctx.fillText('атм', 0, r * 0.52);
   // цифровая подсказка
   // стрелка
   const a = ang(vis.needle);
@@ -162,6 +167,8 @@ function drawGauge(ctx, R) {
   ctx.fillStyle = '#7a1f12'; ctx.beginPath(); ctx.moveTo(-r * 0.2, -3); ctx.lineTo(rb - 2, -1.2); ctx.lineTo(rb + 4, 0); ctx.lineTo(rb - 2, 1.2); ctx.lineTo(-r * 0.2, 3); ctx.closePath(); ctx.fill();
   ctx.restore();
   ctx.fillStyle = brassGrad(ctx, -8, -8, 8, 8); ctx.beginPath(); ctx.arc(0, 0, r * 0.1, 0, TAU); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+  // подписи манометра: только отметки шкалы, «ДАВЛЕНИЕ» и «атм» (раскладка в gaugeLabels, чтобы тесты могли проверить отсутствие наложений)
+  for (const lb of gaugeLabels(r)) { ctx.font = lb.font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = lb.col; ctx.fillText(lb.t, lb.x, lb.y); }
   glassShine(ctx, -r + 12, -r + 12, r * 2 - 24, r - 10, r * 0.6);
   // кольцо опасности
   if (s.danger > 0) {
@@ -483,6 +490,8 @@ export function drawScene(ctx, R) {
   const { L } = R;
   ctx.save();
   drawCity(ctx, R);
+  // единственный дым — из трубы котла; под HUD и котлом, поэтому не налезает на надписи
+  ctx.save(); ctx.beginPath(); ctx.rect(-L.offX, L.hud.h, L.fullW, L.chimney.y - L.hud.h); ctx.clip(); R.fx.draw(ctx, 'smoke'); ctx.restore();
   // шестерни на стене
   for (const g of R.gears) drawGear(ctx, g.x, g.y, g.r, g.n, g.rot, g.kind, g.a, R.dpr * R.scale);
   drawHUD(ctx, R);
@@ -497,7 +506,7 @@ export function drawScene(ctx, R) {
   if (R.tutHint === 'gauge') pulseRing(ctx, L.gauge.cx - L.gauge.r - 8, L.gauge.cy - L.gauge.r - 8, L.gauge.r * 2 + 16, L.gauge.r * 2 + 16, R.time, R.reduced);
   if (R.tutHint === 'leak') for (const lk of R.s.leaks) { const c = column(L, lk.pipe); pulseRing(ctx, c.leak.x - 22, c.leak.y - 22, 44, 44, R.time, R.reduced); }
   drawBanner(ctx, R);
-  R.fx.draw(ctx);
+  R.fx.draw(ctx, 'main');
   // опасность
   if (R.s.P > P_VENT - 4 || R.s.danger > 0) {
     const k = clamp((R.s.P - (P_VENT - 4)) / 12, 0, 1);

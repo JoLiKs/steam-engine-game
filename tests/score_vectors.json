@@ -1,0 +1,10 @@
+[
+  {"nights": 10, "pop": 1000, "ending": "light", "burnouts": 0, "smog": 0, "score": 1800},
+  {"nights": 10, "pop": 933, "ending": "light", "burnouts": 1, "smog": 12, "score": 1730},
+  {"nights": 10, "pop": 801, "ending": "smoke", "burnouts": 0, "smog": 31, "score": 1520},
+  {"nights": 10, "pop": 745, "ending": "iron", "burnouts": 3, "smog": 20, "score": 1428},
+  {"nights": 10, "pop": 600, "ending": "cold", "burnouts": 1, "smog": 25, "score": 1300},
+  {"nights": 4, "pop": 700, "ending": "boom", "burnouts": 0, "smog": 10, "score": 740},
+  {"nights": 0, "pop": 0, "ending": "silence", "burnouts": 5, "smog": 100, "score": 0},
+  {"nights": 3, "pop": 401, "ending": "silence", "burnouts": 0, "smog": 5, "score": 496}
+]

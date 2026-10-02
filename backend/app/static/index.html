@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Последний котёл — админка</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/admin/panel/admin.css">
+</head>
+<body>
+<header class="top">
+  <h1>⚙ Последний котёл <small>админка</small></h1>
+  <nav id="tabs" role="tablist">
+    <button role="tab" data-tab="overview" class="on">Обзор</button>
+    <button role="tab" data-tab="sessions">Сессии</button>
+    <button role="tab" data-tab="scores">Рейтинг</button>
+    <button role="tab" data-tab="maint">Обслуживание</button>
+  </nav>
+  <button id="logout" class="btn">Выйти</button>
+</header>
+<main>
+  <section id="tab-overview" class="tab">
+    <div class="filters" id="ovFilters"></div>
+    <div id="cards" class="cards"></div>
+    <div class="grid">
+      <div class="card"><h3>Концовки</h3><div id="chEndings"></div></div>
+      <div class="card"><h3>Дошли до ночи (пройдено ночей)</h3><div id="chNights"></div></div>
+      <div class="card"><h3>Платформы</h3><div id="chPlatforms"></div></div>
+      <div class="card"><h3>Размер экрана</h3><div id="chScreens"></div></div>
+      <div class="card"><h3>Сессии по дням</h3><div id="chDays"></div></div>
+      <div class="card"><h3>Среднее открытие вентилей</h3><div id="chValves"></div></div>
+    </div>
+  </section>
+  <section id="tab-sessions" class="tab" hidden>
+    <form id="sFilters" class="filters">
+      <label>Платформа <select name="platform"><option value="">все</option></select></label>
+      <label>Концовка <select name="ending"><option value="">все</option></select></label>
+      <label>Статус <select name="status"><option value="">все</option><option value="ended">завершены</option><option value="playing">идут/брошены</option></select></label>
+      <label>Ночей от <input name="min_nights" type="number" min="0" max="10"></label>
+      <label>до <input name="max_nights" type="number" min="0" max="10"></label>
+      <label>Длит. от, с <input name="min_duration" type="number" min="0"></label>
+      <label>С даты <input name="since" type="date"></label>
+      <label>По дату <input name="until" type="date"></label>
+      <button class="btn primary" type="submit">Применить</button>
+      <button class="btn" type="reset" id="sReset">Сбросить</button>
+      <a class="btn" id="sCsv" href="#">CSV</a>
+    </form>
+    <div class="tbl-wrap"><table id="sTable"><thead></thead><tbody></tbody></table></div>
+    <div class="pager"><button class="btn" id="sPrev">←</button> <span id="sInfo"></span> <button class="btn" id="sNext">→</button></div>
+    <dialog id="sDlg"><pre id="sDetail"></pre><div class="row"><button class="btn danger" id="sDel">Удалить сессию</button><button class="btn" id="sClose">Закрыть</button></div></dialog>
+  </section>
+  <section id="tab-scores" class="tab" hidden>
+    <div class="filters"><label>Ник <input id="scQ" maxlength="30"></label><button class="btn primary" id="scGo">Найти</button><a class="btn" id="scCsv" href="/api/admin/export?what=scores">CSV</a></div>
+    <div class="tbl-wrap"><table id="scTable"><thead></thead><tbody></tbody></table></div>
+    <p class="muted">«Скрыть» убирает запись из публичного рейтинга (можно вернуть), «Удалить» — навсегда. В рейтинге игрок виден один раз — своей лучшей записью.</p>
+  </section>
+  <section id="tab-maint" class="tab" hidden>
+    <div class="card">
+      <h3>Удалить старые сессии</h3>
+      <p class="muted">Сессии и события старше N дней удаляются безвозвратно (рейтинг не затрагивается). Автоматически сервер чистит всё старше 180 дней.</p>
+      <label>Старше, дней <input id="pDays" type="number" min="0" max="3650" value="90"></label>
+      <button class="btn danger" id="pGo">Удалить</button>
+      <p id="pRes" class="muted"></p>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+<script src="/admin/panel/app.js" defer></script>
+</body>
+</html>
