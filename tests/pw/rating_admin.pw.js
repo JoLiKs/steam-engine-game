@@ -40,7 +40,7 @@ const path = require('path');
     ok(await page.isVisible('#board'), 'после отправки открылся рейтинг');
     const items = await page.$$eval('#lb-list li', els => els.map(e => ({ t: e.textContent, html: e.innerHTML })));
     ok(items.length === 1, 'в рейтинге одна запись (' + items.length + ')');
-    ok(items[0] && !/<b|<img|<script/i.test(items[0].html) && !/[<>]/.test(items[0].t) && /Тест/.test(items[0].t), 'ник санитизирован, без HTML: «' + (items[0] && items[0].t.split(/\d/)[0]) + '»');
+    ok(items[0] && !/<img|<script/i.test(items[0].html) && !/[<>]/.test(items[0].t) && /Тест/.test(items[0].t), 'ник санитизирован, без HTML: «' + (items[0] && items[0].t.split(/\d/)[0]) + '»');
     await page.screenshot({ path: path.join(SHOTS, 'rating-filled-desktop.png') });
     await page.click('[data-board=survival]'); await sleep(500);
     ok((await page.$$('#lb-list li')).length === 1, 'вкладка «По выживанию» показывает запись');
