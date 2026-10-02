@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 (2026-10-02) — GitHub Pages
+
+- Игра опубликована также на https://joliks.github.io/steam-engine-game/ (ветка `gh-pages`, `tools/deploy-ghpages.sh`, Pages включаются через API).
+- API-база настраиваемая: при сборке `SEG_TARGET=ghpages SEG_API_BASE=…` адрес бэкенда вшивается в бандл; без него — тот же origin (`/api/g`, pages.dev не изменился). В сборке gh-pages нет `/admin`, `_worker.js`, `_headers`; добавлены `.nojekyll` и `404.html`.
+- Бэкенд: `SEG_DIRECT_ORIGINS` — прямой доступ без Worker только к публичному `/api/g/*` с доверенных origin; `X-Real-IP` от nginx принимается только с loopback; админка недоступна напрямую (403). В nginx `location /steam/` добавлен `X-Real-IP`.
+- Тесты: pytest +9 (прямой доступ, CORS/preflight, админка закрыта, X-Real-IP), `tests/ghpages.test.mjs`, живые `tests/live/ghpages*.pw.js`.
+- Ограничения: на github.io игра зависит от доступности бэкенда напрямую (без Cloudflare перед ним); без ключей Worker лимиты на IP опираются на `X-Real-IP` nginx.
+
 ## 1.2.0 (2026-10-02) — тренер, звук на телефонах, ИИ-комментатор
 
 ### Изменено

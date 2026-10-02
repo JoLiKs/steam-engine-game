@@ -126,15 +126,25 @@
 
 **Безопасность ключей:** хранятся только зашифрованными (Fernet); мастер-ключ — в `SEG_AI_MASTER_KEY` в `/etc/steam-engine-game.env` (chmod 640 root:seg), не в репозитории и не в БД; без него добавить ключ нельзя (503). Наружу (API, админка, логи) — только маска `abcd…wxyz`. Сессия + CSRF + Origin — как у остальной админки; тяжёлые действия (добавить/проверить/пример) ограничены 12 в минуту на сессию. Создать мастер-ключ: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. **Потеря мастер-ключа = ключи придётся добавить заново.**
 
+### Вторая площадка: GitHub Pages
+Игра также доступна на **https://joliks.github.io/steam-engine-game/** (ветка `gh-pages`, собирается скриптом `tools/deploy-ghpages.sh`). Отличия от pages.dev:
+* На github.io нет Cloudflare Worker, поэтому API-адрес вшивается при сборке (`SEG_API_BASE`, по умолчанию `https://185-255-133-179.sslip.io/steam/api/g`), и браузер ходит на бэкенд напрямую (CORS). В `src/net.js` база — `__SEG_API_BASE__` (без неё — тот же origin `/api/g`).
+* Бэкенд пускает такие прямые запросы **только** на публичное `/api/g/*` (рейтинг, билет, события, заметка) и только с origin из `SEG_DIRECT_ORIGINS` (`https://joliks.github.io`, он же в `SEG_ALLOWED_ORIGINS`); реальный IP для лимитов даёт nginx через `X-Real-IP` (бэкенд верит заголовку только при соединении с loopback). Админка и `/api/admin/*` по-прежнему только через Worker на pages.dev — прямой доступ отдаёт 403, а в сборке gh-pages нет ни `/admin`, ни `_worker.js`.
+* Пути в сборке относительные — работает в подкаталоге `/steam-engine-game/`.
+
+Выкладка: `GITHUB_TOKEN=… bash tools/deploy-ghpages.sh` (собирает `SEG_TARGET=ghpages`, коммитит в `gh-pages`, при первом запуске включает Pages через API — источник `gh-pages`, `/`, — и ждёт публикации; токен передаётся только одноразовым `http.extraheader`, в remote/вывод не попадает). Ветки `1.x` и теги скрипт не трогает. Проверка: `node tests/live/ghpages.pw.js` (Chromium+WebKit, десктоп и телефон) и `node tests/live/ghpages_score.pw.js` (запись в рейтинг) — создают тестовые данные на проде, их нужно удалить.
+Серверная часть: в `/etc/steam-engine-game.env` — `SEG_ALLOWED_ORIGINS=https://steam-engine-game.pages.dev,https://joliks.github.io` и `SEG_DIRECT_ORIGINS=https://joliks.github.io`; в `location /steam/` nginx — `proxy_set_header X-Real-IP $remote_addr;` (см. `backend/deploy/nginx-location.conf`).
+
 ## Тесты и баланс
 
 ```bash
 npm install                                  # playwright-core, puppeteer-core (используется системный Chrome)
 bash tests/run-all.sh                        # всё сразу (≈ 8 минут)
-node --test tests/                           # юниты: логика, тренер, заметки, звук (мок AudioContext), счёт (общие векторы с бэкендом) — 71
+node --test tests/                           # юниты: логика, тренер, заметки, звук (мок AudioContext), счёт (общие векторы с бэкендом) — 74
 node tests/audio_offline.js                  # звук: реальный OfflineAudioContext — каналы «Звуки»/«Музыка» независимы
-(cd backend && python -m pytest -q)          # бэкенд: 121 тест (+ ИИ: сигнатуры ключей, Fernet, санитизация, лимиты, цепочка фолбэков, 401/CSRF)
+(cd backend && python -m pytest -q)          # бэкенд: 130 тестов (+ ИИ: сигнатуры ключей, Fernet, санитизация, лимиты, цепочка фолбэков, 401/CSRF)
 node tests/pw/audio_mobile.pw.js             # Playwright: звук — Android Chromium и iPhone WebKit: состояние AudioContext после жеста, кнопка «Включить звук»
+node tests/ghpages.test.mjs                  # сборка для GitHub Pages: API вшит, нет админки/воркера
 node tests/pw/ai.pw.js                       # Playwright: заметки в игре (десктоп/телефон/офлайн) и вкладка «ИИ» в админке (ИИ-провайдеры подменены SEG_AI_MOCK=1)
 node tests/pw/rating_admin.pw.js             # Playwright: рейтинг, телеметрия, офлайн, админка (стенд: бэкенд + настоящий _worker.js)
 node tests/pw/mobile_visual.pw.js            # Playwright: 4 мобильных и 3 десктопных вьюпорта, касания, манометр, дым, safe-area, FPS
@@ -162,6 +172,7 @@ tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты вер�
 
 ## Деплой
 
+* **GitHub Pages**: `tools/deploy-ghpages.sh` (см. раздел «Вторая площадка» выше).
 * **Сборка** (`node scripts/build.mjs [dir]`): `src/*.js` → один классический скрипт `game.<хеш>.js` (esbuild, цели Safari 11+/Chrome 64+/Firefox 60+/Edge 79+), `boot.<хеш>.js` — страж загрузки, который показывает экран ошибки вместо чёрного экрана. Модули `src/` остаются для разработки и тестов (`index.html` в репозитории подключает их напрямую).
 
 * **Игра/Pages**: `scripts/deploy.sh` (wrangler 3, проект `steam-engine-game`; публикуются только файлы сайта). Секрет прокси задаётся в проекте Pages как `SEG_PROXY_SECRET`.
@@ -171,4 +182,4 @@ tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты вер�
 
 * `1.0` / тег `v1.0` — исходная версия игры (без онлайна). `main` = 1.0.
 * `1.1` — онлайн-рейтинг, админка, мобильная версия (теги `v1.1`, `v1.1.1`).
-* `1.2` — эта версия (тег `v1.2.0`): тренер вместо обучения, звук на телефонах, ИИ-комментатор и раздел «ИИ» в админке.
+* `1.2` — эта версия (теги `v1.2.0`, `v1.2.1`): тренер вместо обучения, звук на телефонах, ИИ-комментатор и раздел «ИИ» в админке.
