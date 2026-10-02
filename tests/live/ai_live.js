@@ -16,11 +16,11 @@ let bad = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); 
   ok(st.vault === true, 'шифрование ключей настроено (мастер-ключ задан)');
   console.log('  провайдеры:', st.providers.map(p => `${p.name}[${p.status}]`).join(', '));
   for (const p of st.providers) {
-    const r = await (await a.api(`/api/admin/ai/providers/${p.id}/check`, { method: 'POST', body: '{}' })).json();
+    const r = await (await a.api(`/api/admin/ai/providers/${p.id}/check`, { method: 'POST', body: '{}' })).json().catch(() => ({ ok: false, error: 'не-JSON ответ (таймаут?)' }));
     console.log(`  проверка ${p.name}: ${r.ok ? 'OK ' + r.ms + ' мс' : 'ошибка: ' + r.error}`);
   }
   for (const sit of ['calm', 'leak', 'pressure_high']) {
-    const r = await (await a.api('/api/admin/ai/sample', { method: 'POST', body: JSON.stringify({ situation: sit }) })).json();
+    const r = await (await a.api('/api/admin/ai/sample', { method: 'POST', body: JSON.stringify({ situation: sit }) })).json().catch(() => ({ ok: false, text: 'не-JSON ответ (таймаут?)' }));
     console.log(`  пример (${sit}): ${r.ok ? 'ИИ' : 'ЗАПАСНОЙ'} ${r.provider || ''} ${r.ms || ''} мс — «${r.text}»`);
   }
   await a.api('/api/admin/logout', { method: 'POST', body: '{}' });

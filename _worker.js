@@ -51,7 +51,7 @@ export async function proxy(request, env, url) {
 
   // бэкенд не должен «вешать» игру: публичные вызовы — не дольше 2,5 с (клиент всё равно ждёт максимум 3 с), админка — до 15 с
   const ac = new AbortController(); init.signal = ac.signal;
-  const limit = url.pathname.startsWith('/api/g/') ? 2500 : 15000;
+  const limit = url.pathname.startsWith('/api/g/') ? 2500 : url.pathname.startsWith('/api/admin/ai') ? 40000 : 15000;   // раздел «ИИ»: проверка ключа/пример могут идти до ~30 с
   const timer = setTimeout(() => ac.abort(), limit);
   let up;
   try { up = await fetch(base + url.pathname + url.search, init); } catch (e) { clearTimeout(timer); return plain(ac.signal.aborted ? 504 : 502, ac.signal.aborted ? 'backend timeout' : 'backend unavailable'); }
