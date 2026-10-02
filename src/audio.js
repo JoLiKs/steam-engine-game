@@ -2,18 +2,29 @@
 // Никаких файлов — всё синтезируется на лету.
 import { makeRng } from './rng.js';
 
+// Громкость 0..1 (положение ползунка) → усиление. Логарифмическая кривая: диапазон 40 дБ, 0 — полная тишина.
+export const DB_RANGE = 40;
+export function volCurve(v) {
+  v = Math.max(0, Math.min(1, +v || 0));
+  return v <= 0.001 ? 0 : Math.pow(10, -(DB_RANGE / 20) * (1 - v));
+}
+export const SFX_MAX = 2.2, MUSIC_MAX = 1.6; // усиление при ползунке на 100%
+
 export class Sound {
-  constructor() {
-    this.ctx = null; this.enabled = true; this.volume = 0.7; this.musicVol = 0.5;
+  // makeCtx — необязательная фабрика AudioContext (тесты подставляют мок или OfflineAudioContext)
+  constructor(makeCtx) {
+    this.makeCtx = makeCtx || null;
+    this.ctx = null; this.enabled = true; this.sfxVol = 0.7; this.musicVol = 0.6;
     this.master = null; this.sfx = null; this.music = null; this.noiseBuf = null;
     this.hiss = null; this.rumble = null; this.musicTimer = null; this.step = 0; this.nextT = 0;
     this.musicOn = false; this.rng = makeRng(77); this.lastT = {};
   }
   ensure() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return !!this.ctx; }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return false;
-    try { this.ctx = new AC(); } catch (e) { return false; }
+    try {
+      if (this.makeCtx) this.ctx = this.makeCtx();
+      else { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; this.ctx = new AC(); }
+    } catch (e) { return false; }
     const c = this.ctx;
     this.master = c.createGain(); this.sfx = c.createGain(); this.music = c.createGain();
     const comp = c.createDynamicsCompressor();
@@ -21,16 +32,18 @@ export class Sound {
     this.noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = this.rng() * 2 - 1;
-    this.applyVol();
+    this.applyVol(true);
     this.buildLoops();
     return true;
   }
-  applyVol() {
+  // master — только общий выключатель; «Звуки» и «Музыка» — независимые узлы gain со своей кривой
+  applyVol(immediate) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, t, 0.05);
-    this.music.gain.setTargetAtTime(this.musicVol * 0.55, t, 0.1);
-    this.sfx.gain.setTargetAtTime(0.9, t, 0.1);
+    const put = (g, v, tc) => { if (immediate) { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(v, t); } else g.gain.setTargetAtTime(v, t, tc); };
+    put(this.master, this.enabled ? 1 : 0, 0.05);
+    put(this.sfx, volCurve(this.sfxVol) * SFX_MAX, 0.05);
+    put(this.music, volCurve(this.musicVol) * MUSIC_MAX, 0.05);
   }
   set(opts) { Object.assign(this, opts); this.applyVol(); }
   noiseSrc(loop = false) {

@@ -24,8 +24,13 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
 };
-let settings = { sound: true, vol: 70, music: 50, reduce: mq.matches, shake: true };
-try { Object.assign(settings, JSON.parse(store.get(SET_KEY) || '{}')); } catch (e) { /* ignore */ }
+let settings = { sound: true, sfx: 70, music: 60, reduce: mq.matches, shake: true };
+try {
+  const saved = JSON.parse(store.get(SET_KEY) || '{}');
+  if (saved.sfx === undefined && saved.vol !== undefined) { saved.sfx = saved.vol; if (saved.music !== undefined) saved.music = Math.min(100, saved.music + 10); } // миграция со старой «Громкости»
+  delete saved.vol; Object.assign(settings, saved);
+} catch (e) { /* ignore */ }
+for (const k of ['sfx', 'music']) settings[k] = Math.max(0, Math.min(100, +settings[k] || 0));
 let meta = { endings: [], plays: 0 };
 try { Object.assign(meta, JSON.parse(store.get(META_KEY) || '{}')); } catch (e) { /* ignore */ }
 
@@ -45,7 +50,7 @@ for (let i = 0; i < 70; i++) vis.snow.push({ x: rnd() * 1400, y: rnd() * 90, s: 
 let gears = [];
 
 function applySettings() {
-  sound.set({ enabled: settings.sound, volume: settings.vol / 100, musicVol: settings.music / 100 });
+  sound.set({ enabled: settings.sound, sfxVol: settings.sfx / 100, musicVol: settings.music / 100 });
   fx.reduced = settings.reduce; fx.shakeOn = settings.shake;
   document.documentElement.classList.toggle('reduce', settings.reduce);
   store.set(SET_KEY, JSON.stringify(settings));
@@ -249,11 +254,11 @@ function wire() {
   click('b-again', () => { newGame(); }); click('b-emenu', () => { ui = 'title'; updateTitle(); show('title'); });
   click('b-wipe', () => { if (confirm('Стереть сохранение и открытые концовки?')) { store.del(SAVE_KEY); meta = { endings: [], plays: 0 }; store.set(META_KEY, JSON.stringify(meta)); updateTitle(); } });
   $('o-sound').addEventListener('change', e => { settings.sound = e.target.checked; applySettings(); sound.ensure(); sound.play('click'); });
-  $('o-vol').addEventListener('input', e => { settings.vol = +e.target.value; applySettings(); sound.ensure(); sound.play('valve', 0.5); });
+  $('o-sfx').addEventListener('input', e => { settings.sfx = +e.target.value; applySettings(); sound.ensure(); sound.play('valve', 0.5); });
   $('o-music').addEventListener('input', e => { settings.music = +e.target.value; applySettings(); });
   $('o-reduce').addEventListener('change', e => { settings.reduce = e.target.checked; applySettings(); });
   $('o-shake').addEventListener('change', e => { settings.shake = e.target.checked; applySettings(); });
-  $('o-sound').checked = settings.sound; $('o-vol').value = settings.vol; $('o-music').value = settings.music; $('o-reduce').checked = settings.reduce; $('o-shake').checked = settings.shake;
+  $('o-sound').checked = settings.sound; $('o-sfx').value = settings.sfx; $('o-music').value = settings.music; $('o-reduce').checked = settings.reduce; $('o-shake').checked = settings.shake;
   document.addEventListener('visibilitychange', () => { if (document.hidden) { pauseGame(); sound.silence(); } });
   window.addEventListener('blur', () => { if (ui === 'play') pauseGame(); });
   window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 120));
