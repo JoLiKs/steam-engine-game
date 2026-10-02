@@ -49,8 +49,13 @@ export async function proxy(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'HEAD') init.body = await request.arrayBuffer();
   if (init.body && init.body.byteLength > MAX_BODY) return plain(413, 'too large');
 
+  // бэкенд не должен «вешать» игру: публичные вызовы — не дольше 2,5 с (клиент всё равно ждёт максимум 3 с), админка — до 15 с
+  const ac = new AbortController(); init.signal = ac.signal;
+  const limit = url.pathname.startsWith('/api/g/') ? 2500 : 15000;
+  const timer = setTimeout(() => ac.abort(), limit);
   let up;
-  try { up = await fetch(base + url.pathname + url.search, init); } catch { return plain(502, 'backend unavailable'); }
+  try { up = await fetch(base + url.pathname + url.search, init); } catch (e) { clearTimeout(timer); return plain(ac.signal.aborted ? 504 : 502, ac.signal.aborted ? 'backend timeout' : 'backend unavailable'); }
+  clearTimeout(timer);
 
   const out = new Headers();
   for (const [k, v] of up.headers) if (!DROP_RES.has(k.toLowerCase()) && k.toLowerCase() !== 'set-cookie') out.append(k, v);

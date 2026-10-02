@@ -98,6 +98,8 @@
 
 ### Мобильная версия
 
+* **Надёжный запуск**: сеть (рейтинг/статистика) ограничена 3 секундами и не блокирует игру; ошибки звука не ломают игру; любая ошибка загрузки показывает экран с кнопкой «Перезагрузить».
+
 * `viewport-fit=cover`, `user-scalable=no`; `touch-action: manipulation` на странице и `none` на холсте — двойной тап не зумит; отступы **safe-area** заданы на самом холсте (вырез/жестовая панель не закрывают HUD).
 * Две раскладки: книжная (телефон) и альбомная; поворот на лету без потери игры. Цели касания ≥ 44 CSS-px (колонки вентилей, «Уголь», утечки, пауза — зона нажатия расширяется на мелком масштабе); кнопки меню ≥ 48 px; ползунки ≥ 44 px.
 * Аудио создаётся/возобновляется по первому касанию (`pointerdown`/`touchend`); плотность пикселей на телефонах ограничена 2×.
@@ -113,6 +115,7 @@ node tests/audio_offline.js                  # звук: реальный Offlin
 (cd backend && python -m pytest -q)          # бэкенд: 43 теста (валидация, лимиты, ник, билеты, CORS, 401, CSRF, админка, CSV)
 node tests/pw/rating_admin.pw.js             # Playwright: рейтинг, телеметрия, офлайн, админка (стенд: бэкенд + настоящий _worker.js)
 node tests/pw/mobile_visual.pw.js            # Playwright: 4 мобильных и 3 десктопных вьюпорта, касания, манометр, дым, safe-area, FPS
+node tests/compat/boot.pw.js                 # загрузка на «телефонах»: Android Chromium + iPhone WebKit, сбои сети/хранилища/звука, экран ошибки
 node tests/e2e.js                            # Puppeteer: игра с нуля до концовки на 1280×800 и 390×844
 node tests/live/live_check.pw.js          # живая проверка прода (нужен файл с паролем админки; создаёт и удаляет тестовую запись)
 node scripts/balance.mjs                     # таблица: бот × политика решений × 20 seed → концовки
@@ -135,6 +138,8 @@ tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты вер�
 ```
 
 ## Деплой
+
+* **Сборка** (`node scripts/build.mjs [dir]`): `src/*.js` → один классический скрипт `game.<хеш>.js` (esbuild, цели Safari 11+/Chrome 64+/Firefox 60+/Edge 79+), `boot.<хеш>.js` — страж загрузки, который показывает экран ошибки вместо чёрного экрана. Модули `src/` остаются для разработки и тестов (`index.html` в репозитории подключает их напрямую).
 
 * **Игра/Pages**: `scripts/deploy.sh` (wrangler 3, проект `steam-engine-game`; публикуются только файлы сайта). Секрет прокси задаётся в проекте Pages как `SEG_PROXY_SECRET`.
 * **Бэкенд**: `backend/deploy/` — unit systemd (`steam-engine-game.service`, порт 8932, пользователь без shell, `ProtectSystem=strict`) и фрагмент nginx (`location /steam/`). Переменные окружения (`SEG_*`) — в `/etc/steam-engine-game.env` (chmod 640 root:seg): `SEG_SECRET_KEY`, `SEG_PROXY_SECRET`, `SEG_ADMIN_PASSWORD_HASH` (получить: `echo -n 'пароль' | python -m app.hashpw`), `SEG_ALLOWED_ORIGINS`, `SEG_ADMIN_ORIGINS`.

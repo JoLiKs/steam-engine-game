@@ -1,20 +1,26 @@
 // Сеть: рейтинг и анонимная статистика. Все вызовы безопасны офлайн: ошибка/таймаут → null, игра продолжает работать.
 // Запросы идут на тот же origin (/api/g/*): Cloudflare Pages Worker проксирует их на бэкенд.
 const BASE = '/api/g';
-const TIMEOUT = 5000;
+export const TIMEOUT = 3000;   // жёсткий предел на любой запрос к бэкенду: игра не ждёт сеть дольше 3 с
 
-export async function call(path, body, opts = {}) {
-  if (typeof fetch !== 'function') return null;
+// Всегда завершается за ≤ TIMEOUT мс: и по AbortController, и по «гонке» с таймером (на случай браузеров, где fetch не реагирует на abort).
+export function call(path, body, opts = {}) {
+  if (typeof fetch !== 'function') return Promise.resolve(null);
+  const limit = Math.min(opts.timeout || TIMEOUT, TIMEOUT);
   const ctl = typeof AbortController === 'function' ? new AbortController() : null;
-  const timer = ctl ? setTimeout(() => ctl.abort(), opts.timeout || TIMEOUT) : 0;
-  try {
-    const r = await fetch(BASE + path, {
-      method: body === undefined ? 'GET' : 'POST', signal: ctl ? ctl.signal : undefined, cache: 'no-store', credentials: 'omit', keepalive: !!opts.keepalive,
-      headers: body === undefined ? undefined : { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    let j = null; try { j = await r.json(); } catch (e) { /* не JSON */ }
-    return { ok: r.ok, status: r.status, data: j };
-  } catch (e) { return null; } finally { if (timer) clearTimeout(timer); }
+  let timer = 0;
+  const deadline = new Promise(res => { timer = setTimeout(() => { try { if (ctl) ctl.abort(); } catch (e) { /* */ } res(null); }, limit); });
+  const req = (async () => {
+    try {
+      const r = await fetch(BASE + path, {
+        method: body === undefined ? 'GET' : 'POST', signal: ctl ? ctl.signal : undefined, cache: 'no-store', credentials: 'omit', keepalive: !!opts.keepalive,
+        headers: body === undefined ? undefined : { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      let j = null; try { j = await r.json(); } catch (e) { /* не JSON */ }
+      return { ok: r.ok, status: r.status, data: j };
+    } catch (e) { return null; }
+  })();
+  return Promise.race([req, deadline]).then(v => { clearTimeout(timer); return v; }, () => { clearTimeout(timer); return null; });
 }
 
 // краткие сведения об устройстве (без точных версий и идентификаторов)

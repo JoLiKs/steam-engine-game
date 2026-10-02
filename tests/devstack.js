@@ -2,7 +2,8 @@
 // Используется e2e-тестами (Playwright): node tests/devstack.js  — поднять стенд вручную.
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), net = require('net');
 const { spawn } = require('child_process');
-const root = path.resolve(__dirname, '..');
+const repo = path.resolve(__dirname, '..');
+const root = process.env.SEG_SITE ? path.resolve(process.env.SEG_SITE) : repo;   // SEG_SITE=dist → проверяем собранную (прод) версию
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const PY = process.env.SEG_PY || (fs.existsSync('/workspace/venv-test/bin/python') ? '/workspace/venv-test/bin/python' : 'python3');
 const freePort = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
@@ -12,9 +13,9 @@ function parseHeaders() {   // минимальный разбор _headers Clou
   const rules = []; let cur = null;
   for (const line of fs.readFileSync(path.join(root, '_headers'), 'utf8').split('\n')) {
     if (!line.trim() || line.startsWith('#')) continue;
-    if (!/^\s/.test(line)) { cur = { pat: line.trim(), h: {} }; rules.push(cur); } else { const i = line.indexOf(':'); cur.h[line.slice(0, i).trim()] = line.slice(i + 1).trim(); }
+    if (!/^\s/.test(line)) { cur = { pat: line.trim(), h: {} }; cur.re = new RegExp('^' + cur.pat.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$'); rules.push(cur); } else { const i = line.indexOf(':'); cur.h[line.slice(0, i).trim()] = line.slice(i + 1).trim(); }
   }
-  return p => Object.assign({}, ...rules.filter(r => r.pat === '/*' || r.pat === p || (r.pat.endsWith('/*') && p.startsWith(r.pat.slice(0, -1)))).map(r => r.h));
+  return p => Object.assign({}, ...rules.filter(r => r.re.test(p)).map(r => r.h));
 }
 
 async function start(opts = {}) {
@@ -26,7 +27,7 @@ async function start(opts = {}) {
   const origin = `http://127.0.0.1:${wport}`;
   const env = { ...process.env, ...secrets, SEG_ADMIN_PASSWORD: password, SEG_DB_PATH: path.join(dir, 'seg.db'), SEG_HOST: '127.0.0.1', SEG_PORT: String(bport),
     SEG_ALLOWED_ORIGINS: origin, SEG_ADMIN_ORIGINS: origin, SEG_COOKIE_SECURE: '0', SEG_MIN_TIME_FACTOR: String(opts.minTimeFactor ?? 0), SEG_RL_SCORE_PER_MIN: '60', ...(opts.env || {}) };
-  const py = spawn(PY, ['-m', 'app'], { cwd: path.join(root, 'backend'), env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const py = spawn(PY, ['-m', 'app'], { cwd: path.join(repo, 'backend'), env, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; py.stdout.on('data', d => log += d); py.stderr.on('data', d => log += d);
   for (let i = 0; i < 60; i++) { try { const r = await fetch(`http://127.0.0.1:${bport}/api/health`); if (r.ok) break; } catch (e) { /* ждём */ } await sleep(150); if (i === 59) throw new Error('backend не поднялся: ' + log); }
 

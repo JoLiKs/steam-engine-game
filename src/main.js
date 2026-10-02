@@ -288,7 +288,7 @@ async function openBoard(which) {
   if (ui !== 'board') openOverlay('board');
   boardCur = which || boardCur;
   document.querySelectorAll('#board .tab').forEach(b => { const on = b.dataset.board === boardCur; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-  const list = $('lb-list'), msg = $('lb-msg'); list.replaceChildren(); msg.textContent = 'Загружаем…';
+  const list = $('lb-list'), msg = $('lb-msg'); list.textContent = ''; msg.textContent = 'Загружаем…';
   const entries = await fetchBoard(boardCur);
   if (ui !== 'board') return;
   if (!entries) { msg.textContent = 'Рейтинг сейчас недоступен.'; return; }
@@ -484,5 +484,6 @@ function init() {
   wire(); applySettings(); resize(); updateTitle(); show('title');
   fetchBoard('score').then(e => { boardAvailable = e !== null; updateBoardBtn(); });
   requestAnimationFrame(t => { last = t; frame(t); });
+  window.__gameReady = true; if (window.__bootReady) window.__bootReady();   // сообщаем стражу загрузки (boot.js), что всё поднялось
 }
 init();

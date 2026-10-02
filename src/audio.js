@@ -20,21 +20,26 @@ export class Sound {
     this.musicOn = false; this.rng = makeRng(77); this.lastT = {};
   }
   ensure() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return !!this.ctx; }
+    if (this.dead) return false;
+    if (this.ctx) { if (this.ctx.state === 'suspended') { try { const pr = this.ctx.resume(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { /* аудио недоступно — игра идёт без звука */ } } return !!this.ctx; }
     try {
       if (this.makeCtx) this.ctx = this.makeCtx();
       else { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; this.ctx = new AC(); }
-    } catch (e) { return false; }
-    const c = this.ctx;
-    this.master = c.createGain(); this.sfx = c.createGain(); this.music = c.createGain();
-    const comp = c.createDynamicsCompressor();
-    this.sfx.connect(this.master); this.music.connect(this.master); this.master.connect(comp); comp.connect(c.destination);
-    this.noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
-    const d = this.noiseBuf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = this.rng() * 2 - 1;
-    this.applyVol(true);
-    this.buildLoops();
-    return true;
+    } catch (e) { this.dead = true; return false; }
+    try {
+      const c = this.ctx;
+      this.master = c.createGain(); this.sfx = c.createGain(); this.music = c.createGain();
+      const comp = c.createDynamicsCompressor();
+      this.sfx.connect(this.master); this.music.connect(this.master); this.master.connect(comp); comp.connect(c.destination);
+      this.noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+      const d = this.noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = this.rng() * 2 - 1;
+      this.applyVol(true);
+      this.buildLoops();
+      return true;
+    } catch (e) {   // частичная инициализация (редкие/старые реализации WebAudio): без звука, но игра идёт
+      this.dead = true; try { this.ctx.close(); } catch (e2) { /* */ } this.ctx = null; return false;
+    }
   }
   // master — только общий выключатель; «Звуки» и «Музыка» — независимые узлы gain со своей кривой
   applyVol(immediate) {
@@ -161,5 +166,10 @@ export class Sound {
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     s.connect(f); f.connect(g); g.connect(this.music); s.start(t, this.rng() * 1.5, dur + 0.1);
   }
+}
+// Звук никогда не должен ронять игру: любое исключение WebAudio в публичных методах глотается, а звук отключается.
+for (const name of ['applyVol', 'set', 'ambient', 'silence', 'play', 'startMusic', 'stopMusic', 'setIntensity', 'schedule']) {
+  const orig = Sound.prototype[name];
+  Sound.prototype[name] = function (...args) { try { return orig.apply(this, args); } catch (e) { this.errors = (this.errors || 0) + 1; return undefined; } };
 }
 function midi(n) { return 440 * Math.pow(2, (n - 69) / 12); }

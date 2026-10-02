@@ -1,13 +1,17 @@
 {
   "name": "steam-engine-game",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Последний котёл — паропанк-игра (v1.1: рейтинг, телеметрия, админка, мобильная версия)",
   "scripts": {
     "test": "bash tests/run-all.sh",
-    "test:backend": "cd backend && python -m pytest -q"
+    "test:backend": "cd backend && python -m pytest -q",
+    "build": "node scripts/build.mjs",
+    "test:compat": "node tests/compat/boot.pw.js"
   },
   "devDependencies": {
+    "acorn": "^8.18.0",
+    "esbuild": "^0.17.19",
     "playwright-core": "^1.50.0",
     "puppeteer-core": "^23.0.0"
   }
