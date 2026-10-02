@@ -23,7 +23,7 @@ const getJ = async p => (await api(p)).json();
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.tab').forEach(t => { t.hidden = t.id !== 'tab-' + b.dataset.tab; });
-  ({ overview: loadOverview, sessions: loadSessions, scores: loadScores }[b.dataset.tab] || (() => {}))();
+  ({ overview: loadOverview, sessions: loadSessions, scores: loadScores, ai: loadAi }[b.dataset.tab] || (() => {}))();
 }));
 $('#logout').addEventListener('click', async () => { try { await api('/api/admin/logout', { method: 'POST' }); } catch (e) { /* ignore */ } location.href = '/admin/'; });
 
@@ -102,3 +102,70 @@ $('#pGo').addEventListener('click', async () => {
   for (const [name, list, lab] of [['platform', f.platforms, x => x], ['ending', f.endings, x => ENDING[x] || x]]) { const sel = $(`#sFilters [name=${name}]`); for (const v of list) sel.append(el('option', { value: v, textContent: lab(v) })); }
   loadOverview();
 })();
+
+// ---------- ИИ
+const FREQ_RU = { rare: 'Редко (≈2 за ночь)', normal: 'Обычно (≈3 за ночь)', often: 'Чаще (≈5 за ночь)' };
+const LEN_RU = { short: 'Короткая (до 110 зн.)', medium: 'Средняя (до 170 зн.)', long: 'Длинная (до 260 зн.)' };
+const SIT_RU = { calm: 'Спокойно', pressure_high: 'Давление высокое', pressure_low: 'Давление низкое', coal_low: 'Мало угля', smog_high: 'Много дыма', leak: 'Утечка пара', pop_loss: 'Гибнут жители', night_start: 'Начало ночи', collapse: 'Авария' };
+let aiState = null;
+// запросы раздела «ИИ» возвращают понятные ошибки (текст сервера), поэтому свой обёрток вместо api()
+async function aiReq(path, method = 'GET', body) {
+  const o = { method, credentials: 'same-origin', headers: {} };
+  if (method !== 'GET') { o.headers['x-csrf-token'] = csrf; o.headers['content-type'] = 'application/json'; o.body = JSON.stringify(body || {}); }
+  const r = await fetch(path, o);
+  if (r.status === 401) { location.href = '/admin/'; throw new Error('401'); }
+  let j = {}; try { j = await r.json(); } catch (e) { /* не JSON */ }
+  if (!r.ok) { const e = new Error(j.error || ('Ошибка ' + r.status)); e.status = r.status; throw e; }
+  return j;
+}
+function fillSel(sel, map, keys, val) { sel.replaceChildren(...keys.map(k => el('option', { value: k, textContent: map[k] || k }))); sel.value = val; }
+function renderAi(d) {
+  aiState = d; const s = d.settings;
+  $('#aiVaultWarn').hidden = d.vault;
+  $('#aiEnabled').checked = s.enabled; $('#aiTopic').value = s.topic; $('#aiStyle').value = s.style;
+  fillSel($('#aiLength'), LEN_RU, d.options.length, s.length); fillSel($('#aiFreq'), FREQ_RU, Object.keys(d.options.frequency), s.frequency);
+  if (!$('#aiSit').options.length) fillSel($('#aiSit'), SIT_RU, Object.keys(d.options.situations), 'calm');
+  $('#aiTable thead').replaceChildren(el('tr', {}, ...['№', 'Название', 'Провайдер', 'Модель', 'Ключ', 'Статус', 'Вкл', ''].map(t => el('th', { textContent: t }))));
+  const n = d.providers.length;
+  $('#aiTable tbody').replaceChildren(...d.providers.map((p, i) => {
+    const st = p.status === 'ok' ? el('span', { className: 'ok', textContent: 'работает' }) : p.status === 'error' ? el('span', { className: 'bad', textContent: 'ошибка', title: p.last_error }) : el('span', { className: 'muted', textContent: 'не проверялся' });
+    const en = el('input', { type: 'checkbox', checked: p.enabled, title: 'Включить/выключить' });
+    en.addEventListener('change', () => aiDo(() => aiReq('/api/admin/ai/providers/' + encodeURIComponent(p.id), 'POST', { enabled: en.checked })));
+    const mv = (dir) => { const ids = d.providers.map(x => x.id); const j = i + dir; [ids[i], ids[j]] = [ids[j], ids[i]]; return aiDo(() => aiReq('/api/admin/ai/order', 'POST', { ids })); };
+    const bUp = el('button', { className: 'btn', textContent: '▲', title: 'Выше', disabled: i === 0 }); bUp.addEventListener('click', () => mv(-1));
+    const bDn = el('button', { className: 'btn', textContent: '▼', title: 'Ниже', disabled: i === n - 1 }); bDn.addEventListener('click', () => mv(1));
+    const bCk = el('button', { className: 'btn', textContent: 'Проверить' });
+    bCk.addEventListener('click', async () => { bCk.disabled = true; try { const r = await aiReq('/api/admin/ai/providers/' + encodeURIComponent(p.id) + '/check', 'POST'); toast(r.ok ? `Работает (${r.ms} мс)` : 'Ошибка: ' + r.error); } catch (e) { toast(e.message); } await loadAi(); });
+    const acts = [bUp, bDn, bCk];
+    if (p.kind === 'own') { const bDel = el('button', { className: 'btn danger', textContent: 'Удалить' }); bDel.addEventListener('click', () => { if (confirm('Удалить ключ «' + p.name + '»? Он будет стёрт с сервера.')) aiDo(() => aiReq('/api/admin/ai/providers/' + encodeURIComponent(p.id), 'DELETE')); }); acts.push(bDel); }
+    return el('tr', {}, el('td', { textContent: String(i + 1) }), el('td', { textContent: p.name + (p.kind === 'builtin' ? ' (бесплатный)' : '') }), el('td', { textContent: p.provider }), el('td', { textContent: p.model }),
+      el('td', { textContent: p.key_mask || '—' }), el('td', {}, st), el('td', {}, en), el('td', {}, ...acts));
+  }));
+}
+async function aiDo(fn) { try { await fn(); } catch (e) { toast(e.message); } await loadAi(); }
+async function loadAi() { try { renderAi(await aiReq('/api/admin/ai')); } catch (e) { if (e.message !== '401') toast(e.message); } }
+$('#aiSave').addEventListener('click', async () => {
+  try {
+    const r = await aiReq('/api/admin/ai/settings', 'POST', { enabled: $('#aiEnabled').checked, topic: $('#aiTopic').value, style: $('#aiStyle').value, length: $('#aiLength').value, frequency: $('#aiFreq').value });
+    $('#aiSaveRes').textContent = 'Сохранено'; toast('Сохранено'); aiState.settings = r.settings;
+  } catch (e) { $('#aiSaveRes').textContent = e.message; }
+});
+$('#aiAdd').addEventListener('click', async () => {
+  const key = $('#aiKey').value.trim(); if (!key) { $('#aiAddRes').textContent = 'Вставьте ключ'; return; }
+  const b = $('#aiAdd'); b.disabled = true; $('#aiAddRes').textContent = 'Определяю провайдера…';
+  try {
+    const r = await aiReq('/api/admin/ai/providers', 'POST', { key, name: $('#aiName').value.trim() });
+    $('#aiKey').value = ''; $('#aiName').value = '';
+    $('#aiAddRes').textContent = `Добавлен: ${r.provider.provider}, модель ${r.provider.model}`; toast('Добавлено');
+  } catch (e) { $('#aiAddRes').textContent = e.message; }
+  b.disabled = false; await loadAi();
+});
+$('#aiSample').addEventListener('click', async () => {
+  const b = $('#aiSample'); b.disabled = true; $('#aiSampleOut').textContent = '…'; $('#aiSampleMeta').textContent = '';
+  try {
+    const r = await aiReq('/api/admin/ai/sample', 'POST', { situation: $('#aiSit').value });
+    $('#aiSampleOut').textContent = r.text || '';
+    $('#aiSampleMeta').textContent = r.ok ? `${r.provider} · ${r.model} · ${r.ms} мс` : 'ИИ недоступен — показан запасной текст. ' + (r.error || '');
+  } catch (e) { $('#aiSampleOut').textContent = ''; $('#aiSampleMeta').textContent = e.message; }
+  b.disabled = false; await loadAi();
+});

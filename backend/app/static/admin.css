@@ -29,4 +29,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}pre{white-space:pre-wrap;word-break:b
 .row{display:flex;gap:10px;justify-content:flex-end}
 #toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#2b2118;border:1px solid var(--brass);padding:8px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none}
 #toast.on{opacity:1}
+.chk{display:flex;gap:8px;align-items:center;margin:8px 0}.blk{display:block;margin:8px 0}.blk textarea,.blk input{display:block;width:100%;box-sizing:border-box;margin-top:4px}
+.rowf{display:flex;gap:16px;flex-wrap:wrap}.aiout{font-size:15px;line-height:1.4;border-left:3px solid var(--brass);padding:4px 10px;margin:10px 0 2px}
+#aiTable td .btn{padding:3px 8px;margin-right:4px}.ok{color:#8fd19e}.bad{color:#e08a7a}
 @media(max-width:600px){main{padding:8px}.bar{grid-template-columns:90px 1fr 36px}}

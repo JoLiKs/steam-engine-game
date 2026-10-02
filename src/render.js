@@ -441,10 +441,28 @@ export function pulseRing(ctx, x, y, w, h, time, reduced) {
 }
 
 // ------------------------------------------------------------ нижняя панель сообщений
+// Длинный текст (подсказка тренера, «заметка механика») — в панели сообщений вместо журнала: подбираем кегль, чтобы влез целиком.
+function drawToast(ctx, R, m, px, pw) {
+  const tt = R.toast, age = R.time - tt.t0;
+  const k = clamp(Math.min(age / 0.3, (tt.dur - age) / 0.8), 0, 1);
+  ctx.save(); ctx.globalAlpha = k;
+  text(ctx, String(tt.title || '').toUpperCase(), px, m.y + 16, 11, tt.col || C.gold, 'left', 'bold', false);
+  const avail = m.h - 36; let fs = 16, lines = [];
+  for (const f of [16, 14, 13, 12]) {
+    fs = f; ctx.font = `${f}px Georgia, serif`; lines = wrap(ctx, tt.text, pw);
+    if (lines.length * (f + 4) <= avail) break;
+  }
+  const cap = Math.max(1, Math.floor(avail / (fs + 4)));
+  if (lines.length > cap) { lines = lines.slice(0, cap); let last = lines[cap - 1]; ctx.font = `${fs}px Georgia, serif`; while (last.length > 3 && ctx.measureText(last + '…').width > pw) last = last.slice(0, -1); lines[cap - 1] = last.replace(/[\s,;:—-]+$/, '') + '…'; }
+  lines.forEach((ln, i) => text(ctx, ln, px, m.y + 34 + fs / 2 + i * (fs + 4), fs, C.cream, 'left', 'normal', false));
+  ctx.restore();
+}
+
 function drawMessages(ctx, R) {
   const { s, L, log, time } = R; const m = L.msg;
   plate(ctx, m.x, m.y, m.w, m.h, { r: 10, top: '#2c231b', bot: '#17110d', rivets: !L.portrait });
   const px = m.x + 14, pw = m.w - 28;
+  if (R.toast && time - R.toast.t0 < R.toast.dur) { drawToast(ctx, R, m, px, pw); return; }
   const maxLines = Math.max(2, Math.floor((m.h - 20) / (L.portrait ? 38 : 40)));
   const shown = log.slice(-maxLines);
   let yy = m.y + 14; const fs = L.portrait ? 14 : 16;

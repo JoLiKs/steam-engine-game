@@ -15,6 +15,7 @@
     <button role="tab" data-tab="overview" class="on">Обзор</button>
     <button role="tab" data-tab="sessions">Сессии</button>
     <button role="tab" data-tab="scores">Рейтинг</button>
+    <button role="tab" data-tab="ai">ИИ</button>
     <button role="tab" data-tab="maint">Обслуживание</button>
   </nav>
   <button id="logout" class="btn">Выйти</button>
@@ -54,6 +55,39 @@
     <div class="filters"><label>Ник <input id="scQ" maxlength="30"></label><button class="btn primary" id="scGo">Найти</button><a class="btn" id="scCsv" href="/api/admin/export?what=scores">CSV</a></div>
     <div class="tbl-wrap"><table id="scTable"><thead></thead><tbody></tbody></table></div>
     <p class="muted">«Скрыть» убирает запись из публичного рейтинга (можно вернуть), «Удалить» — навсегда. В рейтинге игрок виден один раз — своей лучшей записью.</p>
+  </section>
+  <section id="tab-ai" class="tab" hidden>
+    <div class="card" id="aiVaultWarn" hidden><b>Шифрование ключей не настроено.</b> <span class="muted">Задайте на сервере SEG_AI_MASTER_KEY (см. README) — до этого свои ключи добавить нельзя, работают только бесплатные провайдеры без ключа.</span></div>
+    <div class="card">
+      <h3>Заметки механика</h3>
+      <p class="muted">Редко показываются в игре короткой строкой. ИИ вызывает только сервер; если он недоступен — игра показывает запасные тексты.</p>
+      <label class="chk"><input id="aiEnabled" type="checkbox"> ИИ-заметки включены</label>
+      <label class="blk">О чём писать (тема / инструкция)<textarea id="aiTopic" rows="3" maxlength="400"></textarea></label>
+      <label class="blk">Стиль<input id="aiStyle" type="text" maxlength="200"></label>
+      <div class="rowf">
+        <label>Длина <select id="aiLength"></select></label>
+        <label>Частота <select id="aiFreq"></select></label>
+      </div>
+      <p><button class="btn" id="aiSave">Сохранить</button> <span id="aiSaveRes" class="muted"></span></p>
+    </div>
+    <div class="card">
+      <h3>Подключённые ИИ</h3>
+      <p class="muted">Порядок — это приоритет: сверху вниз, пока кто-то не ответит. Свои ключи стоят выше бесплатных. Ключ виден только маской.</p>
+      <div class="tbl-wrap"><table id="aiTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>Добавить свой ИИ</h3>
+      <p class="muted">Вставьте только ключ — провайдер и модель определятся сами (по формату ключа и пробному запросу к /models). Если формат ключа нестандартный, ключ будет отправлен на проверку нескольким известным провайдерам; не подошедшие запросы ничего не сохраняют.</p>
+      <label class="blk">API-ключ<input id="aiKey" type="password" autocomplete="off" spellcheck="false" maxlength="400"></label>
+      <label class="blk">Название (необязательно)<input id="aiName" type="text" maxlength="40"></label>
+      <p><button class="btn" id="aiAdd">Добавить</button> <span id="aiAddRes" class="muted"></span></p>
+    </div>
+    <div class="card">
+      <h3>Пример заметки</h3>
+      <label>Ситуация <select id="aiSit"></select></label>
+      <button class="btn" id="aiSample">Сгенерировать пример</button>
+      <p id="aiSampleOut" class="aiout"></p><p id="aiSampleMeta" class="muted"></p>
+    </div>
   </section>
   <section id="tab-maint" class="tab" hidden>
     <div class="card">

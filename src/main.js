@@ -8,7 +8,8 @@ import { Sound } from './audio.js';
 import { botAct } from './bot.js';
 import { makeRng } from './rng.js';
 import { Coach } from './coach.js';
-import { Run, deviceInfo, fetchBoard, randomId } from './net.js';
+import { Notes } from './notes.js';
+import { Run, deviceInfo, fetchBoard, randomId, call as netCall } from './net.js';
 import { runResult } from './score.js';
 
 const DT = 1 / 60;
@@ -99,12 +100,22 @@ function say(who, text, kind = 'info', col) {
   $('sr-status').textContent = (who ? who + ': ' : '') + text;
 }
 const coach = new Coach();
-function showHint(h) { say('Подсказка', h.text, 'talk', '#9fd8a6'); }
+let toast = null;
+function showToast(title, text, col, dur) { toast = { title, text, col, t0: time, dur }; $('sr-status').textContent = title + ': ' + text; }
+const notes = new Notes();
+function showHint(h) { notes.noteHint(); showToast('Подсказка', h.text, '#9fd8a6', 9); }
+// Заметка механика: сервер сам решает, ИИ это или запасной текст. Любая ошибка сети — просто нет заметки.
+function requestNote(req) {
+  netCall(`/note?s=${encodeURIComponent(req.s)}&n=${req.n}`).then(r => {
+    const txt = notes.accept(r, req, s);
+    if (txt) showToast('Заметка механика', txt, '#e0b866', Math.min(20, Math.max(9, 6 + txt.length / 14)));
+  }, () => notes.fail());
+}
 const PIPE_NAMES = ['Госпиталя', 'Кварталов', 'Завода', 'Фильтров'];
 
 function handleEvents() {
   for (const e of s.events) {
-    coach.onEvent(e, s);
+    coach.onEvent(e, s); notes.onEvent(e);
     switch (e.type) {
       case 'shovel': sound.play('shovel'); vis.swing = 1; { const f = L.furnace; fx.sparks(f.x + f.w * 0.5, f.y + f.h * 0.6, 12, { v: 140 }); fx.steam(f.x + f.w * 0.5, f.y + 20, 2, { vy: -50 }); } break;
       case 'spill': sound.play('spill'); say('', 'Топка переполнена — уголь высыпается!', 'warn'); fx.text(L.furnace.x + L.furnace.w / 2, L.furnace.y, 'Перебор!', '#f0c24a', 16); vis.swing = 1; break;
@@ -118,7 +129,7 @@ function handleEvents() {
       case 'loss': sound.play('loss'); break;
       case 'talk': say(e.who, e.text, 'talk'); break;
       case 'event': sound.play('event'); banner = { label: e.label, at: time }; say('', e.label + '.', 'warn'); break;
-      case 'night': sound.play('night'); log = []; break;
+      case 'night': sound.play('night'); log = []; toast = null; break;
       case 'nightend': sound.play('nightend'); break;
       case 'ending': sound.play(e.id === 'boom' ? 'boom' : 'warn'); if (e.id === 'boom') { fx.shake(1.2); const g = L.gauge; for (let k = 0; k < 6; k++) fx.steam(L.tank.x + L.tank.w / 2, L.tank.y + L.tank.h / 2, 30, { spread: 160, vy: -140, jx: 220, r: 16, grow: 80, life: 2.2, a: 0.8 }); void g; } break;
       default: break;
@@ -184,7 +195,7 @@ function updateTitle() {
   $('t-endings').textContent = n ? `Открыто концовок: ${n} из ${Object.keys(ENDINGS).length}` : 'Десять ночей. Шесть судеб.';
 }
 function newGame() {
-  coach.reset();
+  coach.reset(); notes.reset(); toast = null;
   s = createState((Math.random() * 2 ** 31) | 0 || 1); lastPhase = null; lastNight = -1;
   log = []; fx.clear(); banner = null; vis.satShown = [1, 1, 1, 1]; vis.popShown = POP_START; vis.needle = s.P; vis.fireShown = 0;
   store.del(SAVE_KEY); show('prologue'); ui = 'prologue'; startRun();
@@ -200,7 +211,7 @@ function beginPlayFromState() {
   if (s.night === 0 && s.t === 0 && !s.tut?.done) say('Агафья', 'Топка остыла. Город ждёт тепла.', 'talk', '#e39a62');
 }
 function continueGame() {
-  coach.reset();
+  coach.reset(); notes.reset(); toast = null;
   if (!loadGame()) { newGame(); return; }
   log = []; fx.clear(); banner = null; vis.satShown = s.sat.slice(); vis.popShown = s.pop; vis.needle = s.P; vis.fireShown = s.fire;
   sound.ensure(); sound.startMusic(); startRun();
@@ -429,7 +440,7 @@ function update(dt) {
   }
   if (dbg.bot && s.phase === 'night') { botAct(s, dbg.bot, dbg.botOpts); }
   step(s, dt);
-  if (s.phase === 'night') { const h = coach.update(s, dt); if (h) showHint(h); }
+  if (s.phase === 'night') { const h = coach.update(s, dt); if (h) showHint(h); const q = notes.update(s, dt); if (q) requestNote(q); }
   if (s.shake > 0.6) { fx.shake(s.shake); }
   handleEvents();
   trackPhase();
@@ -456,7 +467,7 @@ function render() {
   const [sx, sy] = fx.shakeOffset();
   ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, (L.offX * view.scale + sx) * dpr, sy * dpr);
   fxAcc += 1;
-  const R = { s, L, vis, input, log, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: (fxAcc % 6) === 0 };
+  const R = { s, L, vis, input, log, toast, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: (fxAcc % 6) === 0 };
   drawScene(ctx, R);
   void cssW; void cssH;
 }
@@ -491,6 +502,7 @@ function frame(now) {
 if (DEBUG) {
   window.__game = {
     get pill() { return !$('b-snd').hidden; }, updatePill,
+    get toast() { return toast; }, get notes() { return notes; },
     get s() { return s; }, get ui() { return ui; }, get L() { return L; }, get view() { return view; }, get run() { return run; }, resize, pauseHit,
     setBot(skill, opts) { dbg.bot = skill; dbg.botOpts = opts || {}; }, setSpeed(v) { dbg.speed = v; },
     setUiState: (u) => { ui = u; }, input, settings, meta, log, fx, sound,

@@ -26,7 +26,7 @@ async function start(opts = {}) {
   const wport = await freePort();
   const origin = `http://127.0.0.1:${wport}`;
   const env = { ...process.env, ...secrets, SEG_ADMIN_PASSWORD: password, SEG_DB_PATH: path.join(dir, 'seg.db'), SEG_HOST: '127.0.0.1', SEG_PORT: String(bport),
-    SEG_ALLOWED_ORIGINS: origin, SEG_ADMIN_ORIGINS: origin, SEG_COOKIE_SECURE: '0', SEG_MIN_TIME_FACTOR: String(opts.minTimeFactor ?? 0), SEG_RL_SCORE_PER_MIN: '60', ...(opts.env || {}) };
+    SEG_ALLOWED_ORIGINS: origin, SEG_ADMIN_ORIGINS: origin, SEG_COOKIE_SECURE: '0', SEG_MIN_TIME_FACTOR: String(opts.minTimeFactor ?? 0), SEG_RL_SCORE_PER_MIN: '60', SEG_AI_MOCK: '1', SEG_AI_MASTER_KEY: require('crypto').randomBytes(32).toString('base64url') + '=', ...(opts.env || {}) };
   const py = spawn(PY, ['-m', 'app'], { cwd: path.join(repo, 'backend'), env, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = ''; py.stdout.on('data', d => log += d); py.stderr.on('data', d => log += d);
   for (let i = 0; i < 60; i++) { try { const r = await fetch(`http://127.0.0.1:${bport}/api/health`); if (r.ok) break; } catch (e) { /* ждём */ } await sleep(150); if (i === 59) throw new Error('backend не поднялся: ' + log); }

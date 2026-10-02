@@ -1,7 +1,7 @@
 // Общие помощники Playwright-тестов (системный Chrome, без скачивания браузеров).
 const { chromium } = require('playwright-core');
 const fs = require('fs'), path = require('path');
-const SHOTS = path.resolve(__dirname, '../../screenshots/v1.1'); fs.mkdirSync(SHOTS, { recursive: true });
+const SHOTS = path.resolve(__dirname, '../../screenshots/v1.2'); fs.mkdirSync(SHOTS, { recursive: true });
 let fails = 0, passes = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function ok(c, m) { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? passes++ : fails++; }
