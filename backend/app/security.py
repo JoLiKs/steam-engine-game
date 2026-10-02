@@ -125,10 +125,18 @@ def _valid_ip(v: str) -> str | None:
         return None
 
 
+LOOPBACK = ("127.0.0.1", "::1")
+
+
 def client_ip(headers, peer: str | None, proxy_secret: str) -> str:
-    """Реальный адрес клиента — ТОЛЬКО из X-SEG-Client-IP при верном секрете прокси; иначе адрес соединения."""
+    """Реальный адрес клиента: X-SEG-Client-IP — только при верном секрете прокси (Pages Worker); X-Real-IP — только если соединение
+    пришло с loopback (то есть от нашего nginx, который сам его выставляет и затирает клиентский); иначе — адрес соединения."""
     if proxy_verified(headers, proxy_secret):
         ip = _valid_ip(headers.get(PROXY_IP_HEADER) or "")
+        if ip:
+            return ip
+    if peer in LOOPBACK:
+        ip = _valid_ip(headers.get("x-real-ip") or "")
         if ip:
             return ip
     return peer or "unknown"

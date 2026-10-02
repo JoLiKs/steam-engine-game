@@ -23,6 +23,7 @@ class Settings:
     admin_password_hash: str = ""       # scrypt$...
     admin_password: str = ""            # только для тестов/локального запуска (в памяти превращается в хеш)
     allowed_origins: list[str] = field(default_factory=lambda: [DEFAULT_ORIGIN])   # CORS
+    direct_origins: list[str] = field(default_factory=list)   # сайты (напр. GitHub Pages), которым разрешён ПРЯМОЙ доступ к публичному /api/g/* без Pages Worker (админка — никогда)
     admin_origins: list[str] = field(default_factory=lambda: [DEFAULT_ORIGIN])     # откуда принимаются изменяющие запросы админки
     cookie_secure: bool = True
     admin_session_hours: int = 12
@@ -51,6 +52,7 @@ class Settings:
         s.admin_password_hash = g("SEG_ADMIN_PASSWORD_HASH", "")
         s.admin_password = g("SEG_ADMIN_PASSWORD", "")
         s.allowed_origins = _list(g("SEG_ALLOWED_ORIGINS"), [DEFAULT_ORIGIN])
+        s.direct_origins = _list(g("SEG_DIRECT_ORIGINS"), [])
         s.admin_origins = _list(g("SEG_ADMIN_ORIGINS"), [DEFAULT_ORIGIN])
         s.cookie_secure = g("SEG_COOKIE_SECURE", "1") not in ("0", "false", "no")
         s.retention_days = int(g("SEG_RETENTION_DAYS", str(s.retention_days)))

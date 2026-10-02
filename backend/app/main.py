@@ -132,8 +132,9 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
             if not cors_ok:
                 return Response(status_code=403)
             resp: Response = Response(status_code=204)
-        elif path != "/api/health" and s.require_proxy and not proxy_verified(request.headers, s.proxy_secret):
-            resp = err(403, "forbidden")          # прямой доступ в обход Pages Worker запрещён
+        elif (path != "/api/health" and s.require_proxy and not proxy_verified(request.headers, s.proxy_secret)
+              and not (is_public(path) and cors_ok and origin in s.direct_origins and request.method in ("GET", "HEAD", "POST"))):
+            resp = err(403, "forbidden")          # прямой доступ в обход Pages Worker запрещён (исключение — публичное API с доверенных сайтов-владельцев игры, см. SEG_DIRECT_ORIGINS)
         else:
             try:
                 resp = await call_next(request)

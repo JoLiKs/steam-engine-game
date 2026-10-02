@@ -1,6 +1,6 @@
 {
   "name": "steam-engine-game",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Последний котёл — паропанк-игра (v1.1: рейтинг, телеметрия, админка, мобильная версия)",
   "scripts": {

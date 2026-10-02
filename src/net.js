@@ -1,6 +1,7 @@
 // Сеть: рейтинг и анонимная статистика. Все вызовы безопасны офлайн: ошибка/таймаут → null, игра продолжает работать.
 // Запросы идут на тот же origin (/api/g/*): Cloudflare Pages Worker проксирует их на бэкенд.
-const BASE = '/api/g';
+// База API: на pages.dev — тот же origin (/api/g, проксирует Worker); на github.io Worker нет, поэтому при сборке (SEG_API_BASE) вшивается полный адрес бэкенда.
+const BASE = (typeof __SEG_API_BASE__ === 'string' && __SEG_API_BASE__) ? __SEG_API_BASE__.replace(/\/+$/, '') : '/api/g';
 export const TIMEOUT = 3000;   // жёсткий предел на любой запрос к бэкенду: игра не ждёт сеть дольше 3 с
 
 // Всегда завершается за ≤ TIMEOUT мс: и по AbortController, и по «гонке» с таймером (на случай браузеров, где fetch не реагирует на abort).
