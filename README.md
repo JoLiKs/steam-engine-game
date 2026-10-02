@@ -114,6 +114,7 @@ node tests/audio_offline.js                  # звук: реальный Offlin
 node tests/pw/rating_admin.pw.js             # Playwright: рейтинг, телеметрия, офлайн, админка (стенд: бэкенд + настоящий _worker.js)
 node tests/pw/mobile_visual.pw.js            # Playwright: 4 мобильных и 3 десктопных вьюпорта, касания, манометр, дым, safe-area, FPS
 node tests/e2e.js                            # Puppeteer: игра с нуля до концовки на 1280×800 и 390×844
+node tests/live/live_check.pw.js          # живая проверка прода (нужен файл с паролем админки; создаёт и удаляет тестовую запись)
 node scripts/balance.mjs                     # таблица: бот × политика решений × 20 seed → концовки
 ```
 
