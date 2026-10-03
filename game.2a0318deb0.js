@@ -28,7 +28,7 @@
     return target;
   };
 
-  // src/data.js
+  // src/core/data.js
   var POP_START = 1e3;
   var COAL_MAX = 99;
   var CAP = [5.6, 8.5, 6.5, 3.2];
@@ -146,7 +146,7 @@
     { id: "go", text: "\u0413\u043E\u0442\u043E\u0432\u043E! \u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0437\u0435\u043B\u0451\u043D\u043E\u0439 \u0437\u043E\u043D\u0435 \u0438 \u043F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0433\u043E\u043B\u044C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043D\u043E\u0447\u044C.", hint: null }
   ];
 
-  // src/rng.js
+  // src/core/rng.js
   function nextRand(s2) {
     s2.rs = s2.rs + 1831565813 >>> 0;
     let t = s2.rs;
@@ -168,7 +168,7 @@
     };
   }
 
-  // src/sim.js
+  // src/core/sim.js
   var P_GREEN = [40, 78];
   var P_VENT = 88;
   var P_DANGER = 96;
@@ -264,12 +264,15 @@
       n *= 1 + s2.smog / 300;
     return n;
   }
+  var isNum = (v) => typeof v === "number" && Number.isFinite(v);
+  var isValveIdx = (i) => Number.isInteger(i) && i >= 0 && i < 4;
   function setValve(s2, i, v) {
-    if (i >= 0 && i < 4)
+    if (isValveIdx(i) && isNum(v))
       s2.valves[i] = Math.max(0, Math.min(1, v));
   }
   function adjustValve(s2, i, dv) {
-    setValve(s2, i, Math.round((s2.valves[i] + dv) * 100) / 100);
+    if (isValveIdx(i) && isNum(dv))
+      setValve(s2, i, Math.round((s2.valves[i] + dv) * 100) / 100);
   }
   function shovel(s2) {
     if (s2.phase !== "night")
@@ -299,6 +302,8 @@
     return true;
   }
   function fixLeak(s2, id) {
+    if (id != null && !Number.isInteger(id))
+      return false;
     const idx = id == null ? s2.leaks.length ? 0 : -1 : s2.leaks.findIndex((l2) => l2.id === id);
     if (idx < 0)
       return false;
@@ -322,6 +327,8 @@
     if (s2.phase !== "card" || !s2.card)
       return;
     const c = s2.card;
+    if (typeof key !== "string" || !c.options.some((o) => o.key === key))
+      return;
     s2.choices[c.id] = key;
     if (c.id === "timka") {
       if (key === "help")
@@ -590,7 +597,7 @@
     return o;
   }
 
-  // src/layout.js
+  // src/ui/layout.js
   var MIN_P = { w: 400, h: 860 };
   var MIN_L = { w: 1100, h: 700 };
   function viewFor(cssW, cssH) {
@@ -660,7 +667,7 @@
     return { x, y: m.y, w: cw, h: m.h, cx: x + cw / 2, head, ty0, ty1, leak: { x: x + cw / 2, y: L2.manifoldY + (m.y - L2.manifoldY) * 0.55 } };
   }
 
-  // src/draw.js
+  // src/ui/draw.js
   var C = {
     bg0: "#14100d",
     bg1: "#1d1713",
@@ -1020,7 +1027,7 @@
     return lines;
   }
 
-  // src/render.js
+  // src/ui/render.js
   var TAU = Math.PI * 2;
   var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   function makeBackground(W, H, dpr2, scale) {
@@ -1861,6 +1868,49 @@
     text(ctx2, b.label, x + 44, y + h / 2, L2.portrait ? 14 : 16, C.cream, "left", "bold", false);
     ctx2.restore();
   }
+  function mpTag(ctx2, x, y, w, label, mine, size) {
+    const h = size + 8;
+    ctx2.save();
+    ctx2.fillStyle = mine ? "rgba(224,180,85,.96)" : "rgba(20,14,10,.88)";
+    rr(ctx2, x - w / 2, y - h / 2, w, h, h / 2);
+    ctx2.fill();
+    ctx2.lineWidth = 1.5;
+    ctx2.strokeStyle = mine ? "#fff3d0" : "#7d5f21";
+    ctx2.stroke();
+    text(ctx2, label, x, y + 1, size, mine ? "#24160a" : "#f1e6c8", "center", "bold", false);
+    ctx2.restore();
+  }
+  function drawMpOverlay(ctx2, R) {
+    const { L: L2, mp: mp2 } = R, por = L2.portrait, size = por ? 10 : 12;
+    for (let i = 0; i < 4; i++) {
+      const c = column(L2, i), o = mp2.own.valve[i], mine = !!(o && o.pid === mp2.me);
+      if (!mine) {
+        ctx2.save();
+        ctx2.fillStyle = "rgba(10,7,5,.32)";
+        rr(ctx2, c.x, c.y, c.w, c.h, 9);
+        ctx2.fill();
+        ctx2.restore();
+      }
+      const label = o ? mine ? "\u0412\u042B" : o.nick : "\u2014";
+      mpTag(ctx2, c.cx, c.y + c.h - (por ? 12 : 14), Math.min(c.w - 6, 20 + label.length * (size * 0.62)), label, mine, size);
+    }
+    const sh = L2.shovel, so = mp2.own.shovel, smine = !!(so && so.pid === mp2.me);
+    if (!smine) {
+      ctx2.save();
+      ctx2.fillStyle = "rgba(10,7,5,.38)";
+      rr(ctx2, sh.x, sh.y, sh.w, sh.h, 8);
+      ctx2.fill();
+      ctx2.restore();
+    }
+    const sl = smine ? "\u041B\u041E\u041F\u0410\u0422\u0410: \u0412\u042B" : "\u043B\u043E\u043F\u0430\u0442\u0430: " + (so ? so.nick : "\u2014");
+    mpTag(ctx2, sh.x + sh.w / 2, sh.y + 10, Math.min(Math.max(sh.w, 96), 20 + sl.length * (size * 0.6)), sl, smine, size);
+    const lo = mp2.own.leaks;
+    if (lo)
+      for (const lk of R.s.leaks) {
+        const c = column(L2, lk.pipe), lmine = lo.pid === mp2.me;
+        mpTag(ctx2, c.leak.x, c.leak.y - 26, 18 + (lmine ? "\u0412\u042B" : lo.nick).length * (size * 0.6), lmine ? "\u0412\u042B" : lo.nick, lmine, size);
+      }
+  }
   function drawScene(ctx2, R) {
     const { L: L2 } = R;
     ctx2.save();
@@ -1890,6 +1940,8 @@
         const c = column(L2, lk.pipe);
         pulseRing(ctx2, c.leak.x - 22, c.leak.y - 22, 44, 44, R.time, R.reduced);
       }
+    if (R.mp)
+      drawMpOverlay(ctx2, R);
     drawBanner(ctx2, R);
     R.fx.draw(ctx2, "main");
     if (R.s.P > P_VENT - 4 || R.s.danger > 0) {
@@ -1904,7 +1956,7 @@
     ctx2.restore();
   }
 
-  // src/fx.js
+  // src/ui/fx.js
   var MAX = 700;
   var Fx = class {
     constructor() {
@@ -2039,7 +2091,7 @@
     }
   };
 
-  // src/audio.js
+  // src/audio/audio.js
   var DB_RANGE = 40;
   function volCurve(v) {
     v = Math.max(0, Math.min(1, +v || 0));
@@ -2601,7 +2653,7 @@
     return 440 * Math.pow(2, (n - 69) / 12);
   }
 
-  // src/bot.js
+  // src/core/bot.js
   function botAct(s2, skill = "good", opts = {}) {
     var _a, _b;
     if (s2.phase === "summary") {
@@ -2705,7 +2757,67 @@
     return (table[p] || table.good)[c];
   }
 
-  // src/coach.js
+  // src/core/validate.js
+  var num = (v, lo = -Infinity, hi = Infinity) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi;
+  var arr4 = (a, lo, hi) => Array.isArray(a) && a.length === 4 && a.every((v) => num(v, lo, hi));
+  var PHASES = ["night", "summary", "card", "ended"];
+  function validateSave(o) {
+    if (!o || typeof o !== "object" || Array.isArray(o) || o.v !== 1)
+      return null;
+    if (!PHASES.includes(o.phase))
+      return null;
+    if (!Number.isInteger(o.night) || o.night < 0 || o.night >= NIGHTS.length)
+      return null;
+    if (!Number.isInteger(o.rs) || o.rs < 0 || o.rs > 4294967295)
+      return null;
+    const ranges = [["t", 0, 1e5], ["clock", 0, 1e7], ["P", 0, 100], ["fire", 0, 200], ["coal", 0, 99], ["smog", 0, 100], ["pop", 0, 1e3], ["fw", 0, 100], ["danger", 0, 100], ["shovelCd", 0, 100], ["burnT", 0, 100], ["burnouts", 0, 1e3]];
+    for (const [k, lo, hi] of ranges)
+      if (!num(o[k], lo, hi))
+        return null;
+    if (!arr4(o.valves, 0, 1) || !arr4(o.sat, 0, 1.0001) || !arr4(o.flow, 0, 1e4) || !arr4(o.needNow, 0, 1e4))
+      return null;
+    if (!Array.isArray(o.leaks) || o.leaks.length > 3 || !o.leaks.every((l) => l && Number.isInteger(l.pipe) && l.pipe >= 0 && l.pipe < 4 && num(l.age, 0, 1e5) && Number.isInteger(l.id)))
+      return null;
+    if (!o.flags || typeof o.flags !== "object" || Array.isArray(o.flags))
+      return null;
+    if (!o.choices || typeof o.choices !== "object" || Array.isArray(o.choices))
+      return null;
+    if (o.phase === "card" && !(o.card && typeof o.card === "object" && Array.isArray(o.card.options) && o.card.options.length > 0 && typeof o.card.id === "string"))
+      return null;
+    if (o.phase === "summary" && !(o.summary && typeof o.summary === "object"))
+      return null;
+    if (o.phase === "ended" && typeof o.ending !== "string")
+      return null;
+    if (o.events === void 0)
+      o.events = [];
+    if (o.msgs === void 0)
+      o.msgs = [];
+    return o;
+  }
+  function loadSaved(str) {
+    if (typeof str !== "string" || str.length > 2e5)
+      return null;
+    try {
+      const o = JSON.parse(str);
+      if (o && typeof o === "object") {
+        o.events = [];
+        o.msgs = [];
+      }
+      return validateSave(o);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // src/ui/keys.js
+  function shouldIgnoreKey(target) {
+    if (!target)
+      return false;
+    const tag = String(target.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!target.isContentEditable;
+  }
+
+  // src/ui/coach.js
   var COACH = { WINDOW: 20, NEED: 3, COOLDOWN: 45, CAT_COOLDOWN: 90, PER_NIGHT: 3, STALL: 25, STALL_COOLDOWN: 40, RING: 7 };
   var NAMES = ["\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044F", "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u043E\u0432", "\u0417\u0430\u0432\u043E\u0434\u0430", "\u0424\u0438\u043B\u044C\u0442\u0440\u043E\u0432"];
   var NAMES_NOM = ["\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C", "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u044B", "\u0417\u0430\u0432\u043E\u0434", "\u0424\u0438\u043B\u044C\u0442\u0440\u044B"];
@@ -2850,7 +2962,7 @@
     }
   };
 
-  // src/notes.js
+  // src/ui/notes.js
   var NOTES = {
     FIRST: 45,
     // не раньше чем через 45 с после начала ночи
@@ -2977,12 +3089,12 @@
         return null;
       }
       this.fails = 0;
-      const num = (v, lo, hi, def) => typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def;
-      this.gap = num(d.next_s, this.o.MIN_GAP, this.o.MAX_GAP, this.o.DEFAULT_GAP);
-      this.perNight = Math.round(num(d.per_night, 1, this.o.MAX_PER_NIGHT, this.o.PER_NIGHT));
+      const num2 = (v, lo, hi, def) => typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def;
+      this.gap = num2(d.next_s, this.o.MIN_GAP, this.o.MAX_GAP, this.o.DEFAULT_GAP);
+      this.perNight = Math.round(num2(d.per_night, 1, this.o.MAX_PER_NIGHT, this.o.PER_NIGHT));
       const text2 = typeof d.note === "string" ? d.note.trim() : "";
       if (!text2 || text2.length > 300) {
-        this.nextAt = this.t + num(d.retry_s, 10, 300, this.o.RETRY);
+        this.nextAt = this.t + num2(d.retry_s, 10, 300, this.o.RETRY);
         return null;
       }
       if (s2 && (s2.phase !== "night" || isCrisis(s2) || this.t - this.lastHint < 5)) {
@@ -3001,7 +3113,7 @@
     }
   };
 
-  // src/net.js
+  // src/net/net.js
   var BASE = "https://185-255-133-179.sslip.io/steam/api/g" ? "https://185-255-133-179.sslip.io/steam/api/g".replace(/\/+$/, "") : "/api/g";
   var TIMEOUT = 3e3;
   function call(path, body, opts = {}) {
@@ -3112,7 +3224,7 @@
     return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // src/score.js
+  // src/core/score.js
   var ENDING_BONUS = { light: 300, smoke: 150, iron: 150, cold: 50, boom: 0, silence: 0 };
   function computeScore({ nights, pop, ending, burnouts = 0, smog = 0 }) {
     return Math.max(0, nights * 100 + Math.round(pop / 2) + (ENDING_BONUS[ending] || 0) - burnouts * 25 - smog);
@@ -3125,6 +3237,398 @@
     const burnouts = Math.min(60, s2.burnouts | 0), smog = Math.max(0, Math.min(100, Math.round(smogAvgFn(s2))));
     return { ending: s2.ending, nights, pop, burnouts, smog, duration_s: Math.round(durS * 10) / 10, score: computeScore({ nights, pop, ending: s2.ending, burnouts, smog }) };
   }
+
+  // src/net/mp.js
+  function wsUrl(search = "", debug = false) {
+    if (debug) {
+      const o = new URLSearchParams(search).get("ws");
+      if (o && /^wss?:\/\/[\w.:-]+(\/[\w./-]*)?$/.test(o))
+        return o;
+    }
+    return "wss://185-255-133-179.sslip.io/steam/ws" ? "wss://185-255-133-179.sslip.io/steam/ws" : DEFAULT_WS;
+  }
+  var CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
+  function normalizeCode(raw) {
+    return String(raw || "").toUpperCase().replace(/[\s-]/g, "").slice(0, 8);
+  }
+  function roomFromSearch(search) {
+    const c = new URLSearchParams(search).get("room");
+    return c && CODE_RE.test(c.toUpperCase()) ? c.toUpperCase() : "";
+  }
+  function inviteLink(loc, code) {
+    return `${loc.origin}${loc.pathname}?room=${encodeURIComponent(code)}`;
+  }
+  var EMOJI = { thumbs: "\u{1F44D}", fire: "\u{1F525}", scream: "\u{1F631}", heart: "\u2764\uFE0F", clap: "\u{1F44F}", cold: "\u{1F976}", steam: "\u{1F4A8}", sos: "\u{1F198}" };
+  var EMOJI_NAMES = { thumbs: "\u041A\u043B\u0430\u0441\u0441", fire: "\u0416\u0430\u0440\u043A\u043E", scream: "\u0423\u0436\u0430\u0441", heart: "\u0421\u0435\u0440\u0434\u0446\u0435", clap: "\u0410\u043F\u043B\u043E\u0434\u0438\u0441\u043C\u0435\u043D\u0442\u044B", cold: "\u0425\u043E\u043B\u043E\u0434\u043D\u043E", steam: "\u041F\u0430\u0440", sos: "\u041F\u043E\u043C\u043E\u0433\u0438\u0442\u0435" };
+  var ERR_TEXT = {
+    no_such_room: "\u0422\u0430\u043A\u043E\u0439 \u043A\u043E\u043C\u043D\u0430\u0442\u044B \u043D\u0435\u0442 (\u0438\u043B\u0438 \u0438\u0433\u0440\u0430 \u0443\u0436\u0435 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0430\u0441\u044C).",
+    room_full: "\u041A\u043E\u043C\u043D\u0430\u0442\u0430 \u0437\u0430\u043F\u043E\u043B\u043D\u0435\u043D\u0430.",
+    already_started: "\u0418\u0433\u0440\u0430 \u0432 \u044D\u0442\u043E\u0439 \u043A\u043E\u043C\u043D\u0430\u0442\u0435 \u0443\u0436\u0435 \u043D\u0430\u0447\u0430\u043B\u0430\u0441\u044C.",
+    create_limit: "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u043D\u043E\u0432\u044B\u0445 \u043A\u043E\u043C\u043D\u0430\u0442 \u043F\u043E\u0434\u0440\u044F\u0434. \u041F\u043E\u0434\u043E\u0436\u0434\u0438\u0442\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043C\u0438\u043D\u0443\u0442.",
+    server_full: "\u0421\u0435\u0440\u0432\u0435\u0440 \u0441\u0435\u0439\u0447\u0430\u0441 \u043F\u0435\u0440\u0435\u043F\u043E\u043B\u043D\u0435\u043D. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435.",
+    need_players: "\u041D\u0443\u0436\u043D\u043E \u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u0432\u043E\u0435 \u0438\u0433\u0440\u043E\u043A\u043E\u0432 \u0432 \u0441\u0435\u0442\u0438.",
+    not_ready: "\u041D\u0435 \u0432\u0441\u0435 \u0438\u0433\u0440\u043E\u043A\u0438 \u0433\u043E\u0442\u043E\u0432\u044B.",
+    not_host: "\u041D\u0430\u0447\u0430\u0442\u044C \u0438\u0433\u0440\u0443 \u043C\u043E\u0436\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0445\u043E\u0437\u044F\u0438\u043D \u043A\u043E\u043C\u043D\u0430\u0442\u044B.",
+    rate_limit: "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E. \u041F\u043E\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435.",
+    chat_rate: "\u041D\u0435 \u0442\u0430\u043A \u0431\u044B\u0441\u0442\u0440\u043E \u2014 \u0447\u0430\u0442 \u0440\u0430\u0437 \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443.",
+    bad_chat: "\u0421\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E (\u043F\u0443\u0441\u0442\u043E\u0435 \u0438\u043B\u0438 \u0441\u043E \u0441\u0441\u044B\u043B\u043A\u043E\u0439).",
+    forbidden: "\u042D\u0442\u0438\u043C \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0435 \u043D\u0435 \u0432\u044B.",
+    bad_value: "\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.",
+    bad_json: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u0432\u044F\u0437\u0438.",
+    bad_message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u0432\u044F\u0437\u0438.",
+    unknown: "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430.",
+    no_room: "\u0412\u044B \u043D\u0435 \u0432 \u043A\u043E\u043C\u043D\u0430\u0442\u0435.",
+    not_playing: "\u0418\u0433\u0440\u0430 \u0435\u0449\u0451 \u043D\u0435 \u0438\u0434\u0451\u0442.",
+    bad_state: "\u0421\u0435\u0439\u0447\u0430\u0441 \u0442\u0430\u043A \u043D\u0435\u043B\u044C\u0437\u044F."
+  };
+  var errText = (code) => ERR_TEXT[code] || "\u0427\u0442\u043E-\u0442\u043E \u043F\u043E\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A (" + String(code).slice(0, 24) + ").";
+  function ownership(roles, players) {
+    const nick = (pid) => (players.find((p) => p.pid === pid) || {}).nick || "?";
+    const valve = [null, null, null, null];
+    let shovel2 = null, leaks = null;
+    for (const [pid, r] of Object.entries(roles || {})) {
+      for (const i of r.valves)
+        valve[i] = pid;
+      if (r.shovel)
+        shovel2 = pid;
+      if (r.leaks)
+        leaks = pid;
+    }
+    return { valve: valve.map((p) => p && { pid: p, nick: nick(p) }), shovel: shovel2 && { pid: shovel2, nick: nick(shovel2) }, leaks: leaks && { pid: leaks, nick: nick(leaks) } };
+  }
+  var DIST = ["\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C", "\u041A\u0432\u0430\u0440\u0442\u0430\u043B\u044B", "\u0417\u0430\u0432\u043E\u0434", "\u0424\u0438\u043B\u044C\u0442\u0440\u044B"];
+  function roleSummary(r) {
+    if (!r)
+      return "";
+    const parts = r.valves.map((i) => DIST[i]);
+    if (r.shovel)
+      parts.push("\u043B\u043E\u043F\u0430\u0442\u0430");
+    if (r.leaks)
+      parts.push("\u0443\u0442\u0435\u0447\u043A\u0438");
+    return parts.join(", ");
+  }
+  var BACKOFF = [0.5, 1, 2, 3, 5, 5, 8, 8, 10];
+  var MpClient = class {
+    /**
+     * @param {{url: string, onMsg: (m: any) => void, onStatus?: (st: string, info?: any) => void, WS?: any, maxOfflineS?: number, setTimer?: Function, clearTimer?: Function}} o
+     */
+    constructor(o) {
+      var _a;
+      this.url = o.url;
+      this.onMsg = o.onMsg;
+      this.onStatus = o.onStatus || (() => {
+      });
+      this.WS = o.WS || (typeof WebSocket !== "undefined" ? WebSocket : null);
+      this.maxOfflineS = (_a = o.maxOfflineS) != null ? _a : 90;
+      this.setTimer = o.setTimer || ((f, ms) => setTimeout(f, ms));
+      this.clearTimer = o.clearTimer || ((t) => clearTimeout(t));
+      this.ws = null;
+      this.status = "idle";
+      this.session = null;
+      this.wanted = false;
+      this.attempt = 0;
+      this.offlineSince = 0;
+      this.retryT = null;
+      this.pingT = null;
+      this.openWaiters = [];
+    }
+    _set(st, info) {
+      this.status = st;
+      try {
+        this.onStatus(st, info);
+      } catch (e) {
+      }
+    }
+    /** Открыть соединение. Резолвится при открытии, отклоняется при первой же ошибке (дальше — автоповтор только при наличии сессии). */
+    connect() {
+      this.wanted = true;
+      if (this.ws && (this.status === "open" || this.status === "connecting"))
+        return this.status === "open" ? Promise.resolve() : new Promise((res, rej) => this.openWaiters.push([res, rej]));
+      return new Promise((res, rej) => {
+        this.openWaiters.push([res, rej]);
+        this._open();
+      });
+    }
+    _open() {
+      if (!this.WS) {
+        this._fail(new Error("WebSocket \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D"));
+        return;
+      }
+      this._set(this.attempt ? "reconnecting" : "connecting");
+      let ws;
+      try {
+        ws = new this.WS(this.url);
+      } catch (e) {
+        this._fail(e);
+        return;
+      }
+      this.ws = ws;
+      ws.onopen = () => {
+        if (this.ws !== ws)
+          return;
+        this.attempt = 0;
+        this.offlineSince = 0;
+        this._set("open");
+        this._startPing();
+        if (this.session)
+          this.send({ t: "rejoin", code: this.session.code, pid: this.session.pid, secret: this.session.secret });
+        const w = this.openWaiters;
+        this.openWaiters = [];
+        w.forEach(([res]) => res());
+      };
+      ws.onmessage = (ev) => {
+        let m;
+        try {
+          m = JSON.parse(ev.data);
+        } catch (e) {
+          return;
+        }
+        if (m && typeof m.t === "string")
+          this.onMsg(m);
+      };
+      ws.onerror = () => {
+      };
+      ws.onclose = (ev) => {
+        if (this.ws === ws)
+          this._closed(ev);
+      };
+    }
+    _startPing() {
+      this.clearTimer(this.pingT);
+      this.pingT = this.setTimer(() => {
+        this.send({ t: "ping" });
+        this._startPing();
+      }, 2e4);
+    }
+    _closed(ev) {
+      this.ws = null;
+      this.clearTimer(this.pingT);
+      const w = this.openWaiters;
+      this.openWaiters = [];
+      if (w.length && !this.session) {
+        this._set("closed", { code: ev && ev.code });
+        w.forEach(([, rej]) => rej(new Error("connect failed")));
+        this.wanted = false;
+        return;
+      }
+      if (!this.wanted) {
+        this._set("closed", { code: ev && ev.code });
+        return;
+      }
+      const code = ev && ev.code;
+      if (code === 1008 || code === 1009 || code === 4e3) {
+        this._set("closed", { code });
+        this.wanted = false;
+        w.forEach(([, rej]) => rej(new Error("rejected")));
+        return;
+      }
+      if (!this.session) {
+        this._set("closed", { code });
+        this.wanted = false;
+        return;
+      }
+      this._retry();
+    }
+    _fail(e) {
+      const w = this.openWaiters;
+      this.openWaiters = [];
+      this.wanted = false;
+      this._set("closed", { error: String(e && e.message || e) });
+      w.forEach(([, rej]) => rej(e));
+    }
+    _retry() {
+      if (!this.offlineSince)
+        this.offlineSince = Date.now();
+      if (Date.now() - this.offlineSince > this.maxOfflineS * 1e3) {
+        this.wanted = false;
+        this._set("lost");
+        return;
+      }
+      const d = BACKOFF[Math.min(this.attempt, BACKOFF.length - 1)] * 1e3 * (0.8 + Math.random() * 0.4);
+      this.attempt++;
+      this._set("reconnecting", { in: d });
+      this.retryT = this.setTimer(() => {
+        if (this.wanted)
+          this._open();
+      }, d);
+    }
+    send(obj) {
+      if (this.ws && this.ws.readyState === 1) {
+        this.ws.send(JSON.stringify(obj));
+        return true;
+      }
+      return false;
+    }
+    setSession(s2) {
+      this.session = s2;
+    }
+    close() {
+      this.wanted = false;
+      this.session = null;
+      this.clearTimer(this.retryT);
+      this.clearTimer(this.pingT);
+      if (this.ws) {
+        try {
+          this.ws.close(1e3);
+        } catch (e) {
+        }
+      }
+      this.ws = null;
+      this._set("closed", {});
+    }
+  };
+
+  // src/ui/lobby.js
+  var LobbyUi = class {
+    /** @param {(id: string) => HTMLElement} $  @param {Record<string, Function>} cb */
+    constructor($2, cb) {
+      this.$ = $2;
+      this.cb = cb;
+      this.me = null;
+      this.chatOpen = false;
+      this.floatN = 0;
+      const emos = $2("mp-emos");
+      for (const [k, ch] of Object.entries(EMOJI)) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "emo";
+        b.textContent = ch;
+        b.setAttribute("aria-label", EMOJI_NAMES[k]);
+        b.title = EMOJI_NAMES[k];
+        b.addEventListener("click", () => cb.onEmo(k));
+        emos.appendChild(b);
+      }
+      $2("mp-chatbtn").addEventListener("click", () => this.toggleChat());
+      $2("mp-chatform").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const i = $2("mp-chatin"), v = i.value.trim();
+        if (v) {
+          cb.onChat(v);
+          i.value = "";
+        }
+      });
+      $2("mp-create").addEventListener("click", () => cb.onCreate($2("mp-nick").value, +$2("mp-max").value));
+      $2("mp-join").addEventListener("click", () => cb.onJoin($2("mp-nick").value, $2("mp-code").value));
+      $2("mp-code").addEventListener("keydown", (e) => {
+        if (e.key === "Enter")
+          cb.onJoin($2("mp-nick").value, $2("mp-code").value);
+      });
+      $2("mp-ready").addEventListener("click", () => cb.onReady());
+      $2("mp-start").addEventListener("click", () => cb.onStart());
+      $2("mp-leave").addEventListener("click", () => cb.onLeave());
+      $2("mp-back").addEventListener("click", () => cb.onBack());
+      $2("mp-copy").addEventListener("click", () => cb.onCopy());
+    }
+    setStatus(text2, bad = false) {
+      const el = this.$("mp-status");
+      el.textContent = text2 || "";
+      el.classList.toggle("bad", !!bad);
+    }
+    showEntry() {
+      this.$("mp-entry").hidden = false;
+      this.$("mp-room").hidden = true;
+    }
+    setBusy(b) {
+      for (const id of ["mp-create", "mp-join"])
+        this.$(id).disabled = !!b;
+    }
+    toggleChat(open) {
+      this.chatOpen = open === void 0 ? !this.chatOpen : open;
+      this.$("mp-tray").hidden = !this.chatOpen;
+      this.$("mp-hud").classList.toggle("chat-open", this.chatOpen);
+      this.$("mp-chatbtn").setAttribute("aria-expanded", String(this.chatOpen));
+      if (this.chatOpen)
+        setTimeout(() => this.$("mp-chatin").focus({ preventScroll: true }), 20);
+    }
+    hud(visible) {
+      this.$("mp-hud").hidden = !visible;
+      if (!visible)
+        this.toggleChat(false);
+    }
+    /** Состояние комнаты: m — сообщение lobby, me — pid игрока */
+    renderRoom(m, me) {
+      this.me = me;
+      this.$("mp-entry").hidden = true;
+      this.$("mp-room").hidden = false;
+      this.$("mp-roomcode").textContent = m.code;
+      const ul = this.$("mp-players");
+      ul.textContent = "";
+      for (const p of m.players) {
+        const li = document.createElement("li");
+        li.className = (p.online ? "" : "off ") + (p.pid === me ? "me" : "");
+        const dot = document.createElement("i");
+        dot.className = "dot " + (p.online ? "on" : "off");
+        dot.setAttribute("aria-hidden", "true");
+        const name = document.createElement("b");
+        name.textContent = p.nick + (p.pid === me ? " (\u0432\u044B)" : "");
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = (p.pid === m.host ? "\u2605 \u0445\u043E\u0437\u044F\u0438\u043D" : p.ready ? "\u2713 \u0433\u043E\u0442\u043E\u0432" : "\u043D\u0435 \u0433\u043E\u0442\u043E\u0432") + (p.online ? "" : " \xB7 \u043D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438");
+        li.append(dot, name, tag);
+        if (m.state === "playing" && p.role) {
+          const r = document.createElement("small");
+          r.textContent = roleSummary(p.role);
+          li.append(r);
+        }
+        if (m.host === me && p.pid !== me && m.state === "lobby") {
+          const k = document.createElement("button");
+          k.type = "button";
+          k.className = "btn small";
+          k.textContent = "\u0423\u0431\u0440\u0430\u0442\u044C";
+          k.setAttribute("aria-label", "\u0423\u0431\u0440\u0430\u0442\u044C \u0438\u0433\u0440\u043E\u043A\u0430 " + p.nick);
+          k.addEventListener("click", () => this.cb.onKick(p.pid));
+          li.append(k);
+        }
+        ul.append(li);
+      }
+      const isHost = m.host === me, mine = m.players.find((p) => p.pid === me);
+      const others = m.players.filter((p) => p.pid !== m.host);
+      const canStart = m.players.length >= 2 && m.players.every((p) => p.online) && others.every((p) => p.ready);
+      const lobbyState = m.state === "lobby";
+      this.$("mp-start").hidden = !isHost;
+      this.$("mp-start").disabled = lobbyState && !canStart;
+      this.$("mp-start").textContent = lobbyState ? "\u041D\u0430\u0447\u0430\u0442\u044C \u0438\u0433\u0440\u0443" : "\u041D\u043E\u0432\u0430\u044F \u0438\u0433\u0440\u0430";
+      this.$("mp-ready").hidden = isHost || !lobbyState;
+      this.$("mp-ready").textContent = mine && mine.ready ? "\u041D\u0435 \u0433\u043E\u0442\u043E\u0432" : "\u0413\u043E\u0442\u043E\u0432";
+      if (!lobbyState) {
+        this.setStatus(m.state === "playing" ? "\u0418\u0434\u0451\u0442 \u0438\u0433\u0440\u0430." : isHost ? "\u0418\u0433\u0440\u0430 \u043E\u043A\u043E\u043D\u0447\u0435\u043D\u0430. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u041D\u043E\u0432\u0430\u044F \u0438\u0433\u0440\u0430\xBB, \u0447\u0442\u043E\u0431\u044B \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u0432\u0441\u0435\u0445 \u0432 \u043B\u043E\u0431\u0431\u0438." : "\u0418\u0433\u0440\u0430 \u043E\u043A\u043E\u043D\u0447\u0435\u043D\u0430. \u0416\u0434\u0451\u043C \u0445\u043E\u0437\u044F\u0438\u043D\u0430.");
+        return;
+      }
+      this.setStatus(m.players.length < 2 ? `\u0416\u0434\u0451\u043C \u0438\u0433\u0440\u043E\u043A\u043E\u0432 (${m.players.length} \u0438\u0437 ${m.max}). \u041E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0434\u0440\u0443\u0437\u044C\u044F\u043C \u043A\u043E\u0434 \u0438\u043B\u0438 \u0441\u0441\u044B\u043B\u043A\u0443.` : isHost ? canStart ? "\u0412\u0441\u0435 \u0433\u043E\u0442\u043E\u0432\u044B \u2014 \u043C\u043E\u0436\u043D\u043E \u043D\u0430\u0447\u0438\u043D\u0430\u0442\u044C." : "\u0416\u0434\u0451\u043C, \u043F\u043E\u043A\u0430 \u0432\u0441\u0435 \u043D\u0430\u0436\u043C\u0443\u0442 \xAB\u0413\u043E\u0442\u043E\u0432\xBB." : "\u0416\u0434\u0451\u043C, \u043F\u043E\u043A\u0430 \u0445\u043E\u0437\u044F\u0438\u043D \u043D\u0430\u0447\u043D\u0451\u0442 \u0438\u0433\u0440\u0443.");
+    }
+    addChat(m) {
+      const ul = this.$("mp-chatlog"), li = document.createElement("li");
+      const b = document.createElement("b");
+      b.textContent = m.nick + ": ";
+      const s2 = document.createElement("span");
+      s2.textContent = m.text;
+      li.append(b, s2);
+      ul.append(li);
+      while (ul.children.length > 40)
+        ul.firstChild.remove();
+      ul.scrollTop = ul.scrollHeight;
+      li.classList.add("fresh");
+      setTimeout(() => li.classList.remove("fresh"), 9e3);
+    }
+    clearChat() {
+      this.$("mp-chatlog").textContent = "";
+    }
+    floatEmoji(m) {
+      const box = this.$("mp-float");
+      if (box.children.length > 12)
+        return;
+      const d = document.createElement("div");
+      d.className = "floaty";
+      d.style.left = 10 + this.floatN++ * 17 % 70 + "%";
+      const e = document.createElement("span");
+      e.textContent = EMOJI[m.e] || "";
+      const n = document.createElement("small");
+      n.textContent = m.nick;
+      d.append(e, n);
+      box.append(d);
+      setTimeout(() => d.remove(), 2600);
+    }
+  };
 
   // src/main.js
   var DT = 1 / 60;
@@ -3380,15 +3884,13 @@
     return !!store.get(SAVE_KEY);
   }
   function loadGame() {
-    try {
-      const o = deserialize(store.get(SAVE_KEY));
-      if (!o || o.v !== 1)
-        return false;
-      s = o;
-      return true;
-    } catch (e) {
+    const o = loadSaved(store.get(SAVE_KEY));
+    if (!o) {
+      store.del(SAVE_KEY);
       return false;
     }
+    s = o;
+    return true;
   }
   var lastPhase = null;
   var lastNight = -1;
@@ -3396,16 +3898,28 @@
     if (s.phase !== lastPhase || s.night !== lastNight) {
       lastPhase = s.phase;
       lastNight = s.night;
+      const online = !!(mp && mp.inGame);
       if (s.phase === "night" && s.t === 0) {
-        snap = serialize(s);
-        saveGame();
+        if (!online) {
+          snap = serialize(s);
+          saveGame();
+        }
       } else if (s.phase === "summary" || s.phase === "card") {
-        saveGame();
-        if (s.phase === "summary" && s.summary)
-          run.event("night_end", nightPayload(s.summary));
+        if (!online) {
+          saveGame();
+          if (s.phase === "summary" && s.summary)
+            run.event("night_end", nightPayload(s.summary));
+        }
       } else if (s.phase === "ended") {
-        store.del(SAVE_KEY);
-        recordEnding();
+        if (online) {
+          if (!meta.endings.includes(s.ending)) {
+            meta.endings.push(s.ending);
+            store.set(META_KEY, JSON.stringify(meta));
+          }
+        } else {
+          store.del(SAVE_KEY);
+          recordEnding();
+        }
       }
       routeUi();
     }
@@ -3424,7 +3938,7 @@
     meta.plays++;
     store.set(META_KEY, JSON.stringify(meta));
   }
-  var screens = ["title", "prologue", "pause", "settings", "help", "card", "summary", "ending", "board"];
+  var screens = ["title", "lobby", "prologue", "pause", "settings", "help", "card", "summary", "ending", "board"];
   function show(id) {
     for (const k of screens)
       $(k).hidden = k !== id;
@@ -3579,9 +4093,11 @@
       show(ui);
     if (ui === "title")
       updateTitle();
+    if (mp && mp.inGame)
+      routeUi();
   }
   function pauseGame() {
-    if (ui !== "play")
+    if (ui !== "play" || mp && mp.inGame)
       return;
     ui = "pause";
     show("pause");
@@ -3613,6 +4129,12 @@
     if (s.phase !== "card")
       return;
     sound.play("click");
+    if (mp && mp.inGame) {
+      mp.myVote = key;
+      mp.client.send({ t: "card", key });
+      mpRefresh();
+      return;
+    }
     chooseCard(s, key);
     handleEvents();
     trackPhase();
@@ -3677,12 +4199,15 @@
     const left = Object.keys(ENDINGS).length - meta.endings.length;
     const hints = { light: "\u042D\u0442\u043E \u043B\u0443\u0447\u0448\u0430\u044F \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0430. \u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u0446\u0435\u043D\u044B \u0442\u043E\u0436\u0435 \u0435\u0441\u0442\u044C \u2014 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u044C \xAB\u0432\u044B\u0433\u043E\u0434\u043D\u044B\u0435\xBB \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435, \u0447\u0435\u043C \u043F\u043B\u0430\u0442\u044F\u0442 \u0434\u0440\u0443\u0433\u0438\u0435.", smoke: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043E\u0442\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u043E\u0442 \u0431\u0443\u0440\u043E\u0433\u043E \u0443\u0433\u043B\u044F \u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0444\u0438\u043B\u044C\u0442\u0440\u044B \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C\u0438.", iron: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043D\u0435 \u043F\u0440\u043E\u0434\u043B\u0435\u0432\u0430\u0442\u044C \u0441\u043C\u0435\u043D\u0443 \u0438 \u0434\u0430\u0442\u044C \u0443\u0441\u0442\u0430\u043B\u043E\u0441\u0442\u0438 \u043E\u0441\u0442\u044B\u0442\u044C: \u0441\u043D\u0438\u0436\u0430\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0437\u0430\u0432\u043E\u0434\u0430, \u043A\u043E\u0433\u0434\u0430 \u0448\u043A\u0430\u043B\u0430 \u043A\u0440\u0430\u0441\u043D\u0430\u044F.", cold: "\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0438 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0432\u0430\u0436\u043D\u0435\u0435 \u0432\u0441\u0435\u0433\u043E. \u041D\u0435 \u0436\u0430\u043B\u0435\u0439\u0442\u0435 \u0438\u043C \u043F\u0430\u0440\u0430.", boom: "\u0421\u043B\u0435\u0434\u0438\u0442\u0435 \u0437\u0430 \u0441\u0442\u0440\u0435\u043B\u043A\u043E\u0439: \u0432 \u043A\u0440\u0430\u0441\u043D\u043E\u0439 \u0437\u043E\u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0434\u0432\u0443\u0445 \u0441\u0435\u043A\u0443\u043D\u0434 \u2014 \u0432\u0437\u0440\u044B\u0432. \u041D\u0435 \u043F\u0435\u0440\u0435\u0431\u0430\u0440\u0449\u0438\u0432\u0430\u0439\u0442\u0435 \u0441 \u0443\u0433\u043B\u0451\u043C.", silence: "\u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0445\u043E\u0442\u044F \u0431\u044B \u0433\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0438 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0432 \u0442\u0435\u043F\u043B\u0435 \u2014 \u0438 \u0443\u0442\u0435\u0447\u043A\u0438 \u0437\u0430\u0434\u0435\u043B\u044B\u0432\u0430\u0439\u0442\u0435 \u0441\u0440\u0430\u0437\u0443." };
     $("e-hint").textContent = hints[s.ending] + (left > 0 ? `  \u041E\u0442\u043A\u0440\u044B\u0442\u043E \u043A\u043E\u043D\u0446\u043E\u0432\u043E\u043A: ${meta.endings.length} \u0438\u0437 ${Object.keys(ENDINGS).length}.` : "  \u0412\u044B \u043E\u0442\u043A\u0440\u044B\u043B\u0438 \u0432\u0441\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438.");
+    $("b-again").textContent = mp && mp.inGame ? "\u0412 \u043B\u043E\u0431\u0431\u0438 \u043A\u043E\u043C\u043D\u0430\u0442\u044B" : "\u0421\u044B\u0433\u0440\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430";
     sound.play(tone === "good" ? "end-good" : tone === "fail" ? "end-fail" : "end-bitter");
     setupRank();
   }
   function setupRank() {
     const box = $("e-rank");
     box.hidden = true;
+    if (mp && mp.inGame)
+      return;
     $("e-nick").value = store.get(NICK_KEY) || "";
     $("b-submit").disabled = false;
     $("e-rank-msg").textContent = "";
@@ -3753,6 +4278,392 @@
       list.append(li);
     });
   }
+  var SESS_KEY = "last-boiler-mp-v1";
+  var sstore = {
+    get(k) {
+      try {
+        return sessionStorage.getItem(k);
+      } catch (e) {
+        return null;
+      }
+    },
+    set(k, v) {
+      try {
+        sessionStorage.setItem(k, v);
+      } catch (e) {
+      }
+    },
+    del(k) {
+      try {
+        sessionStorage.removeItem(k);
+      } catch (e) {
+      }
+    }
+  };
+  var mp = null;
+  var lobbyUi = null;
+  function mpEnsure() {
+    if (!mp)
+      mp = { client: null, code: "", pid: "", nick: "", players: [], host: "", state: "lobby", max: 2, roles: null, mine: null, own: null, inGame: false, votes: {}, voted: [], acks: [], left: 0, paused: false, touch: [0, 0, 0, 0], sent: [0, 0, 0, 0], timers: [null, null, null, null], lastDeny: 0, lastShovel: 0, net: "idle", myVote: null, myAck: false };
+    if (!mp.client)
+      mp.client = new MpClient({ url: wsUrl(location.search, DEBUG), onMsg: mpOnMsg, onStatus: mpOnStatus });
+    return mp;
+  }
+  function mpNick(raw) {
+    const n = String(raw || "").trim().slice(0, 16);
+    store.set(NICK_KEY, n);
+    return n || "\u041A\u043E\u0447\u0435\u0433\u0430\u0440";
+  }
+  async function mpOpenSocket(first) {
+    mpEnsure();
+    lobbyUi.setBusy(true);
+    lobbyUi.setStatus("\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0430\u0435\u043C\u0441\u044F\u2026");
+    try {
+      await mp.client.connect();
+    } catch (e) {
+      lobbyUi.setBusy(false);
+      lobbyUi.setStatus("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F \u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0443. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442 \u0438 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437.", true);
+      return;
+    }
+    if (first)
+      mp.client.send(first);
+  }
+  function mpOpen() {
+    $("mp-nick").value = store.get(NICK_KEY) || "";
+    const want = roomFromSearch(location.search);
+    if (want && !$("mp-code").value)
+      $("mp-code").value = want;
+    ui = "lobby";
+    show("lobby");
+    if (mp && mp.code)
+      lobbyUi.renderRoom({ code: mp.code, players: mp.players, host: mp.host, state: mp.state, max: mp.max }, mp.pid);
+    else {
+      lobbyUi.showEntry();
+      lobbyUi.setBusy(false);
+      lobbyUi.setStatus("");
+    }
+  }
+  function mpInit() {
+    lobbyUi = new LobbyUi($, {
+      onCreate: (nick, max) => mpOpenSocket({ t: "create", nick: mpNick(nick), max: max || 2, mode: "coop" }),
+      onJoin: (nick, code) => {
+        code = normalizeCode(code);
+        if (!CODE_RE.test(code)) {
+          lobbyUi.setStatus("\u041A\u043E\u0434 \u043A\u043E\u043C\u043D\u0430\u0442\u044B \u2014 5 \u0441\u0438\u043C\u0432\u043E\u043B\u043E\u0432, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 K7M2P.", true);
+          return;
+        }
+        mpOpenSocket({ t: "join", code, nick: mpNick(nick) });
+      },
+      onReady: () => {
+        const me = mp && mp.players.find((p) => p.pid === mp.pid);
+        mp.client.send({ t: "ready", ready: !(me && me.ready) });
+      },
+      onStart: () => mp.client.send({ t: mp.state === "ended" ? "again" : "start" }),
+      onLeave: () => mpLeave(false),
+      onBack: () => mpLeave(true),
+      onKick: (pid) => mp.client.send({ t: "kick", pid }),
+      onChat: (text2) => mp && mp.client.send({ t: "chat", text: text2 }),
+      onEmo: (e) => mp && mp.client.send({ t: "emo", e }),
+      onCopy: async () => {
+        const link = inviteLink(location, mp.code);
+        try {
+          await navigator.clipboard.writeText(link);
+          lobbyUi.setStatus("\u0421\u0441\u044B\u043B\u043A\u0430 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u0430: " + link);
+        } catch (e) {
+          lobbyUi.setStatus("\u0421\u0441\u044B\u043B\u043A\u0430 \u0434\u043B\u044F \u0434\u0440\u0443\u0437\u0435\u0439: " + link);
+        }
+      }
+    });
+    $("mp-chatin").addEventListener("keydown", (e) => {
+      if (e.key === "Escape")
+        lobbyUi.toggleChat(false);
+    });
+    let sess = null;
+    try {
+      sess = JSON.parse(sstore.get(SESS_KEY) || "null");
+    } catch (e) {
+    }
+    const want = roomFromSearch(location.search);
+    if (sess && CODE_RE.test(sess.code) && (!want || want === sess.code)) {
+      mpEnsure();
+      mp.code = sess.code;
+      mp.pid = sess.pid;
+      mp.nick = sess.nick;
+      mp.client.setSession({ code: sess.code, pid: sess.pid, secret: sess.secret });
+      ui = "lobby";
+      show("lobby");
+      lobbyUi.setStatus("\u0412\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u043C\u0441\u044F \u0432 \u043A\u043E\u043C\u043D\u0430\u0442\u0443\u2026");
+      lobbyUi.hud(true);
+      mp.client.connect().catch(() => mpReset("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0432\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u0432 \u043A\u043E\u043C\u043D\u0430\u0442\u0443."));
+    } else if (want)
+      mpOpen();
+  }
+  function mpOnStatus(st) {
+    if (!mp)
+      return;
+    mp.net = st;
+    const el = $("mp-net");
+    if (st === "reconnecting") {
+      el.textContent = "\u0421\u0432\u044F\u0437\u044C \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u0430 \u2014 \u043F\u0435\u0440\u0435\u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0430\u0435\u043C\u0441\u044F\u2026";
+      el.hidden = false;
+    } else if (st === "lost")
+      mpReset("\u0421\u0432\u044F\u0437\u044C \u0441 \u043A\u043E\u043C\u043D\u0430\u0442\u043E\u0439 \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u0430.");
+    else
+      mpRefreshNet();
+  }
+  function mpRefreshNet() {
+    const el = $("mp-net");
+    if (!mp) {
+      el.hidden = true;
+      return;
+    }
+    if (mp.net === "reconnecting")
+      return;
+    const wait = mp.inGame && mp.paused;
+    el.textContent = wait ? "\u041F\u0430\u0443\u0437\u0430: \u0436\u0434\u0451\u043C \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0432\u0448\u0435\u0433\u043E\u0441\u044F \u0438\u0433\u0440\u043E\u043A\u0430 (\u0434\u043E 60 \u0441)\u2026" : "";
+    el.hidden = !wait;
+  }
+  function mpReset(msg) {
+    if (mp) {
+      try {
+        mp.client.close();
+      } catch (e) {
+      }
+      for (const t of mp.timers)
+        clearTimeout(t);
+    }
+    sstore.del(SESS_KEY);
+    mp = null;
+    if (lobbyUi) {
+      lobbyUi.hud(false);
+      lobbyUi.clearChat();
+    }
+    $("mp-net").hidden = true;
+    $("mp-role").hidden = true;
+    $("c-vote").hidden = true;
+    if (s.phase !== "ended" || ui === "lobby") {
+    }
+    sound.silence();
+    ui = "title";
+    updateTitle();
+    if (msg)
+      $("t-endings").textContent = msg;
+    show("title");
+  }
+  function mpLeave(toTitle) {
+    if (!mp)
+      return;
+    if (mp.client)
+      mp.client.send({ t: "leave" });
+    if (toTitle) {
+      mpReset("");
+      return;
+    }
+    mp.code = "";
+    mp.players = [];
+    sstore.del(SESS_KEY);
+    mp.client.setSession(null);
+    mp.inGame = false;
+    lobbyUi.clearChat();
+    lobbyUi.hud(false);
+    lobbyUi.showEntry();
+    lobbyUi.setBusy(false);
+    lobbyUi.setStatus("\u0412\u044B \u0432\u044B\u0448\u043B\u0438 \u0438\u0437 \u043A\u043E\u043C\u043D\u0430\u0442\u044B.");
+    ui = "lobby";
+    show("lobby");
+  }
+  function mpLeaveAsk() {
+    if (confirm("\u041F\u043E\u043A\u0438\u043D\u0443\u0442\u044C \u043A\u043E\u043C\u043D\u0430\u0442\u0443? \u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442 \u0431\u0435\u0437 \u0432\u0430\u0441."))
+      mpLeave(true);
+  }
+  function mpBackToLobby() {
+    if (mp.host === mp.pid && mp.state === "ended")
+      mp.client.send({ t: "again" });
+    mp.inGame = false;
+    lobbyUi.hud(true);
+    mpOpen();
+  }
+  function mpDeny(what) {
+    const now = performance.now();
+    if (now - mp.lastDeny < 1500)
+      return;
+    mp.lastDeny = now;
+    showToast("\u042D\u0442\u043E \u0443\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0434\u0440\u0443\u0433\u043E\u0433\u043E \u0438\u0433\u0440\u043E\u043A\u0430", what, "#e0b866", 3);
+  }
+  function mpOwnerLabel(i) {
+    const o = mp.own && mp.own.valve[i];
+    return DISTRICTS[i].name + ": " + (o ? o.nick : "\u043D\u0438\u043A\u0442\u043E");
+  }
+  function mpValve(i) {
+    mp.touch[i] = performance.now();
+    const send = () => {
+      mp.timers[i] = null;
+      mp.sent[i] = performance.now();
+      mp.client.send({ t: "valve", i, v: s.valves[i] });
+    };
+    const wait = 60 - (performance.now() - mp.sent[i]);
+    if (wait <= 0)
+      send();
+    else if (!mp.timers[i])
+      mp.timers[i] = setTimeout(send, wait);
+  }
+  function mpRoles(roles) {
+    mp.roles = roles;
+    mp.own = ownership(roles, mp.players);
+    mp.mine = roles[mp.pid] || { valves: [], shovel: false, leaks: false };
+    const el = $("mp-role");
+    el.textContent = "\u0412\u044B: " + (roleSummary(mp.mine) || "\u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0442\u0435\u043B\u044C");
+    el.hidden = false;
+  }
+  function mpStartGame(m) {
+    mpRoles(m.roles);
+    coach.reset();
+    notes.reset();
+    toast = null;
+    s = createState(m.seed, { skipTutorial: true });
+    lastPhase = null;
+    lastNight = -1;
+    snap = null;
+    playTime = 0;
+    endTimer = 0;
+    log = [];
+    fx.clear();
+    banner = null;
+    vis.satShown = [1, 1, 1, 1];
+    vis.popShown = POP_START;
+    vis.needle = s.P;
+    vis.fireShown = 0;
+    mp.inGame = true;
+    mp.myVote = null;
+    mp.myAck = false;
+    mp.paused = false;
+    sound.ensure();
+    sound.startMusic();
+    lobbyUi.hud(true);
+    ui = "play";
+    show(null);
+    say("\u0410\u0433\u0430\u0444\u044C\u044F", "\u0412\u044B \u0443 \u043E\u0434\u043D\u043E\u0433\u043E \u043A\u043E\u0442\u043B\u0430: \u043A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0434\u0451\u0442 \u0441\u0432\u043E\u044E \u0447\u0430\u0441\u0442\u044C. \u0413\u043E\u0432\u043E\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433 \u0441 \u0434\u0440\u0443\u0433\u043E\u043C (T)!", "talk", "#e39a62");
+  }
+  function mpApplySnap(m) {
+    const d = m.s, keep = s.valves.slice(), now = performance.now(), prevPhase = s.phase;
+    Object.assign(s, d);
+    s.card = d.card ? Object.values(CARDS).find((c) => c.id === d.card) || null : null;
+    if (s.phase === "night") {
+      for (const i of mp.mine.valves)
+        if (now - mp.touch[i] < 500)
+          s.valves[i] = keep[i];
+    }
+    mp.votes = m.votes || {};
+    mp.voted = m.voted || [];
+    mp.acks = m.acks || [];
+    mp.left = m.left | 0;
+    mp.paused = !!m.paused;
+    if (s.phase !== prevPhase) {
+      mp.myVote = null;
+      mp.myAck = false;
+    }
+    for (const e of m.ev || [])
+      s.events.push(e);
+    handleEvents();
+    trackPhase();
+    mpRefresh();
+    mpRefreshNet();
+  }
+  function mpRefresh() {
+    if (!mp || !mp.inGame)
+      return;
+    const online = mp.players.filter((p) => p.online).length || mp.players.length;
+    if (ui === "card") {
+      const v = $("c-vote");
+      v.hidden = false;
+      v.textContent = `\u041F\u0440\u043E\u0433\u043E\u043B\u043E\u0441\u043E\u0432\u0430\u043B\u0438: ${mp.voted.length} \u0438\u0437 ${online}. \u0420\u0435\u0448\u0430\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0438\u043D\u0441\u0442\u0432\u043E; \u043F\u0440\u0438 \u043D\u0438\u0447\u044C\u0435\u0439 \u2014 \u043F\u0435\u0440\u0432\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442. \u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${mp.left} \u0441.`;
+      [...$("c-opts").children].forEach((b, i) => {
+        const o = s.card && s.card.options[i];
+        b.classList.toggle("picked", !!(o && mp.myVote === o.key));
+      });
+    } else
+      $("c-vote").hidden = true;
+    if (ui === "summary") {
+      const b = $("b-next"), last2 = s.summary && s.summary.night + 1 >= NIGHTS.length;
+      const acked = mp.myAck || mp.acks.includes(mp.pid);
+      b.disabled = acked;
+      b.textContent = acked ? `\u0416\u0434\u0451\u043C \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0445 (${mp.acks.length}/${online})` : `${last2 ? "\u0412\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044C \u043E\u0431\u043E\u0437" : "\u0414\u0430\u043B\u044C\u0448\u0435"} (${mp.left})`;
+    } else
+      $("b-next").disabled = false;
+  }
+  function mpOnMsg(m) {
+    if (!mp)
+      return;
+    switch (m.t) {
+      case "joined":
+        mp.code = m.code;
+        mp.pid = m.pid;
+        mp.nick = m.nick;
+        mp.client.setSession({ code: m.code, pid: m.pid, secret: m.secret });
+        sstore.set(SESS_KEY, JSON.stringify({ code: m.code, pid: m.pid, secret: m.secret, nick: m.nick }));
+        lobbyUi.clearChat();
+        (m.chat || []).forEach((c) => lobbyUi.addChat(c));
+        lobbyUi.hud(true);
+        lobbyUi.setBusy(false);
+        if (!mp.inGame) {
+          ui = "lobby";
+          show("lobby");
+        }
+        break;
+      case "lobby":
+        mp.players = m.players;
+        mp.host = m.host;
+        mp.state = m.state;
+        mp.max = m.max;
+        if (mp.inGame && m.state === "playing")
+          mpRoles(Object.fromEntries(m.players.filter((p) => p.role).map((p) => [p.pid, p.role])));
+        lobbyUi.renderRoom(m, mp.pid);
+        if (m.state === "lobby" && mp.inGame) {
+          mp.inGame = false;
+          sound.silence();
+          ui = "lobby";
+          show("lobby");
+        }
+        break;
+      case "start":
+        if (!mp.inGame)
+          mpStartGame(m);
+        else
+          mpRoles(m.roles);
+        break;
+      case "snap":
+        if (mp.inGame)
+          mpApplySnap(m);
+        break;
+      case "chat":
+        lobbyUi.addChat(m);
+        break;
+      case "emo":
+        lobbyUi.floatEmoji(m);
+        break;
+      case "end":
+        mp.result = m.result;
+        break;
+      case "left":
+        mpReset({ kicked: "\u0425\u043E\u0437\u044F\u0438\u043D \u0443\u0431\u0440\u0430\u043B \u0432\u0430\u0441 \u0438\u0437 \u043A\u043E\u043C\u043D\u0430\u0442\u044B.", timeout: "\u0412\u044B \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E \u0431\u044B\u043B\u0438 \u0431\u0435\u0437 \u0441\u0432\u044F\u0437\u0438 \u2014 \u043C\u0435\u0441\u0442\u043E \u043E\u0441\u0432\u043E\u0431\u043E\u0436\u0434\u0435\u043D\u043E.", room_closed: "\u041A\u043E\u043C\u043D\u0430\u0442\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u0430.", replaced: "\u0412\u044B \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u043B\u0438\u0441\u044C \u0441 \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u043A\u043B\u0430\u0434\u043A\u0438." }[m.reason] || "");
+        break;
+      case "err":
+        lobbyUi.setBusy(false);
+        if (m.code === "no_such_room" && !mp.inGame && (mp.client.session || mp.code) && !$("mp-room").hidden === false && ui === "lobby" && mp.code && mp.players.length === 0) {
+          mpReset("\u041A\u043E\u043C\u043D\u0430\u0442\u0430 \u0443\u0436\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u0430.");
+          break;
+        }
+        if (m.code === "forbidden")
+          break;
+        if (ui === "lobby")
+          lobbyUi.setStatus(errText(m.code), true);
+        else
+          showToast("\u041A\u043E\u043E\u043F\u0435\u0440\u0430\u0442\u0438\u0432", errText(m.code), "#e0523c", 4);
+        break;
+      default:
+        break;
+    }
+  }
   function wire() {
     const click = (id, fn) => $(id).addEventListener("click", () => {
       sound.ensure();
@@ -3784,18 +4695,33 @@
     click("b-sclose", closeOverlay);
     click("b-hclose", closeOverlay);
     click("b-next", () => {
+      if (mp && mp.inGame) {
+        mp.client.send({ t: "next" });
+        mp.myAck = true;
+        mpRefresh();
+        return;
+      }
       continueSummary(s);
       handleEvents();
       trackPhase();
     });
     click("b-again", () => {
+      if (mp && mp.inGame) {
+        mpBackToLobby();
+        return;
+      }
       newGame();
     });
     click("b-emenu", () => {
+      if (mp) {
+        mpLeave(true);
+        return;
+      }
       ui = "title";
       updateTitle();
       show("title");
     });
+    click("b-mp", mpOpen);
     click("b-wipe", () => {
       if (confirm("\u0421\u0442\u0435\u0440\u0435\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438?")) {
         store.del(SAVE_KEY);
@@ -3902,12 +4828,61 @@
     return Math.max(0, Math.min(1, (c.ty1 - y) / (c.ty1 - c.ty0)));
   }
   function setV(i, v) {
+    if (mp && mp.inGame && !mp.mine.valves.includes(i)) {
+      mpDeny(mpOwnerLabel(i));
+      return;
+    }
     v = Math.round(v * 100) / 100;
     if (Math.abs(v - s.valves[i]) < 5e-3)
       return;
     setValve(s, i, v);
     sound.play("valve", v);
     vis.wheelKick[i] += (v - s.valves[i]) * 3;
+    if (mp && mp.inGame)
+      mpValve(i);
+  }
+  function adjV(i, dv) {
+    if (mp && mp.inGame && !mp.mine.valves.includes(i)) {
+      mpDeny(mpOwnerLabel(i));
+      return;
+    }
+    const before = s.valves[i];
+    adjustValve(s, i, dv);
+    if (s.valves[i] !== before) {
+      sound.play("valve", s.valves[i]);
+      vis.wheelKick[i] += dv * 6;
+      if (mp && mp.inGame)
+        mpValve(i);
+    }
+  }
+  function actShovel() {
+    input.shovelDown = 0.15;
+    if (mp && mp.inGame) {
+      if (!mp.mine.shovel) {
+        mpDeny("\u041B\u043E\u043F\u0430\u0442\u0430: " + (mp.own.shovel ? mp.own.shovel.nick : "\u043D\u0438\u043A\u0442\u043E"));
+        return;
+      }
+      const now = performance.now();
+      if (now - mp.lastShovel > 120) {
+        mp.lastShovel = now;
+        mp.client.send({ t: "shovel" });
+      }
+      return;
+    }
+    shovel(s);
+    handleEvents();
+  }
+  function actFix(id) {
+    if (mp && mp.inGame) {
+      if (!mp.mine.leaks) {
+        mpDeny("\u0423\u0442\u0435\u0447\u043A\u0438: " + (mp.own.leaks ? mp.own.leaks.nick : "\u043D\u0438\u043A\u0442\u043E"));
+        return;
+      }
+      mp.client.send({ t: "fix", id: id == null ? null : id });
+      return;
+    }
+    if (fixLeak(s, id))
+      handleEvents();
   }
   canvas.addEventListener("pointerdown", (ev) => {
     var _a;
@@ -3917,21 +4892,21 @@
     const [x, y] = toLogical(ev);
     (_a = canvas.setPointerCapture) == null ? void 0 : _a.call(canvas, ev.pointerId);
     if (hitPause(x, y)) {
-      pauseGame();
+      if (mp && mp.inGame)
+        mpLeaveAsk();
+      else
+        pauseGame();
       return;
     }
     for (const lk of s.leaks) {
       const c = column(L, lk.pipe);
       if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR()) {
-        fixLeak(s, lk.id);
-        handleEvents();
+        actFix(lk.id);
         return;
       }
     }
     if (inRect(x, y, L.shovel)) {
-      input.shovelDown = 0.15;
-      shovel(s);
-      handleEvents();
+      actShovel();
       return;
     }
     for (let i = 0; i < 4; i++) {
@@ -3980,14 +4955,14 @@
     for (let i = 0; i < 4; i++) {
       const c = column(L, i);
       if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) {
-        adjustValve(s, i, ev.deltaY < 0 ? 0.05 : -0.05);
+        adjV(i, ev.deltaY < 0 ? 0.05 : -0.05);
         input.sel = i;
         ev.preventDefault();
       }
     }
   }, { passive: false });
   window.addEventListener("keydown", (ev) => {
-    if (ev.ctrlKey || ev.metaKey || ev.altKey)
+    if (ev.ctrlKey || ev.metaKey || ev.altKey || shouldIgnoreKey(ev.target))
       return;
     const k = ev.key;
     sound.ensure();
@@ -3995,6 +4970,11 @@
       settings.sound = !settings.sound;
       $("o-sound").checked = settings.sound;
       applySettings();
+      return;
+    }
+    if (mp && mp.inGame && (k === "t" || k === "T" || k === "\u0435" || k === "\u0415") && (ui === "play" || ui === "card" || ui === "summary")) {
+      ev.preventDefault();
+      lobbyUi.toggleChat(true);
       return;
     }
     if (ui === "card") {
@@ -4025,11 +5005,7 @@
     }
     if (k === " " || k === "Spacebar") {
       ev.preventDefault();
-      if (!ev.repeat || true) {
-        input.shovelDown = 0.15;
-        shovel(s);
-        handleEvents();
-      }
+      actShovel();
       return;
     }
     if (k >= "1" && k <= "4") {
@@ -4045,18 +5021,11 @@
     const ud = { ArrowUp: 1, ArrowDown: -1, w: 1, s: -1, \u0446: 1, \u044B: -1, PageUp: 5, PageDown: -5 };
     if (ud[k] !== void 0) {
       ev.preventDefault();
-      const i = input.sel, before = s.valves[i];
-      adjustValve(s, i, ud[k] * (ev.shiftKey ? 0.2 : 0.05));
-      if (s.valves[i] !== before) {
-        sound.play("valve", s.valves[i]);
-        vis.wheelKick[i] += ud[k] * 0.3;
-      }
+      adjV(input.sel, ud[k] * (ev.shiftKey ? 0.2 : 0.05));
       return;
     }
-    if (k === "f" || k === "F" || k === "\u0430" || k === "\u0410" || k === "Enter") {
-      if (fixLeak(s, null))
-        handleEvents();
-    }
+    if (k === "f" || k === "F" || k === "\u0430" || k === "\u0410" || k === "Enter")
+      actFix(null);
   });
   function update(dt) {
     if (s.phase === "night") {
@@ -4129,7 +5098,7 @@
     const [sx, sy] = fx.shakeOffset();
     ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, (L.offX * view.scale + sx) * dpr, sy * dpr);
     fxAcc += 1;
-    const R = { s, L, vis, input, log, toast, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: fxAcc % 6 === 0 };
+    const R = { s, L, vis, input, log, toast, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: fxAcc % 6 === 0, mp: mp && mp.inGame && mp.own ? { me: mp.pid, own: mp.own } : null };
     drawScene(ctx, R);
   }
   function ambient() {
@@ -4146,10 +5115,13 @@
     requestAnimationFrame(frame);
     const dtReal = Math.min(0.1, (now - last) / 1e3 || 0);
     last = now;
-    const playing = ui === "play";
-    if (playing)
+    const playing = ui === "play", mpg = !!(mp && mp.inGame);
+    if (playing && !(mpg && mp.paused))
       playTime += dtReal;
-    if (playing) {
+    if (mpg) {
+      s.clock += dtReal;
+      acc = 0;
+    } else if (playing) {
       acc += dtReal * dbg.speed;
       let n = 0;
       while (acc >= DT && n < 60 * dbg.speed + 5) {
@@ -4190,6 +5162,17 @@
       },
       get notes() {
         return notes;
+      },
+      get mp() {
+        return mp && { code: mp.code, pid: mp.pid, inGame: mp.inGame, players: mp.players, roles: mp.roles, mine: mp.mine, state: mp.state, net: mp.net, votes: mp.votes };
+      },
+      pt(i, v) {
+        const c = column(L, i), r = canvas.getBoundingClientRect();
+        return { x: r.left + (c.cx + L.offX) * view.scale, y: r.top + (c.ty1 - v * (c.ty1 - c.ty0)) * view.scale };
+      },
+      shovelPt() {
+        const q = L.shovel, r = canvas.getBoundingClientRect();
+        return { x: r.left + (q.x + q.w / 2 + L.offX) * view.scale, y: r.top + (q.y + q.h / 2) * view.scale };
       },
       get s() {
         return s;
@@ -4247,6 +5230,7 @@
     resize();
     updateTitle();
     show("title");
+    mpInit();
     fetchBoard("score").then((e) => {
       boardAvailable = e !== null;
       updateBoardBtn();
