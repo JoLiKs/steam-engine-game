@@ -11,6 +11,7 @@ echo "== node --test (логика, звук, счёт, аудит, мульти
 echo "== pytest (бэкенд)"; (cd backend && $PY -m pytest -q 2>&1 | tail -2)
 echo "== OfflineAudioContext"; node tests/audio_offline.js | tail -2
 echo "== Playwright: кооператив на два браузера (лобби, роли, чат, голосование, реконнект)"; node tests/pw/coop.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
+echo "== Playwright: соревнование, ИИ-напарник, испытание дня, достижения, шаринг (2.0 веха 2)"; node tests/pw/versus.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
 echo "== Playwright: звук на телефонах (Android Chromium + iPhone WebKit)"; node tests/pw/audio_mobile.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
 echo "== Playwright: ИИ-комментатор и раздел «ИИ» в админке"; node tests/pw/ai.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
 echo "== Playwright: рейтинг/админка"; node tests/pw/rating_admin.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
