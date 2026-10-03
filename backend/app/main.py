@@ -89,7 +89,7 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
     s = settings or Settings.from_env()
     s.validate()
     db = db or DB(s.db_path)
-    auth = AdminAuth(s)
+    auth = AdminAuth(s, db)
     s_key = s.secret_key
     ai = AiService(db, KeyVault(s.ai_master_key), clock=clock, transport=ai_transport, background=ai_background)
     rl_ai = RateLimiter(12, 60)          # тяжёлые действия раздела «ИИ» в админке (проверка ключа, пример) — на сессию

@@ -35,6 +35,8 @@ class AiError(Exception):
 
 
 class AiService:
+    MAX_IP_KEYS = 20000                           # жёсткий потолок таблицы лимитов по IP (защита памяти)
+
     def __init__(self, db, vault: KeyVault, clock: Callable[[], float] = time.time, transport: Any = None,
                  gen_per_hour: int = 40, ip_gap_s: float = 20.0, ip_per_hour: int = 24, pool_ttl_s: int = 6 * 3600, background: bool = True):
         self.db, self.vault, self.clock, self.transport = db, vault, clock, transport
@@ -271,6 +273,11 @@ class AiService:
     def _ip_ok(self, ip: str) -> tuple[bool, float]:
         now = self.clock()
         with self._lock:
+            if ip not in self.ip_hits and len(self.ip_hits) >= self.MAX_IP_KEYS:
+                for k in [k for k, v in self.ip_hits.items() if not v or now - v[-1] > 3600][:2000]:
+                    self.ip_hits.pop(k, None)
+                if len(self.ip_hits) >= self.MAX_IP_KEYS:
+                    return False, 60.0                # таблица забита свежими адресами — новым отказываем, память не растёт
             q = self.ip_hits.setdefault(ip, deque())
             while q and now - q[0] > 3600:
                 q.popleft()

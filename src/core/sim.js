@@ -63,8 +63,11 @@ export function activeEvent(s) {
 }
 
 // ---------------------------------------------------------------- команды игрока
-export function setValve(s, i, v) { if (i >= 0 && i < 4) s.valves[i] = Math.max(0, Math.min(1, v)); }
-export function adjustValve(s, i, dv) { setValve(s, i, Math.round((s.valves[i] + dv) * 100) / 100); }
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+const isValveIdx = i => Number.isInteger(i) && i >= 0 && i < 4;
+/** Вентиль i (0..3) → v (0..1). Нечисловые/нефинитные значения и чужие индексы игнорируются (иначе NaN отравит всю симуляцию; важно для сетевого ввода). */
+export function setValve(s, i, v) { if (isValveIdx(i) && isNum(v)) s.valves[i] = Math.max(0, Math.min(1, v)); }
+export function adjustValve(s, i, dv) { if (isValveIdx(i) && isNum(dv)) setValve(s, i, Math.round((s.valves[i] + dv) * 100) / 100); }
 
 export function shovel(s) {
   if (s.phase !== 'night') return false;
@@ -84,6 +87,7 @@ export function shovel(s) {
 }
 
 export function fixLeak(s, id) {
+  if (id != null && !Number.isInteger(id)) return false;
   const idx = id == null ? (s.leaks.length ? 0 : -1) : s.leaks.findIndex(l => l.id === id);
   if (idx < 0) return false;
   const l = s.leaks.splice(idx, 1)[0];
@@ -104,6 +108,7 @@ export function spawnLeak(s, pipe) {
 export function chooseCard(s, key) {
   if (s.phase !== 'card' || !s.card) return;
   const c = s.card;
+  if (typeof key !== 'string' || !c.options.some(o => o.key === key)) return;   // неизвестный вариант (опечатка/сетевой ввод) не меняет состояние
   s.choices[c.id] = key;
   if (c.id === 'timka') {
     if (key === 'help') s.flags.timka = true; else s.coal = Math.max(0, s.coal - 6);

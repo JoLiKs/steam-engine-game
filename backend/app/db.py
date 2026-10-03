@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS scores (
 );
 CREATE INDEX IF NOT EXISTS ix_scores_score ON scores(hidden, score DESC);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS revoked_sessions (sid TEXT PRIMARY KEY, exp INTEGER NOT NULL);
 """
 
 SESSION_SORT = {"created_at", "updated_at", "duration_s", "nights_done", "score", "platform", "ending"}

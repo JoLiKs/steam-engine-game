@@ -48,8 +48,9 @@ class AdminAuth:
 
     COOKIE_MAX_REVOKED = 1000
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, db: Any = None):
         self.s = settings
+        self.db = db                                  # если задана — отозванные сессии переживают перезапуск сервиса
         self._key = settings.secret_key.encode()
         if settings.admin_password_hash:
             self._hash = settings.admin_password_hash
@@ -96,6 +97,8 @@ class AdminAuth:
             return None
         if not hmac.compare_digest(str(p.get("pv", "")), self._pv) or p.get("sid") in self._revoked:
             return None
+        if self.db is not None and self.db.one("SELECT 1 FROM revoked_sessions WHERE sid=?", (str(p.get("sid")),)):
+            return None
         return p
 
     def revoke(self, payload: dict[str, Any]) -> None:
@@ -103,6 +106,10 @@ class AdminAuth:
             now = time.time()
             self._revoked = {k: v for k, v in self._revoked.items() if v > now}
         self._revoked[payload["sid"]] = int(payload["exp"])
+        if self.db is not None:
+            with self.db.tx() as c:
+                c.execute("DELETE FROM revoked_sessions WHERE exp < ?", (int(time.time()),))
+                c.execute("INSERT OR REPLACE INTO revoked_sessions(sid, exp) VALUES(?,?)", (str(payload["sid"]), int(payload["exp"])))
 
 
 # ---------------- IP / билеты ----------------

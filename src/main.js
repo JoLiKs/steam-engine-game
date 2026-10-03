@@ -6,6 +6,8 @@ import { drawScene, makeBackground, makeCity } from './ui/render.js';
 import { Fx } from './ui/fx.js';
 import { Sound } from './audio/audio.js';
 import { botAct } from './core/bot.js';
+import { loadSaved } from './core/validate.js';
+import { shouldIgnoreKey } from './ui/keys.js';
 import { makeRng } from './core/rng.js';
 import { Coach } from './ui/coach.js';
 import { Notes } from './ui/notes.js';
@@ -142,7 +144,9 @@ function handleEvents() {
 function saveGame() { if (s.phase === 'ended') return; const str = serialize(s); store.set(SAVE_KEY, str); }
 function hasSave() { return !!store.get(SAVE_KEY); }
 function loadGame() {
-  try { const o = deserialize(store.get(SAVE_KEY)); if (!o || o.v !== 1) return false; s = o; return true; } catch (e) { return false; }
+  const o = loadSaved(store.get(SAVE_KEY));
+  if (!o) { store.del(SAVE_KEY); return false; }   // испорченное сохранение удаляем, начинаем заново
+  s = o; return true;
 }
 let lastPhase = null, lastNight = -1;
 function trackPhase() {
@@ -413,7 +417,7 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('wheel', ev => { if (ui !== 'play') return; const [x, y] = toLogical(ev); for (let i = 0; i < 4; i++) { const c = column(L, i); if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) { adjustValve(s, i, ev.deltaY < 0 ? 0.05 : -0.05); input.sel = i; ev.preventDefault(); } } }, { passive: false });
 
 window.addEventListener('keydown', ev => {
-  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (ev.ctrlKey || ev.metaKey || ev.altKey || shouldIgnoreKey(ev.target)) return;
   const k = ev.key;
   sound.ensure();
   if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { settings.sound = !settings.sound; $('o-sound').checked = settings.sound; applySettings(); return; }
