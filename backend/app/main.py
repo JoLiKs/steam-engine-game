@@ -22,6 +22,7 @@ from .db import DB, SESSION_SORT
 from .ai import AiError, AiService
 from .aicrypto import KeyVault
 from .ainotes import SITUATIONS
+from .aigame import GameAi, clean_agg, day_seed, day_str, quest_done, quest_for, season_bounds, season_of
 from .mp import Hub
 from .ratelimit import LoginGuard, RateLimiter
 from .scoring import ENDING_BONUS, PLATFORMS, Invalid, clean_nick, int_in, score_js, validate_result
@@ -101,6 +102,23 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
     rl_read, rl_admin = RateLimiter(s.rl_read_per_min, 60), RateLimiter(300, 60)
     guard = LoginGuard(max_fails=5, lock_s=900, global_max=60, global_lock_s=300)
     hub = Hub(clock=clock, limits=mp_limits)
+    hub.ai = GameAi(ai)                                       # ведущий событий, напарник, разбор партии (всегда с запасными текстами)
+    rl_review = RateLimiter(6, 60)
+    rl_daily = RateLimiter(30, 60)
+
+    def _bg(fn, cb) -> None:                                  # блокирующая работа (вызов ИИ) — в потоке, ответ — обратно в event loop
+        async def run() -> None:
+            try:
+                res = await asyncio.get_running_loop().run_in_executor(None, fn)
+            except Exception:
+                logging.getLogger("seg.mp").exception("bg task")
+                return
+            try:
+                cb(res)
+            except Exception:
+                logging.getLogger("seg.mp").exception("bg callback")
+        asyncio.get_running_loop().create_task(run())
+    hub.bg = _bg
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -247,15 +265,94 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
         return {"ok": True, "nick": nick, "rank": {"score": db.rank_of(sid, "score"), "survival": db.rank_of(sid, "survival")}}
 
     @app.get("/api/g/leaderboard")
-    def leaderboard(request: Request, board: str = "score", limit: int = 20):
+    def leaderboard(request: Request, board: str = "score", limit: int = 20, season: str = "", pid: str = ""):
         if (r := limited(rl_read, ip_of(request))):
             return r
+        if board == "season":
+            season = season or season_of(clock())
+            b = season_bounds(season)
+            if b is None:
+                return err(422, "season")
+            rows = db.season_board(b[0], b[1], max(1, min(limit, 50)))
+            out: dict[str, Any] = {"board": "season", "season": season, "current": season == season_of(clock()), "entries": [
+                {"nick": x["nick"], "score": x["score"], "nights": x["nights"], "pop": x["pop"], "ending": x["ending"], "date": time.strftime("%Y-%m-%d", time.gmtime(x["created_at"]))} for x in rows]}
+            if re.fullmatch(r"[A-Za-z0-9_-]{8,64}", pid or ""):
+                out["me"] = db.season_rank(hash_pid(pid, s.secret_key), b[0], b[1])
+            return out
         if board not in db.ORDER:
             return err(422, "board")
         rows = db.leaderboard(board, max(1, min(limit, 50)))
         return {"board": board, "entries": [{"nick": x["nick"], "score": x["score"], "nights": x["nights"], "pop": x["pop"], "ending": x["ending"],
                                              "date": time.strftime("%Y-%m-%d", time.gmtime(x["created_at"]))} for x in rows]}
 
+
+    # ---------- испытание дня: общий сид на сутки (UTC), сюжетное задание, личный рейтинг дня
+    def daily_info(day: str) -> dict[str, Any]:
+        q = quest_for(day)
+        return {"day": day, "seed": day_seed(day), "season": season_of(clock()), "host": True,
+                "quest": {"id": q["id"], "title": q["title"], "goal": q["goal"], "goal_text": q["goal_text"], **ai.daily_story(day, q)}}
+
+    @app.get("/api/g/daily")
+    def daily(request: Request):
+        if (r := limited(rl_read, ip_of(request))):
+            return r
+        return daily_info(day_str(clock()))
+
+    @app.post("/api/g/daily/score")
+    async def daily_score(request: Request):
+        ip = ip_of(request)
+        if (r := limited(rl_score, ip)) or (r := limited(rl_score_day, ip)):
+            return r
+        d = await read_json(request)
+        if not isinstance(d, dict):
+            return err(422, "body")
+        tk = tickets.parse(d.get("token"), clock())
+        if not tk:
+            return err(401, "bad ticket")
+        pid = d.get("pid")
+        if not isinstance(pid, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", pid):
+            return err(422, "pid")
+        day = day_str(clock())
+        if d.get("day") != day:
+            return err(409, "day is over")
+        try:
+            res = validate_result(d, clock() - tk["iat"], s.min_time_factor)
+        except Invalid as e:
+            return err(422, f"invalid: {e}")
+        q = quest_for(day)
+        done = quest_done(q["goal"], res)
+        if not db.claim_ticket(tk["rid"]):
+            return err(409, "already submitted")
+        out = db.add_daily(day, hash_pid(pid, s.secret_key), clean_nick(d.get("nick")), res, done)
+        me = db.daily_me(day, hash_pid(pid, s.secret_key))
+        return {"ok": True, "done": done, **out, "me": me}
+
+    @app.get("/api/g/daily/board")
+    def daily_board(request: Request, day: str = "", pid: str = "", limit: int = 20):
+        if (r := limited(rl_read, ip_of(request))):
+            return r
+        day = day or day_str(clock())
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+            return err(422, "day")
+        out: dict[str, Any] = {"day": day, "entries": db.daily_board(day, max(1, min(limit, 50)))}
+        if re.fullmatch(r"[A-Za-z0-9_-]{8,64}", pid or ""):
+            out["me"] = db.daily_me(day, hash_pid(pid, s.secret_key))
+        return out
+
+    @app.post("/api/g/review")
+    async def game_review(request: Request):
+        """Разбор партии (3–4 предложения) по агрегатам без ников. Отвечает всегда: ИИ или запасной текст по правилам."""
+        ip = ip_of(request)
+        if (r := limited(rl_review, ip)):
+            return r
+        d = await read_json(request, 2048)
+        agg = clean_agg(d)
+        if agg is None:
+            return err(422, "agg")
+        if not hub.ai or not hub.ai.enabled("review"):
+            return {"enabled": False}
+        text, src = await asyncio.get_running_loop().run_in_executor(None, lambda: hub.ai.review(agg))
+        return {"enabled": True, "text": text, "src": src}
 
     @app.get("/api/g/note")
     def game_note(request: Request, s: str = "calm", n: int = 1):

@@ -337,7 +337,7 @@ def test_connections_per_ip_limit(hub):
 
 
 def test_room_creation_rate_limit_and_total_cap(clock):
-    hub = Hub(clock=clock, limits=Limits(max_rooms=5), rng=lambda: 1)
+    hub = Hub(clock=clock, limits=Limits(max_rooms=5, creates_per_window=3), rng=lambda: 1)
     a = Bot(hub, "1.1.1.1")
     for k in range(3):
         a.send(t="create", nick="A", max=2); a.pump(); a.send(t="leave")
@@ -469,3 +469,42 @@ def test_http_security_unchanged_for_other_paths(ws_app):
     with TestClient(ws_app) as c:
         assert c.get("/api/health").status_code == 200
         assert c.get("/api/g/note").status_code in (403, 404, 405)
+
+
+def test_limits_from_env_and_default_is_ten_per_ten_minutes(clock):
+    assert Limits().creates_per_window == 10 and Limits().create_window_s == 600
+    lim = Limits.from_env({"SEG_MP_CREATES": "25", "SEG_MP_CREATE_WINDOW": "120", "SEG_MP_MAX_ROOMS": "7", "SEG_MP_CONNS_PER_IP": "3"})
+    assert (lim.creates_per_window, lim.create_window_s, lim.max_rooms, lim.conns_per_ip) == (25, 120.0, 7, 3)
+    bad = Limits.from_env({"SEG_MP_CREATES": "abc", "SEG_MP_CREATE_WINDOW": "-5", "SEG_MP_MAX_ROOMS": "999999"})
+    assert (bad.creates_per_window, bad.create_window_s, bad.max_rooms) == (10, 600, 200)         # мусор и значения вне диапазона → по умолчанию
+    hub = Hub(clock=clock, limits=Limits(), rng=lambda: 1)
+    a = Bot(hub, "1.1.1.1")
+    for _ in range(10):
+        a.send(t="create", nick="A", max=2); a.pump(); a.send(t="leave")
+    a.send(t="create", nick="A", max=2); assert "create_limit" in a.errs()
+
+
+def test_ws_versus_two_clients_live_race_and_board(ws_app):
+    with TestClient(ws_app) as c:
+        with c.websocket_connect("/ws", headers={"origin": GH}) as w1, c.websocket_connect("/ws", headers={"origin": ORIGIN}) as w2:
+            w1.send_json({"t": "create", "nick": "Анна", "max": 2, "mode": "versus"})
+            j1 = recv_until(w1, "joined")
+            w2.send_json({"t": "join", "code": j1["code"], "nick": "Борис"}); recv_until(w2, "joined")
+            w2.send_json({"t": "ready", "ready": True})
+            lob = recv_until(w1, "lobby")
+            while len(lob["players"]) < 2 or not lob["players"][1]["ready"]:
+                lob = recv_until(w1, "lobby")
+            assert lob["mode"] == "versus"
+            w1.send_json({"t": "start"})
+            st1, st2 = recv_until(w1, "start"), recv_until(w2, "start")
+            assert st1["seed"] == st2["seed"] and st1["mode"] == "versus"
+            w1.send_json({"t": "valve", "i": 2, "v": 0.6}); w1.send_json({"t": "shovel"})
+            t_end = time.time() + 6
+            s1 = s2 = None
+            while time.time() < t_end:
+                s1 = recv_until(w1, "snap"); s2 = recv_until(w2, "snap")
+                if s1["s"]["valves"][2] == 0.6 and s1["s"]["fire"] > 5 and s1["s"]["t"] > 0.5:
+                    break
+            assert s1["s"]["valves"][2] == 0.6 and s2["s"]["valves"][2] == 0.0 and s2["s"]["fire"] < s1["s"]["fire"]     # у соперника свой котёл
+            board = recv_until(w2, "board")
+            assert {r["nick"] for r in board["rows"]} == {"Анна", "Борис"}

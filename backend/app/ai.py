@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import secrets
 import threading
 import time
@@ -72,7 +73,124 @@ class AiService:
             c.execute("INSERT INTO meta(k,v) VALUES('ai_settings',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v", (json.dumps(new, ensure_ascii=False),))
         with self._lock:
             self.pool.clear()                          # смена темы/стиля/длины — старые заметки не подходят
+        self._fcache = None
         return new
+
+    # ------------------------------------------------------------ функции мультиплеера (ведущий, напарник, разбор, сюжет дня)
+    def feature(self, name: str) -> bool:
+        now = self.clock()
+        c = getattr(self, "_fcache", None)
+        if not c or now - c[0] > 5:
+            c = (now, self.settings())
+            self._fcache = c
+        return bool(c[1].get(name, True))
+
+    def _complete(self, system: str, user: str, max_len: int, min_len: int, count: int = 1, deadline_s: float = 14.0) -> list[str]:
+        t_end = time.monotonic() + deadline_s
+        for r in self._chain():
+            left = t_end - time.monotonic()
+            if left < 3:
+                break
+            try:
+                raw = self._call_provider(r, system, user, 130 * count + 80, min(10.0, left))
+            except P.ProviderError as e:
+                self._mark(r["id"], False, str(e)); continue
+            except Exception as e:
+                self._mark(r["id"], False, type(e).__name__); continue
+            if count > 1:
+                out = []
+                for line in re.split(r"\n+", raw if isinstance(raw, str) else ""):
+                    c = clean_note(line, max_len, min_len)
+                    if c and c not in out:
+                        out.append(c)
+                out = out[:count]
+            else:
+                one = clean_note(" ".join(str(raw).split("\n")) if isinstance(raw, str) else raw, max_len, min_len)
+                out = [one] if one else []
+            if out:
+                self._mark(r["id"], True)
+                return out
+            self._mark(r["id"], False, "ответ не прошёл проверку")
+        return []
+
+    def complete_once(self, builder, max_len: int, min_len: int) -> str | None:
+        """Блокирующий разовый запрос (разбор партии). None — ИИ недоступен/лимит: вызывающий берёт запасной текст."""
+        if not self._gen_budget():
+            return None
+        system, user = builder(self.settings())
+        out = self._complete(system, user, max_len, min_len)
+        self.stats["generated"] += len(out)
+        return out[0] if out else None
+
+    def pooled(self, key: str, night: int, builder, max_len: int, min_len: int) -> str | None:
+        """Неблокирующая выдача: берёт готовую фразу из пула, а пул наполняется в фоне. None — берите запасной текст."""
+        now = self.clock()
+        with self._lock:
+            dq = self.pool.setdefault("g:" + key, deque(maxlen=12))
+            while dq and now - dq[0]["ts"] > self.pool_ttl_s:
+                dq.popleft()
+            pick = dq.popleft()["text"] if dq else None
+            need = len(dq) < 2 and key not in self.generating
+            if need:
+                self.generating.add(key)
+        if need:
+            if self.background:
+                threading.Thread(target=self._refill_g, args=(key, night, builder, max_len, min_len), daemon=True).start()
+            else:
+                self._refill_g(key, night, builder, max_len, min_len)
+                with self._lock:
+                    dq = self.pool.get("g:" + key)
+                    if pick is None and dq:
+                        pick = dq.popleft()["text"]
+        if pick:
+            self.stats["served_ai"] += 1
+        return pick
+
+    def _refill_g(self, key: str, night: int, builder, max_len: int, min_len: int) -> None:
+        try:
+            if not self._gen_budget():
+                return
+            system, user = builder(self.settings(), key, night)
+            user += "\n\nНапиши 3 РАЗНЫХ варианта, каждый с новой строки, без нумерации. Только тексты."
+            out = self._complete(system, user, max_len, min_len, count=3)
+            with self._lock:
+                dq = self.pool.setdefault("g:" + key, deque(maxlen=12))
+                for t in out:
+                    dq.append({"text": t, "ts": self.clock()})
+                self.stats["generated" if out else "gen_failed"] += len(out) or 1
+        finally:
+            with self._lock:
+                self.generating.discard(key)
+
+    def daily_story(self, day: str, quest: dict) -> dict:
+        """Сюжет дня: из кэша (meta) или запасной текст квеста; ИИ дописывает в фоне один раз за день."""
+        if not self.feature("daily"):
+            return {"text": quest["story"], "src": "fallback"}
+        k = "daily_story:" + day
+        row = self.db.one("SELECT v FROM meta WHERE k=?", (k,))
+        if row:
+            return {"text": row["v"], "src": "ai"}
+        if day not in self.generating:
+            self.generating.add(day)
+            def work() -> None:
+                try:
+                    if self._gen_budget():
+                        from .aigame import daily_prompt
+                        system, user = daily_prompt(self.settings(), quest)
+                        out = self._complete(system, user, 260, 40)
+                        if out:
+                            with self.db.tx() as c:
+                                c.execute("INSERT OR IGNORE INTO meta(k,v) VALUES(?,?)", (k, out[0]))
+                finally:
+                    self.generating.discard(day)
+            if self.background:
+                threading.Thread(target=work, daemon=True).start()
+            else:
+                work()
+                row = self.db.one("SELECT v FROM meta WHERE k=?", (k,))
+                if row:
+                    return {"text": row["v"], "src": "ai"}
+        return {"text": quest["story"], "src": "fallback"}
 
     # ------------------------------------------------------------ провайдеры
     def _seed(self) -> None:

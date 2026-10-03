@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS scores (
 );
 CREATE INDEX IF NOT EXISTS ix_scores_score ON scores(hidden, score DESC);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS daily_scores (
+  day TEXT NOT NULL, pid_hash TEXT NOT NULL, nick TEXT NOT NULL, score INTEGER NOT NULL, nights INTEGER NOT NULL, pop INTEGER NOT NULL,
+  ending TEXT NOT NULL, burnouts INTEGER NOT NULL, smog INTEGER NOT NULL, done INTEGER NOT NULL DEFAULT 0, tries INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(day, pid_hash)
+);
+CREATE INDEX IF NOT EXISTS ix_daily_day_score ON daily_scores(day, hidden, score DESC);
 CREATE TABLE IF NOT EXISTS revoked_sessions (sid TEXT PRIMARY KEY, exp INTEGER NOT NULL);
 """
 
@@ -138,6 +144,58 @@ class DB:
             args = (row["nights"], row["nights"], row["pop"], row["pop"], row["score"])
         better = self.one(f"SELECT COUNT(DISTINCT pid_hash) AS n FROM scores WHERE hidden=0 AND pid_hash != ? AND {cond}", (row["pid_hash"],) + args)
         return (better["n"] if better else 0) + 1
+
+    def claim_ticket(self, rid: str) -> bool:
+        """Один билет — один зачёт в испытании дня (повторная отправка того же результата отклоняется)."""
+        with self.tx() as c:
+            c.execute("CREATE TABLE IF NOT EXISTS used_tickets (rid TEXT PRIMARY KEY, ts INTEGER NOT NULL)")
+            if c.execute("SELECT 1 FROM used_tickets WHERE rid=?", (rid,)).fetchone() or c.execute("SELECT 1 FROM scores WHERE rid=?", (rid,)).fetchone():
+                return False
+            c.execute("INSERT INTO used_tickets(rid, ts) VALUES(?,?)", (rid, int(time.time())))
+            return True
+
+    # ---------------- сезон (календарный месяц UTC): лучшая запись каждого игрока ----------------
+    def season_board(self, start: int, end: int, limit: int = 20) -> list[dict[str, Any]]:
+        return self.q(
+            """SELECT id, nick, score, nights, pop, ending, created_at FROM scores s WHERE hidden=0 AND created_at>=? AND created_at<? AND id = (
+                 SELECT id FROM scores t WHERE t.pid_hash=s.pid_hash AND t.hidden=0 AND t.created_at>=? AND t.created_at<? ORDER BY t.score DESC, t.created_at ASC LIMIT 1)
+               ORDER BY score DESC, created_at ASC LIMIT ?""", (start, end, start, end, limit))
+
+    def season_rank(self, pid_hash: str, start: int, end: int) -> dict[str, Any] | None:
+        me = self.one("SELECT MAX(score) AS best, COUNT(*) AS n FROM scores WHERE hidden=0 AND pid_hash=? AND created_at>=? AND created_at<?", (pid_hash, start, end))
+        if not me or me["best"] is None:
+            return None
+        better = self.one("SELECT COUNT(*) AS n FROM (SELECT pid_hash, MAX(score) AS b FROM scores WHERE hidden=0 AND created_at>=? AND created_at<? AND pid_hash != ? GROUP BY pid_hash) WHERE b > ?",
+                          (start, end, pid_hash, me["best"]))
+        return {"rank": (better["n"] if better else 0) + 1, "best": me["best"], "games": me["n"]}
+
+    # ---------------- испытание дня ----------------
+    def add_daily(self, day: str, pid_hash: str, nick: str, r: dict[str, Any], done: bool) -> dict[str, Any]:
+        now = int(time.time())
+        with self.tx() as c:
+            row = c.execute("SELECT score, tries, done FROM daily_scores WHERE day=? AND pid_hash=?", (day, pid_hash)).fetchone()
+            if row is None:
+                c.execute("INSERT INTO daily_scores(day,pid_hash,nick,score,nights,pop,ending,burnouts,smog,done,tries,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,1,?)",
+                          (day, pid_hash, nick, r["score"], r["nights"], r["pop"], r["ending"], r["burnouts"], r["smog"], int(done), now))
+                return {"best": r["score"], "improved": True, "tries": 1}
+            improved = r["score"] > row["score"]
+            if improved:
+                c.execute("UPDATE daily_scores SET nick=?, score=?, nights=?, pop=?, ending=?, burnouts=?, smog=?, done=?, tries=tries+1, created_at=? WHERE day=? AND pid_hash=?",
+                          (nick, r["score"], r["nights"], r["pop"], r["ending"], r["burnouts"], r["smog"], int(done or row["done"]), now, day, pid_hash))
+            else:
+                c.execute("UPDATE daily_scores SET tries=tries+1, done=? WHERE day=? AND pid_hash=?", (int(done or row["done"]), day, pid_hash))
+            return {"best": max(row["score"], r["score"]), "improved": improved, "tries": row["tries"] + 1}
+
+    def daily_board(self, day: str, limit: int = 20) -> list[dict[str, Any]]:
+        return self.q("SELECT nick, score, nights, pop, ending, done FROM daily_scores WHERE day=? AND hidden=0 ORDER BY score DESC, created_at ASC LIMIT ?", (day, limit))
+
+    def daily_me(self, day: str, pid_hash: str) -> dict[str, Any] | None:
+        me = self.one("SELECT score, nights, pop, ending, done, tries FROM daily_scores WHERE day=? AND pid_hash=? AND hidden=0", (day, pid_hash))
+        if not me:
+            return None
+        better = self.one("SELECT COUNT(*) AS n FROM daily_scores WHERE day=? AND hidden=0 AND score>?", (day, me["score"]))
+        total = self.one("SELECT COUNT(*) AS n FROM daily_scores WHERE day=? AND hidden=0", (day,))
+        return {**me, "done": bool(me["done"]), "rank": (better["n"] if better else 0) + 1, "total": total["n"] if total else 1}
 
     # ---------------- админка ----------------
     def sessions(self, f: dict[str, Any], sort: str = "created_at", desc: bool = True, limit: int = 50, offset: int = 0) -> tuple[list[dict[str, Any]], int]:

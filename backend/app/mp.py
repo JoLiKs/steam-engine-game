@@ -18,25 +18,27 @@ from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from . import botcore
 from . import simcore as sc
+from .aigame import COMPANION_FALLBACK, COMPANION_NICK, HOST_TEXT, clean_agg
 from .scoring import clean_nick, score_js
 
 log = logging.getLogger("seg.mp")
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"      # без I, L, O, 0, 1 — не путаются при диктовке
 CODE_LEN = 5
 EMOJI = frozenset({"thumbs", "fire", "scream", "heart", "clap", "cold", "steam", "sos"})
-MODES = ("coop",)
+MODES = ("coop", "versus")
 CHAT_MAX = 120
 _LINKISH = re.compile(r"(https?:|www\.|://|\b\w+\.(com|ru|by|io|net|org|me|su|xyz|ly|gg)\b|t\.me|@\w)", re.I)
 SNAP_EVERY = 5                                          # тиков (1/60 с) между снимками → 12 Гц
-PUBLIC_EVENTS = {"shovel", "spill", "nocoal", "leak", "fix", "collapse", "event", "talk", "loss", "choice", "night", "nightend", "ending", "timka", "vent"}
+PUBLIC_EVENTS = {"shovel", "spill", "nocoal", "leak", "fix", "collapse", "event", "talk", "loss", "choice", "night", "nightend", "ending", "timka", "vent", "hostev"}
 
 
 @dataclass
 class Limits:
     max_rooms: int = 200
     conns_per_ip: int = 8
-    creates_per_window: int = 3
+    creates_per_window: int = 10
     create_window_s: float = 600
     max_msg_bytes: int = 2048
     msg_rate: float = 40.0              # сообщений в секунду (token bucket)
@@ -53,6 +55,26 @@ class Limits:
     summary_timeout_s: float = 15
     outbox_max: int = 200
     ping_every_s: float = 25
+    board_every_ticks: int = 30         # живая таблица соревнования ≈2 раза в секунду
+    bot_chat_gap_s: float = 18.0
+
+    @classmethod
+    def from_env(cls, env: Any = None) -> "Limits":
+        """Лимиты из окружения: SEG_MP_CREATES (комнат за окно на IP), SEG_MP_CREATE_WINDOW (с), SEG_MP_MAX_ROOMS, SEG_MP_CONNS_PER_IP."""
+        import os
+        e = os.environ if env is None else env
+        lim = cls()
+        def num(name: str, cur: float, lo: float, hi: float) -> float:
+            try:
+                v = float(e.get(name, ""))
+            except ValueError:
+                return cur
+            return v if lo <= v <= hi else cur
+        lim.creates_per_window = int(num("SEG_MP_CREATES", lim.creates_per_window, 1, 1000))
+        lim.create_window_s = num("SEG_MP_CREATE_WINDOW", lim.create_window_s, 10, 86400)
+        lim.max_rooms = int(num("SEG_MP_MAX_ROOMS", lim.max_rooms, 1, 5000))
+        lim.conns_per_ip = int(num("SEG_MP_CONNS_PER_IP", lim.conns_per_ip, 1, 100))
+        return lim
 
 
 class Conn:
@@ -109,10 +131,11 @@ class Player:
     left_at: float | None = None          # когда пропало соединение
     last_chat: float = 0.0
     last_emo: float = 0.0
+    bot: bool = False                     # ИИ-напарник: без соединения, всегда «на связи»
 
     @property
     def connected(self) -> bool:
-        return self.conn is not None and not self.conn.closed
+        return self.bot or (self.conn is not None and not self.conn.closed)
 
 
 def assign_roles(pids: list[str]) -> dict[str, dict[str, Any]]:
@@ -143,6 +166,224 @@ def _r(x: float, n: int) -> float:
     return round(x, n)
 
 
+def replay_rig(seed: int, log: list, ticks: int) -> dict:
+    """Серверная перепроверка итога соревнования: чистый повтор партии с нуля по сиду и журналу команд. Совпадение с «живым» результатом доказывает,
+    что итог получен только допустимыми командами на детерминированном ядре."""
+    s = sc.create_state(seed, host=True)
+    by_tick: dict[int, list] = {}
+    for t, c in log:
+        by_tick.setdefault(t, []).append(c)
+    def apply(c: list) -> None:
+        k = c[0]
+        if k == "valve":
+            sc.set_valve(s, c[1], c[2])
+        elif k == "shovel":
+            sc.shovel(s)
+        elif k == "fix":
+            sc.fix_leak(s, c[1])
+        elif k == "card":
+            sc.choose_card(s, c[1])
+        elif k == "continue":
+            sc.continue_summary(s)
+    for i in range(ticks):
+        for c in by_tick.get(i, ()):
+            apply(c)
+        sc.step(s, sc.DT)
+        s["events"].clear()
+        if s["phase"] == "ended":
+            break
+    else:
+        for c in by_tick.get(ticks, ()):
+            apply(c)
+    return result_of(s)
+
+
+def result_of(s: dict) -> dict:
+    nights = sc.nights_done(s) if s["ending"] else min(s["night"], 10)
+    pop, burn, smog = max(0, min(1000, round(s["pop"]))), min(60, s["burnouts"]), max(0, min(100, round(sc.smog_avg(s))))
+    return {"ending": s["ending"], "nights": nights, "pop": pop, "burnouts": burn, "smog": smog, "score": score_js(nights, pop, s["ending"], burn, smog),
+            "leaksFixed": s["leaksFixed"], "shovels": s["shovels"]}
+
+
+class Rig:
+    """Личный котёл игрока в соревновании: свой экземпляр ядра на общем сиде, свой таймер карточек, журнал команд для перепроверки."""
+    MAX_LOG = 60000
+
+    def __init__(self, room: "Room", p: Player):
+        self.room, self.pid, self.nick = room, p.pid, p.nick
+        self.sim = sc.create_state(room.seed, host=True)
+        self.tick = 0
+        self.log: list = []
+        self.phase_left = 0.0
+        self.vote: str | None = None
+        self.acked = False
+        self.pending: list[dict] = []
+        self.done = False
+        self.dnf = False
+        self.result: dict | None = None
+        self.finish_order = 0
+        self.seq = 0
+        self._since_snap = 0
+        self.paused = False
+
+    @property
+    def player(self) -> Player | None:
+        return self.room.players.get(self.pid)
+
+    def live_score(self) -> int:
+        s = self.sim
+        if self.result:
+            return self.result["score"]
+        return max(0, s["night"] * 100 + sc.js_round(max(0.0, s["pop"]) / 2) - min(60, s["burnouts"]) * 25 - round(sc.smog_avg(s)))
+
+    # --- ход времени
+    def advance(self, n: int) -> None:
+        s, lim = self.sim, self.room.hub.lim
+        p = self.player
+        self.paused = p is None or not p.connected
+        if self.done or self.paused:
+            return
+        for _ in range(n):
+            ph = s["phase"]
+            if ph == "night":
+                sc.step(s, sc.DT)
+            elif ph in ("card", "summary"):
+                s["clock"] += sc.DT
+                self.phase_left -= sc.DT
+            self.tick += 1
+            if ph in ("card", "summary") and self.phase_left <= 0:
+                self._timeout()
+            self._collect()
+            if s["phase"] == "ended":
+                self._finish()
+                return
+            self._since_snap += 1
+            if self._since_snap >= SNAP_EVERY:
+                self.push()
+
+    def _timeout(self) -> None:
+        s, lim = self.sim, self.room.hub.lim
+        if s["phase"] == "summary":
+            self.log.append((self.tick, ["continue"]))
+            sc.continue_summary(s)
+            self._after_continue()
+        elif s["phase"] == "card" and s["card"]:
+            key = self.vote or s["card"]["options"][0]["key"]
+            self.log.append((self.tick, ["card", key]))
+            sc.choose_card(s, key)
+            self.vote = None
+
+    def _after_continue(self) -> None:
+        self.vote, self.acked = None, False
+        if self.sim["phase"] == "card":
+            self.phase_left = self.room.hub.lim.card_timeout_s
+
+    def _collect(self) -> None:
+        s = self.sim
+        for e in s["events"]:
+            if e.get("type") in PUBLIC_EVENTS and len(self.pending) < 40:
+                if e["type"] == "hostev":
+                    e = {**e, "text": self.room.hub.host_text(e["id"], s["night"])}
+                self.pending.append(e)
+        s["events"].clear()
+        if s["phase"] == "summary" and "summary_seen" not in s:
+            s["summary_seen"] = True
+            self.phase_left, self.acked = self.room.hub.lim.summary_timeout_s, False
+            self.push()
+        if s["phase"] == "night":
+            s.pop("summary_seen", None)
+
+    # --- команды
+    def command(self, m: dict) -> str | None:
+        s, t = self.sim, m.get("t")
+        if self.done:
+            return None
+        if t == "valve":
+            i = m.get("i")
+            if not (isinstance(i, int) and not isinstance(i, bool)) or not 0 <= i < 4:
+                return "forbidden"
+            if s["phase"] != "night" or self.paused:
+                return None
+            if len(self.log) >= self.MAX_LOG:
+                return None
+            v = m.get("v")
+            if not sc.set_valve(s, i, v):
+                return "bad_value"
+            self.log.append((self.tick, ["valve", i, float(v)]))
+            return None
+        if t == "shovel":
+            if s["phase"] == "night" and not self.paused and len(self.log) < self.MAX_LOG:
+                self.log.append((self.tick, ["shovel"]))
+                sc.shovel(s)
+            return None
+        if t == "fix":
+            if s["phase"] == "night" and not self.paused and len(self.log) < self.MAX_LOG:
+                lid = m.get("id")
+                self.log.append((self.tick, ["fix", lid if isinstance(lid, int) and not isinstance(lid, bool) else None]))
+                sc.fix_leak(s, lid if isinstance(lid, int) and not isinstance(lid, bool) else None)
+            return None
+        if t == "card":
+            if s["phase"] != "card" or not s["card"]:
+                return None
+            key = m.get("key")
+            if not isinstance(key, str) or not any(o["key"] == key for o in s["card"]["options"]):
+                return "bad_value"
+            self.log.append((self.tick, ["card", key]))
+            sc.choose_card(s, key)
+            self.vote = None
+            self._collect()
+            self.push()
+            return None
+        if t == "next":
+            if s["phase"] == "summary":
+                self.log.append((self.tick, ["continue"]))
+                sc.continue_summary(s)
+                self._after_continue()
+                self._collect()
+                if s["phase"] == "ended":
+                    self._finish()
+                else:
+                    self.push()
+            return None
+        return "unknown"
+
+    # --- итог
+    def _finish(self, dnf: bool = False) -> None:
+        if self.done:
+            return
+        self.done, self.dnf = True, dnf
+        self.result = result_of(self.sim)
+        self.finish_order = self.room._next_finish()
+        self.push()
+        self.room._rig_done(self)
+
+    def verify(self) -> bool:
+        """Перепроверка: повтор по журналу должен дать тот же итог. При расхождении побеждает повтор (он эталонный)."""
+        try:
+            again = replay_rig(self.room.seed, self.log, self.tick)
+        except Exception:
+            log.exception("replay failed")
+            return False
+        keys = ("ending", "nights", "pop", "burnouts", "smog", "score")
+        if self.result and all(again[k] == self.result[k] for k in keys):
+            return True
+        if not self.dnf:
+            log.error("replay mismatch: live=%s replay=%s", self.result, again)
+            self.result = again
+        return False
+
+    def push(self) -> None:
+        p = self.player
+        self._since_snap = 0
+        if p is None or p.conn is None:
+            self.pending.clear()
+            return
+        self.seq += 1
+        p.conn.send(self.room.snap_dict(self.sim, self.seq, self.paused, {self.pid: self.vote} if self.vote else {}, [self.pid] if self.vote else [],
+                                        [self.pid] if self.acked else [], self.phase_left, self.pending))
+        self.pending.clear()
+
+
 class Room:
     def __init__(self, hub: "Hub", code: str, mode: str, max_players: int, seed: int):
         self.hub, self.code, self.mode, self.max_players, self.seed = hub, code, mode, max_players, seed
@@ -163,16 +404,35 @@ class Room:
         self.result: dict | None = None
         self.last_tick_t: float | None = None
         self._acc = 0.0
+        self.rigs: dict[str, Rig] = {}
+        self.reviews: dict[str, dict] = {}
+        self._board_acc = 0
+        self._finishes = 0
+        self._bot_acc = 0.0
+        self._bs: dict[str, Any] = {"last": -999.0, "night": -1, "leaks": 0, "pop": None, "hi": -999.0, "coal": -999.0, "end": False}
+
+    def versus(self) -> bool:
+        return self.mode == "versus"
+
+    def active(self) -> bool:
+        return self.sim is not None or bool(self.rigs)
+
+    def humans(self) -> list[Player]:
+        return [p for p in self.players.values() if not p.bot]
+
+    def _next_finish(self) -> int:
+        self._finishes += 1
+        return self._finishes
 
     # ------------------------------------------------------------ рассылка
     def broadcast(self, msg: dict, skip: Player | None = None) -> None:
         for p in self.players.values():
-            if p is not skip and p.connected:
-                p.conn.send(msg)  # type: ignore[union-attr]
+            if p is not skip and p.conn is not None and p.connected:
+                p.conn.send(msg)
 
     def lobby_msg(self) -> dict:
         return {"t": "lobby", "code": self.code, "mode": self.mode, "state": self.state, "max": self.max_players, "host": self.host,
-                "players": [{"pid": p.pid, "nick": p.nick, "ready": p.ready, "online": p.connected,
+                "players": [{"pid": p.pid, "nick": p.nick, "ready": p.ready, "online": p.connected, "bot": p.bot,
                              "role": self.roles.get(p.pid)} for p in self.players.values()]}
 
     def push_lobby(self) -> None:
@@ -216,7 +476,7 @@ class Room:
         if self.host in self.players and self.players[self.host].connected:
             return
         for p in self.players.values():
-            if p.connected:
+            if p.connected and not p.bot:
                 self.host = p.pid
                 return
 
@@ -229,15 +489,22 @@ class Room:
             p.conn.send({"t": "left", "reason": reason})
         self.votes.pop(pid, None)
         self.acks.discard(pid)
+        if p.bot is False and not self.humans():           # остались только боты — комната закрывается
+            self.players.clear()
+            return
+        if self.versus() and pid in self.rigs:
+            rg = self.rigs[pid]
+            if not rg.done:
+                rg._finish(dnf=True)
         if self.host == pid:
             self.host = None
             self._migrate_host()
             if self.host is None and self.players:
-                self.host = next(iter(self.players))
-        if self.state == "playing" and self.players:
+                self.host = next((p.pid for p in self.players.values() if not p.bot), None)
+        if self.state == "playing" and self.players and not self.versus():
             self.roles = self._merge_orphans(pid)
         self.push_lobby()
-        if self.state == "playing":
+        if self.state == "playing" and not self.versus():
             self._check_phase_progress()
             self._push_snapshot(force=True)
 
@@ -256,30 +523,45 @@ class Room:
 
     # ------------------------------------------------------------ игра
     def start(self) -> None:
-        self.sim = sc.create_state(self.seed)
         pids = list(self.players)
-        self.roles = assign_roles(pids)
+        self.rigs, self._finishes, self._board_acc = {}, 0, 0
+        self._bs = {"last": -999.0, "night": -1, "leaks": 0, "pop": None, "hi": -999.0, "coal": -999.0, "end": False}
+        if self.versus():
+            self.sim = None
+            self.roles = {p: dict(valves=[0, 1, 2, 3], shovel=True, leaks=True) for p in pids}
+            self.rigs = {p.pid: Rig(self, p) for p in self.players.values()}
+        else:
+            self.sim = sc.create_state(self.seed, host=True)
+            self.roles = assign_roles(pids)
         self.state, self.paused = "playing", False
         self.votes.clear(); self.acks.clear(); self.pending.clear()
         self.last_tick_t, self._acc, self.seq, self._since_snap = None, 0.0, 0, 0
         self.touch()
         for p in self.players.values():
-            p.ready = False
+            p.ready = p.bot
         self.broadcast({"t": "start", "seed": self.seed, "roles": self.roles, "mode": self.mode})
         self.push_lobby()
-        self._push_snapshot(force=True)
+        if self.versus():
+            for rg in self.rigs.values():
+                rg.push()
+            self.push_board()
+        else:
+            self._push_snapshot(force=True)
 
     def _paused_now(self) -> bool:
         return any(not p.connected for p in self.players.values()) or not any(p.connected for p in self.players.values())
 
     def advance(self, n: int = 1) -> None:
         """n тиков по 1/60 с (сервер вызывает по реальному времени, тесты — вручную)."""
+        if self.state == "playing" and self.versus():
+            return self._advance_versus(n)
         if self.state != "playing" or self.sim is None:
             return
         s = self.sim
         self.paused = self._paused_now()
         if self.paused:
             return
+        self._bots_think(n)
         for _ in range(n):
             if s["phase"] == "night":
                 sc.step(s, sc.DT)
@@ -302,6 +584,8 @@ class Room:
         if s["events"]:
             for e in s["events"]:
                 if e.get("type") in PUBLIC_EVENTS and len(self.pending) < 60:
+                    if e["type"] == "hostev":
+                        e = {**e, "text": self.hub.host_text(e["id"], s["night"])}
                     self.pending.append(e)
             s["events"].clear()
         if s["phase"] == "summary" and "summary_seen" not in s:
@@ -368,23 +652,33 @@ class Room:
                        "score": score_js(nights, pop, s["ending"], burn, smog), "players": [p.nick for p in self.players.values()]}
         self.state = "ended"
         self.touch()
+        self.result.update({"mode": self.mode, "seed": self.seed})
         self.broadcast({"t": "end", "result": self.result})
         self.push_lobby()
+        self._bot_final()
+        self.hub.request_review(self, None, {"nights": nights, "pop": pop, "burnouts": burn, "smog": smog, "leaksFixed": s["leaksFixed"], "shovels": s["shovels"],
+                                              "ending": s["ending"], "players": len(self.humans()) or 1, "mode": "coop"})
 
     def back_to_lobby(self) -> None:
-        self.state, self.sim, self.roles, self.result = "lobby", None, {}, None
+        self.state, self.sim, self.roles, self.result, self.rigs, self.reviews = "lobby", None, {}, None, {}, {}
         self.seed = secrets.randbits(32) or 1
         for p in self.players.values():
-            p.ready = False
+            p.ready = p.bot
         self.touch()
         self.push_lobby()
 
     # ------------------------------------------------------------ снимки
-    def snapshot(self) -> dict:
-        s = self.sim
+    def snapshot(self, pid: str | None = None) -> dict:
+        if self.versus() and pid in self.rigs:
+            rg = self.rigs[pid]
+            return self.snap_dict(rg.sim, rg.seq, rg.paused, {pid: rg.vote} if rg.vote else {}, [pid] if rg.vote else [], [pid] if rg.acked else [], rg.phase_left, [])
+        return self.snap_dict(self.sim, self.seq, self.paused, dict(Counter(self.votes.values())), list(self.votes), list(self.acks), self.phase_left, self.pending[:])
+
+    def snap_dict(self, s: dict, seq: int, paused: bool, votes: dict, voted: list, acks: list, phase_left: float, ev: list) -> dict:
         card = s["card"]
-        votes = Counter(self.votes.values())
-        return {"t": "snap", "seq": self.seq, "paused": self.paused,
+        if votes and all(isinstance(v, str) for v in votes.values()):
+            votes = dict(Counter(votes.values()))
+        return {"t": "snap", "seq": seq, "paused": paused,
                 "s": {"phase": s["phase"], "night": s["night"], "t": _r(s["t"], 2), "P": _r(s["P"], 2), "fire": _r(s["fire"], 2), "coal": _r(s["coal"], 2),
                       "smog": _r(s["smog"], 2), "pop": _r(s["pop"], 2), "fw": _r(s["fw"], 2), "danger": _r(s["danger"], 2), "burnT": _r(s["burnT"], 2),
                       "shovelCd": _r(s["shovelCd"], 2), "venting": s["venting"], "shake": _r(s["shake"], 2),
@@ -394,8 +688,8 @@ class Room:
                       "card": card["id"] if card else None, "burnouts": s["burnouts"], "exhaustSec": _r(s["exhaustSec"], 1),
                       "smogSum": _r(s["smogSum"], 1), "smogTime": _r(s["smogTime"], 1), "timkaShovels": s["timkaShovels"], "leaksFixed": s["leaksFixed"],
                       "coalMade": _r(s["coalMade"], 1), "nightStartPop": _r(s["nightStartPop"], 1)},
-                "votes": dict(votes), "voted": list(self.votes), "acks": list(self.acks), "left": math.ceil(max(0.0, self.phase_left)),
-                "ev": self.pending[:]}
+                "votes": dict(votes), "voted": list(voted), "acks": list(acks), "left": math.ceil(max(0.0, phase_left)),
+                "ev": ev}
 
     def _push_snapshot(self, force: bool = False) -> None:
         if self.sim is None:
@@ -408,8 +702,12 @@ class Room:
     # ------------------------------------------------------------ команды игрока
     def command(self, p: Player, m: dict) -> str | None:
         """Возвращает код ошибки или None."""
-        if self.state != "playing" or self.sim is None:
+        if self.state != "playing" or (self.sim is None and not self.rigs):
             return "not_playing"
+        if self.versus():
+            rg = self.rigs.get(p.pid)
+            self.touch()
+            return rg.command(m) if rg else "forbidden"
         s, r, t = self.sim, self.roles.get(p.pid), m.get("t")
         if r is None:
             return "forbidden"
@@ -453,6 +751,143 @@ class Room:
             return None
         return "unknown"
 
+    # ------------------------------------------------------------ соревнование
+    def _advance_versus(self, n: int) -> None:
+        for rg in list(self.rigs.values()):
+            if self.state != "playing":
+                break
+            rg.advance(n)
+        if self.state == "playing":
+            self._board_acc += n
+            if self._board_acc >= self.hub.lim.board_every_ticks:
+                self._board_acc = 0
+                self.push_board()
+
+    def board_rows(self) -> list[dict]:
+        rows = []
+        for pid, rg in self.rigs.items():
+            p = self.players.get(pid)
+            s = rg.sim
+            state = "dnf" if rg.dnf else "done" if rg.done else "offline" if (p is None or not p.connected) else "playing"
+            rows.append({"pid": pid, "nick": rg.nick, "night": min(10, s["night"] + 1), "pop": max(0, min(1000, round(s["pop"]))), "score": rg.live_score(),
+                         "state": state, "ending": rg.result["ending"] if rg.result else None, "o": rg.finish_order})
+        rows.sort(key=lambda r: (-r["score"], r["o"] or 99))
+        return rows
+
+    def push_board(self) -> None:
+        self.broadcast({"t": "board", "rows": self.board_rows()})
+
+    def _rig_done(self, rg: Rig) -> None:
+        self.push_board()
+        if all(r.done for r in self.rigs.values()):
+            self._finish_versus()
+
+    def _finish_versus(self) -> None:
+        if self.state == "ended":
+            return
+        entries = []
+        for pid, rg in self.rigs.items():
+            ok = rg.verify()
+            r = rg.result or result_of(rg.sim)
+            entries.append({"pid": pid, "nick": rg.nick, **{k: r[k] for k in ("score", "nights", "pop", "ending", "burnouts", "smog")}, "dnf": rg.dnf, "verified": ok or rg.dnf, "o": rg.finish_order})
+        entries.sort(key=lambda e: (e["dnf"], -e["score"], -e["nights"], -e["pop"], e["o"]))
+        for i, e in enumerate(entries):
+            e["place"] = i + 1
+            e.pop("o", None)
+        self.result = {"mode": "versus", "seed": self.seed, "places": entries, "players": [e["nick"] for e in entries]}
+        self.state = "ended"
+        self.touch()
+        self.broadcast({"t": "end", "result": self.result})
+        self.push_lobby()
+        for pid, rg in self.rigs.items():
+            r = rg.result or result_of(rg.sim)
+            self.hub.request_review(self, pid, {"nights": r["nights"], "pop": r["pop"], "burnouts": r["burnouts"], "smog": r["smog"], "leaksFixed": r.get("leaksFixed", 0),
+                                                "shovels": r.get("shovels", 0), "ending": r["ending"] or "silence", "players": len(self.rigs), "mode": "versus"})
+
+    # ------------------------------------------------------------ ИИ-напарник
+    def add_bot(self) -> Player | None:
+        if self.mode != "coop" or self.state != "lobby" or len(self.players) >= self.max_players or any(p.bot for p in self.players.values()):
+            return None
+        p = Player(pid="bot" + secrets.token_hex(2), nick=COMPANION_NICK, secret="", conn=None, ready=True, bot=True)
+        self.players[p.pid] = p
+        self.touch()
+        self.push_lobby()
+        return p
+
+    def remove_bot(self) -> bool:
+        b = next((p for p in self.players.values() if p.bot), None)
+        if not b or self.state != "lobby":
+            return False
+        self.players.pop(b.pid, None)
+        self.touch()
+        self.push_lobby()
+        return True
+
+    def _bots_think(self, n: int) -> None:
+        bots = [p for p in self.players.values() if p.bot]
+        if not bots or self.sim is None:
+            return
+        self._bot_acc += n * sc.DT
+        if self._bot_acc < botcore.REACT:
+            return
+        self._bot_acc = 0.0
+        s, lim = self.sim, self.hub.lim
+        for b in bots:
+            role = self.roles.get(b.pid, {})
+            if s["phase"] == "night":
+                for c in botcore.decide(s, role):
+                    if c[0] == "valve":
+                        sc.set_valve(s, c[1], c[2])
+                    elif c[0] == "shovel":
+                        sc.shovel(s)
+                    elif c[0] == "fix":
+                        sc.fix_leak(s, None)
+            elif s["phase"] == "card" and b.pid not in self.votes and lim.card_timeout_s - self.phase_left > 2.0:
+                key = botcore.card_choice(s)
+                if key:
+                    self.votes[b.pid] = key
+                    self._check_phase_progress()
+            elif s["phase"] == "summary" and b.pid not in self.acks and lim.summary_timeout_s - self.phase_left > 3.0:
+                self.acks.add(b.pid)
+                self._check_phase_progress()
+            if self.sim is not None and self.sim["phase"] in ("night",):
+                self._bot_chat(b)
+
+    def _bot_chat(self, b: Player) -> None:
+        s, st = self.sim, self._bs
+        clock = s["clock"]
+        sit = None
+        if st["night"] != s["night"] and s["t"] < 3:
+            st["night"], st["leaks"], st["pop"] = s["night"], 0, s["pop"]
+            sit = "night_start"
+        elif len(s["leaks"]) > st["leaks"]:
+            sit = "leak"
+        elif s["P"] > 90 and clock - st["hi"] > 40:
+            sit, st["hi"] = "pressure_high", clock
+        elif s["coal"] < 6 and clock - st["coal"] > 60:
+            sit, st["coal"] = "coal_low", clock
+        elif st["pop"] is not None and st["pop"] - s["pop"] > 25:
+            sit, st["pop"] = "pop_loss", s["pop"]
+        st["leaks"] = len(s["leaks"])
+        if sit and clock - st["last"] >= self.hub.lim.bot_chat_gap_s:
+            self._bot_say(b, sit)
+
+    def _bot_say(self, b: Player, sit: str) -> None:
+        text = self.hub.companion_line(sit, (self.sim or {}).get("night", 0) + 1)
+        if not text:
+            return
+        self._bs["last"] = self.sim["clock"] if self.sim else 0.0
+        msg = {"t": "chat", "pid": b.pid, "nick": b.nick, "text": text}
+        self.chat_log.append(msg)
+        self.broadcast(msg)
+
+    def _bot_final(self) -> None:
+        b = next((p for p in self.players.values() if p.bot), None)
+        if b and not self._bs["end"]:
+            self._bs["end"] = True
+            win = self.result and self.result.get("ending") in ("light", "smoke", "iron")
+            self._bot_say(b, "win" if win else "lose")
+
     # ------------------------------------------------------------ обслуживание (раз в секунду)
     def housekeeping(self, now: float) -> bool:
         """True — комнату пора закрыть."""
@@ -477,12 +912,60 @@ class Room:
 
 class Hub:
     def __init__(self, clock: Callable[[], float] = time.time, limits: Limits | None = None, rng: Callable[[], int] | None = None):
-        self.clock, self.lim = clock, limits or Limits()
+        self.clock, self.lim = clock, limits or Limits.from_env()
+        self.ai: Any = None                      # GameAi (ведущий, напарник, разбор) — задаётся в main.py; None — только запасные тексты
+        self.bg: Callable[[Callable[[], Any], Callable[[Any], None]], None] | None = None   # запуск блокирующей работы вне event loop
         self.rooms: dict[str, Room] = {}
         self.ip_conns: Counter[str] = Counter()
         self.create_log: dict[str, deque] = {}
         self._rng = rng or (lambda: secrets.randbits(32) or 1)
         self.stats = {"rooms_created": 0, "games": 0, "msgs": 0, "rejected": 0}
+
+    # ------------------------------------------------------------ ИИ-хуки (всегда безопасны: сбой ИИ → запасной текст)
+    def host_text(self, ev_id: str, night: int) -> str:
+        try:
+            if self.ai is not None:
+                return self.ai.host_text(ev_id, night)
+        except Exception:
+            log.exception("host_text")
+        return HOST_TEXT.get(ev_id, "В городе что-то случилось.")
+
+    def companion_line(self, situation: str, night: int) -> str | None:
+        try:
+            if self.ai is not None:
+                return self.ai.companion_line(situation, night)
+        except Exception:
+            log.exception("companion_line")
+        return COMPANION_FALLBACK.get(situation, COMPANION_FALLBACK["calm"])[0]
+
+    def run_bg(self, fn: Callable[[], Any], cb: Callable[[Any], None]) -> None:
+        if self.bg is not None:
+            self.bg(fn, cb)
+        else:
+            cb(fn())
+
+    def request_review(self, room: "Room", pid: str | None, agg: dict) -> None:
+        """Разбор партии (3–4 предложения) по агрегатам без ников: ИИ в фоне, иначе запасной текст по правилам."""
+        ai = self.ai
+        a = clean_agg(agg)
+        if ai is None or a is None or not ai.enabled("review"):
+            return
+        def done(res: Any) -> None:
+            try:
+                text, src = res
+            except (TypeError, ValueError):
+                return
+            msg = {"t": "review", "text": text, "src": src}
+            room.reviews[pid or "*"] = msg
+            if room.state != "ended":
+                return
+            if pid is None:
+                room.broadcast(msg)
+            else:
+                p = room.players.get(pid)
+                if p and p.conn:
+                    p.conn.send(msg)
+        self.run_bg(lambda: ai.review(a), done)
 
     # ------------------------------------------------------------ соединения
     def connect(self, ip: str, on_wake: Callable[[], None] | None = None) -> Conn | None:
@@ -556,6 +1039,12 @@ class Hub:
         elif t == "again":
             if room.state == "ended" and room.host == me.pid:
                 room.back_to_lobby()
+        elif t == "addbot":
+            if room.host == me.pid and room.add_bot() is None:
+                self._err(conn, "bad_state", strike=False)
+        elif t == "rmbot":
+            if room.host == me.pid:
+                room.remove_bot()
         elif t == "kick":
             pid = m.get("pid")
             if room.host == me.pid and isinstance(pid, str) and pid in room.players and pid != me.pid and room.state == "lobby":
@@ -630,11 +1119,16 @@ class Hub:
         room.touch()
         room._migrate_host()
         self._joined(conn, room, p)
-        if room.state in ("playing", "ended") and room.sim is not None:
+        if room.state in ("playing", "ended") and room.active():
             conn.send({"t": "start", "seed": room.seed, "roles": room.roles, "mode": room.mode})
-            conn.send(room.snapshot())
+            conn.send(room.snapshot(p.pid))
+            if room.versus():
+                conn.send({"t": "board", "rows": room.board_rows()})
             if room.result:
                 conn.send({"t": "end", "result": room.result})
+                for k in ("*", p.pid):
+                    if k in room.reviews:
+                        conn.send(room.reviews[k])
 
     def _joined(self, conn: Conn, room: Room, p: Player) -> None:
         conn.send({"t": "joined", "code": room.code, "pid": p.pid, "secret": p.secret, "nick": p.nick, "chat": list(room.chat_log)})

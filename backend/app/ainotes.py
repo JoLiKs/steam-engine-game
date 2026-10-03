@@ -25,7 +25,12 @@ DEFAULT_SETTINGS = {
     "style": "тёплый, чуть ироничный голос старого кочегара-механика; конкретика вместо общих слов",
     "length": "short",
     "frequency": "normal",
+    "host": True,          # ИИ-ведущий событий (мультиплеер)
+    "review": True,        # ИИ-разбор партии после финала
+    "companion": True,     # реплики ИИ-напарника в кооперативе
+    "daily": True,         # сюжет ежедневного испытания
 }
+FEATURES = ("host", "review", "companion", "daily")
 
 # ---------- запасные тексты (если ИИ недоступен): проверенные факты и реплики
 FALLBACK = {
@@ -180,6 +185,11 @@ def clean_settings(d: dict, cur: dict) -> dict:
                 raise ValueError(k)
             v = unicodedata.normalize("NFKC", "".join(ch for ch in v if ch == "\n" or unicodedata.category(ch)[0] != "C")).strip()
             out[k] = v[:lim] or DEFAULT_SETTINGS[k]
+    for k in FEATURES:
+        if k in d:
+            if not isinstance(d[k], bool):
+                raise ValueError(k)
+            out[k] = d[k]
     if "length" in d:
         if d["length"] not in LENGTHS:
             raise ValueError("length")
