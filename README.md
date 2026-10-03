@@ -140,7 +140,7 @@
 * **Играть вместе**: кнопка на титульном экране → лобби, комната по коду или ссылке, 2–4 игрока управляют одним котлом (разные клапаны, лопата, утечки), чат и эмодзи, голосование по карточкам, реконнект. Сервер авторитетный (анти-чит), см. [`MULTIPLAYER.md`](MULTIPLAYER.md).
 * **Аудит**: [`AUDIT.md`](AUDIT.md) — находки с серьёзностью; для каждой исправленной есть падавший тест.
 * **Структура**: `src/core` (детерминированное ядро без DOM — общее для клиента и ботов; Python-порт `backend/app/simcore.py` для сервера), `src/ui`, `src/audio`, `src/net`.
-* **Проверки**: `npm run lint`, `npm run typecheck` (JSDoc + `tsc`), `npm test` (lint + tsc + node + pytest; для pytest задайте `SEG_PY`), `npm run test:all` (всё, включая Playwright), CI — `.github/workflows/ci.yml`.
+* **Проверки**: `npm run lint`, `npm run typecheck` (JSDoc + `tsc`), `npm test` (lint + tsc + node + pytest; для pytest задайте `SEG_PY`), `npm run test:all` (всё, включая Playwright), CI — `ci/github-workflow.yml` (скопируйте в `.github/workflows/ci.yml`: токену деплоя не хватает scope `workflow`, поэтому в ветку он не запушен).
 * При изменении `src/core/data.js` или `sim.js` выполните `npm run gen:sim` (обновляет `backend/app/simdata.json` и `tests/fixtures/sim_vectors.json`); CI проверяет актуальность.
 
 ## Тесты и баланс

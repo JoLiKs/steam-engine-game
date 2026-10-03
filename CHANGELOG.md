@@ -5,7 +5,7 @@
 ### Добавлено
 - **Мультиплеер (кооператив 2–4 игрока)**: WebSocket-сервер в бэкенде (`/ws` → `wss://185-255-133-179.sslip.io/steam/ws`), комнаты по коду/ссылке `?room=КОД`, лобби (готовность, хозяин, «убрать», копирование ссылки), роли (клапаны/лопата/утечки), голосование по карточкам, чат и 8 эмодзи-реакций, пауза и реконнект (rejoin по секрету, переживает обновление страницы), лимиты и санитизация. Авторитетный сервер: `backend/app/simcore.py` — точный порт ядра, сверяется с JS общими тест-векторами. Подробности — `MULTIPLAYER.md`.
 - **AUDIT.md** — детальный аудит (находки, серьёзность, статус, тесты).
-- **Рефакторинг**: `src/core/` (чистое детерминированное ядро: `sim, data, rng, score, bot, validate`), `src/ui/` (render, draw, layout, fx, coach, notes, lobby, keys), `src/audio/`, `src/net/` (net, mp). ESLint 9, `tsc` (checkJs по JSDoc для ядра), единый `npm test`, CI GitHub Actions (`.github/workflows/ci.yml`; копия в `ci/github-workflow.yml`).
+- **Рефакторинг**: `src/core/` (чистое детерминированное ядро: `sim, data, rng, score, bot, validate`), `src/ui/` (render, draw, layout, fx, coach, notes, lobby, keys), `src/audio/`, `src/net/` (net, mp). ESLint 9, `tsc` (checkJs по JSDoc для ядра), единый `npm test`, CI GitHub Actions (`ci/github-workflow.yml` — скопировать в `.github/workflows/ci.yml`; push токеном без scope `workflow` запрещён).
 - Метки владельцев управления на холсте, панель чата/реакций, экран лобби.
 
 ### Исправлено (по аудиту, с тестами)
