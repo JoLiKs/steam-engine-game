@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Notes, NOTES, isCrisis } from '../src/notes.js';
+import { Notes, NOTES, isCrisis } from '../src/ui/notes.js';
 
 const mk = (o = {}) => ({ phase: 'night', night: 2, leaks: [], P: 50, fire: 60, coal: 60, smog: 20, danger: 0, burnT: 0, venting: false, tut: null, ...o });
 const run = (n, s, secs, step = 0.5) => { let req = null; for (let t = 0; t < secs && !req; t += step) req = n.update(s, step); return req; };

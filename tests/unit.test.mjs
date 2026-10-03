@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createState, step, setValve, shovel, fixLeak, spawnLeak, serialize, deserialize, computeEnding, chooseCard, continueSummary, toll, smogAvg, needNow, P_DANGER } from '../src/sim.js';
-import { runGame, botAct } from '../src/bot.js';
-import { NIGHTS, CARDS, ENDINGS, TUTORIAL, CAP } from '../src/data.js';
-import { nextRand } from '../src/rng.js';
-import { makeLayout, column, viewFor } from '../src/layout.js';
+import { createState, step, setValve, shovel, fixLeak, spawnLeak, serialize, deserialize, computeEnding, chooseCard, continueSummary, toll, smogAvg, needNow, P_DANGER } from '../src/core/sim.js';
+import { runGame, botAct } from '../src/core/bot.js';
+import { NIGHTS, CARDS, ENDINGS, TUTORIAL, CAP } from '../src/core/data.js';
+import { nextRand } from '../src/core/rng.js';
+import { makeLayout, column, viewFor } from '../src/ui/layout.js';
 
 const DT = 1 / 60;
 const play = (seed, skill, opts = {}, skip = true) => runGame(createState(seed, { skipTutorial: skip }), skill, opts);
@@ -187,7 +187,7 @@ test('раскладка: все элементы внутри холста на
 
 // ---- счёт прохождения (общие векторы с backend)
 import { readFileSync } from 'node:fs';
-import { computeScore, nightsDone } from '../src/score.js';
+import { computeScore, nightsDone } from '../src/core/score.js';
 test('computeScore совпадает с общими векторами бэкенда', () => {
   const vec = JSON.parse(readFileSync(new URL('./score_vectors.json', import.meta.url)));
   for (const v of vec) assert.equal(computeScore(v), v.score, JSON.stringify(v));

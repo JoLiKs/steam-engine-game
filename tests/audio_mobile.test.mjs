@@ -1,7 +1,7 @@
 // Мобильный звук (мок AudioContext): жест → resume, индикатор «нужен тап», interrupted/suspended/closed, ошибки не роняют игру.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Sound } from '../src/audio.js';
+import { Sound } from '../src/audio/audio.js';
 
 function fakeCtx(initial = 'suspended', opts = {}) {
   const node = () => ({ gain: { value: 1, setValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} }, frequency: { value: 0, setTargetAtTime() {}, setValueAtTime() {} }, Q: { value: 0 }, connect() {}, start() {}, stop() {}, type: '', buffer: null, loop: false });

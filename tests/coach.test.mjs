@@ -1,9 +1,9 @@
 // Логика триггера подсказок: только серия нелогичных действий, кулдауны, лимиты, отсутствие спама.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Coach, COACH } from '../src/coach.js';
-import { createState } from '../src/sim.js';
-import { CAP } from '../src/data.js';
+import { Coach, COACH } from '../src/ui/coach.js';
+import { createState } from '../src/core/sim.js';
+import { CAP } from '../src/core/data.js';
 
 function mk(over = {}) {
   const s = createState(7, { skipTutorial: true });
@@ -139,8 +139,8 @@ test('кольцо-подсветка живёт RING секунд и гасне
   assert.equal(co.ring(s.clock), 'gauge'); assert.equal(co.ring(s.clock + COACH.RING + 1), null);
 });
 
-import { step } from '../src/sim.js';
-import { botAct } from '../src/bot.js';
+import { step } from '../src/core/sim.js';
+import { botAct } from '../src/core/bot.js';
 function hintsFor(skill, seed) {
   const s = createState(seed, {}), co = new Coach(); let g = 0, n = 0;
   while (s.phase !== 'ended' && g++ < 60 * 60 * 30) {

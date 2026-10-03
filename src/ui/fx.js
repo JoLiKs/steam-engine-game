@@ -1,5 +1,5 @@
 // Частицы (пар, искры, дым), всплывающие надписи и дрожание экрана. Чисто косметика: свой ГСЧ.
-import { makeRng } from './rng.js';
+import { makeRng } from '../core/rng.js';
 
 const MAX = 700;
 export class Fx {

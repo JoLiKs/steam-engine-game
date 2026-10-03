@@ -11,7 +11,7 @@
 //   smog         — дым выше 70 %, а вентиль фильтров почти закрыт (периодами по 8 с)
 // Разумное действие (вентиль в нужную сторону, нужное подбрасывание, заделанная утечка) обнуляет серию.
 // Подсказка выдаётся при ≥ NEED нелогичных событиях за WINDOW секунд; затем общий кулдаун, кулдаун на категорию и лимит на ночь.
-import { CAP, TUTORIAL } from './data.js';
+import { CAP, TUTORIAL } from '../core/data.js';
 
 export const COACH = { WINDOW: 20, NEED: 3, COOLDOWN: 45, CAT_COOLDOWN: 90, PER_NIGHT: 3, STALL: 25, STALL_COOLDOWN: 40, RING: 7 };
 const NAMES = ['Госпиталя', 'Кварталов', 'Завода', 'Фильтров'];

@@ -1,7 +1,7 @@
 // Сеть: любой вызов к бэкенду завершается не позже чем через 3 с и никогда не бросает исключение.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { call, TIMEOUT, fetchBoard, Run } from '../src/net.js';
+import { call, TIMEOUT, fetchBoard, Run } from '../src/net/net.js';
 
 const realFetch = globalThis.fetch;
 test.afterEach(() => { globalThis.fetch = realFetch; });

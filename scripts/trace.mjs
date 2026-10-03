@@ -1,5 +1,5 @@
-import { createState, step } from '../src/sim.js';
-import { botAct } from '../src/bot.js';
+import { createState, step } from '../src/core/sim.js';
+import { botAct } from '../src/core/bot.js';
 const [skill='good',policy='good',react='0.35']=process.argv.slice(2);
 const s=createState(1);
 let last=-1;

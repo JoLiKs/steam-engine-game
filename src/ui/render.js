@@ -1,9 +1,9 @@
 // Отрисовка сцены. Читает состояние симуляции и визуальное состояние (vis), ничего не меняет в логике.
 import { C, rr, plate, rivet, rivetsRect, brassGrad, copperGrad, pipe, flange, flowDots, glassShine, icon, text, sans, wrap, drawGear, gearSprite } from './draw.js';
 import { column } from './layout.js';
-import { DISTRICTS, CAP, NIGHTS, TUTORIAL, COAL_MAX, POP_START } from './data.js';
-import { P_GREEN, P_VENT, P_DANGER, SHOVEL_CD } from './sim.js';
-import { makeRng } from './rng.js';
+import { DISTRICTS, CAP, NIGHTS, TUTORIAL, COAL_MAX, POP_START } from '../core/data.js';
+import { P_GREEN, P_VENT, P_DANGER, SHOVEL_CD } from '../core/sim.js';
+import { makeRng } from '../core/rng.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

@@ -1,6 +1,6 @@
-import { createState } from '../src/sim.js';
-import { runGame } from '../src/bot.js';
-import { smogAvg, toll } from '../src/sim.js';
+import { createState } from '../src/core/sim.js';
+import { runGame } from '../src/core/bot.js';
+import { smogAvg, toll } from '../src/core/sim.js';
 const rows=[];
 for (const [skill,policy,react,pusher] of [['good','iron',0.35,true],['good','good',0.35,true],['good','good',0.35],['good','good',0.8],['ok','good',0.9],['good','greedy',0.35],['good','smoky',0.35],['good','iron',0.35],['bad','good'],['idle','good']]) {
   const res={};

@@ -7,7 +7,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m)
   const p = await b.newPage();
   await p.goto(`http://127.0.0.1:${port}/?debug`, { waitUntil: 'load' });
   const res = await p.evaluate(async () => {
-    const { Sound } = await import('/src/audio.js');
+    const { Sound } = await import('/src/audio/audio.js');
     // channel: 'sfx' — только эффект (тон), 'music' — только музыка
     async function render(channel, sfxVol, musicVol) {
       const oc = new OfflineAudioContext(1, 22050, 22050);

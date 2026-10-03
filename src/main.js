@@ -1,16 +1,16 @@
 // «Последний котёл» — контроллер: цикл, ввод, интерфейс, сохранение, звук.
-import { createState, beginNight, step, setValve, adjustValve, shovel, fixLeak, chooseCard, continueSummary, serialize, deserialize, toll, smogAvg, P_VENT } from './sim.js';
-import { NIGHTS, CARDS, ENDINGS, POP_START, TUTORIAL, DISTRICTS } from './data.js';
-import { viewFor, makeLayout, column } from './layout.js';
-import { drawScene, makeBackground, makeCity } from './render.js';
-import { Fx } from './fx.js';
-import { Sound } from './audio.js';
-import { botAct } from './bot.js';
-import { makeRng } from './rng.js';
-import { Coach } from './coach.js';
-import { Notes } from './notes.js';
-import { Run, deviceInfo, fetchBoard, randomId, call as netCall } from './net.js';
-import { runResult } from './score.js';
+import { createState, beginNight, step, setValve, adjustValve, shovel, fixLeak, chooseCard, continueSummary, serialize, deserialize, toll, smogAvg, P_VENT } from './core/sim.js';
+import { NIGHTS, CARDS, ENDINGS, POP_START, TUTORIAL, DISTRICTS } from './core/data.js';
+import { viewFor, makeLayout, column } from './ui/layout.js';
+import { drawScene, makeBackground, makeCity } from './ui/render.js';
+import { Fx } from './ui/fx.js';
+import { Sound } from './audio/audio.js';
+import { botAct } from './core/bot.js';
+import { makeRng } from './core/rng.js';
+import { Coach } from './ui/coach.js';
+import { Notes } from './ui/notes.js';
+import { Run, deviceInfo, fetchBoard, randomId, call as netCall } from './net/net.js';
+import { runResult } from './core/score.js';
 
 const DT = 1 / 60;
 const SAVE_KEY = 'last-boiler-save-v1', SET_KEY = 'last-boiler-settings-v1', META_KEY = 'last-boiler-meta-v1', NICK_KEY = 'last-boiler-nick-v1', PID_KEY = 'last-boiler-pid-v1';
@@ -422,7 +422,7 @@ window.addEventListener('keydown', ev => {
   if (ui === 'pause') { if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') resumeGame(); return; }
   if (ui !== 'play') return;
   if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') { pauseGame(); return; }
-  if (k === ' ' || k === 'Spacebar') { ev.preventDefault(); if (!ev.repeat || true) { input.shovelDown = 0.15; shovel(s); handleEvents(); } return; }
+  if (k === ' ' || k === 'Spacebar') { ev.preventDefault(); input.shovelDown = 0.15; shovel(s); handleEvents(); return; }   // удержание пробела = повторные броски (ограничивает перезарядка)
   if (k >= '1' && k <= '4') { input.sel = +k - 1; return; }
   const nav = { ArrowLeft: -1, ArrowRight: 1, a: -1, d: 1, ф: -1, в: 1 };
   if (nav[k] !== undefined) { ev.preventDefault(); input.sel = (input.sel + nav[k] + 4) % 4; return; }

@@ -1,7 +1,7 @@
 // Тесты звука: «Звуки» и «Музыка» — независимые каналы (мок AudioContext).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Sound, volCurve, SFX_MAX, MUSIC_MAX } from '../src/audio.js';
+import { Sound, volCurve, SFX_MAX, MUSIC_MAX } from '../src/audio/audio.js';
 
 function mockCtx() {
   const mk = () => { const calls = []; return { gain: { value: 1, calls, setValueAtTime(v, t) { calls.push(['set', v, t]); this.value = v; }, setTargetAtTime(v, t, tc) { calls.push(['target', v, t, tc]); this.value = v; }, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} }, connect() {}, start() {}, stop() {}, frequency: { value: 0, setValueAtTime() {}, setTargetAtTime() {}, exponentialRampToValueAtTime() {} }, Q: { value: 0 }, buffer: null, loop: false }; };

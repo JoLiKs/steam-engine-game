@@ -14,7 +14,7 @@ const toCss = (page, fx) => page.evaluate(fx);   // логические → CSS
 
 async function checkGauge(page) {
       const gauge = await page.evaluate(async () => {
-        const { gaugeLabels } = await import('/src/render.js'); const G = window.__game, r = G.L.gauge.r;
+        const { gaugeLabels } = await import('/src/ui/render.js'); const G = window.__game, r = G.L.gauge.r;
         const c = document.createElement('canvas').getContext('2d'); const labs = gaugeLabels(r);
         const boxes = labs.map(l => { c.font = l.font; const m = c.measureText(l.t); const fs = parseFloat(l.font.match(/(\d+(\.\d+)?)px/)[1]); const hw = m.width / 2, hh = fs * 0.62; return { t: l.t, x0: l.x - hw, x1: l.x + hw, y0: l.y - hh, y1: l.y + hh, fs }; });
         const overlaps = []; for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) { const a = boxes[i], b = boxes[j]; if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) overlaps.push(a.t + '×' + b.t); }

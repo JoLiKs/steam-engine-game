@@ -45,5 +45,8 @@ if (GH) {
   for (const f of ['index.html', 'login.js', 'login.css']) fs.copyFileSync(path.join(root, 'admin', f), path.join(out, 'admin', f));
 }
 // модульные исходники — запасной вариант для уже открытых вкладок со старой страницей (с revalidate, см. _headers)
-if (!GH) for (const f of fs.readdirSync(path.join(root, 'src'))) if (f.endsWith('.js')) fs.copyFileSync(path.join(root, 'src', f), path.join(out, 'src', f));
+if (!GH) {
+  const copyTree = (from, to) => { fs.mkdirSync(to, { recursive: true }); for (const e of fs.readdirSync(from, { withFileTypes: true })) { if (e.isDirectory()) copyTree(path.join(from, e.name), path.join(to, e.name)); else if (e.name.endsWith('.js')) fs.copyFileSync(path.join(from, e.name), path.join(to, e.name)); } };
+  copyTree(path.join(root, 'src'), path.join(out, 'src'));
+}
 console.log(`сборка${GH ? ' (GitHub Pages)' : ''} → ${out}: game.${hGame}.js (${(game.length / 1024).toFixed(0)} КБ), boot.${hBoot}.js, style.css?v=${hCss}`);
