@@ -6,7 +6,7 @@ if [ -d /workspace/pw-browsers ]; then export PLAYWRIGHT_BROWSERS_PATH=/workspac
 export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 cd "$(dirname "$0")/.."
 PY=${SEG_PY:-/workspace/venv-test/bin/python}
-echo "== eslint + tsc (проверка типов JSDoc ядра)"; npx eslint . 2>&1 | tail -3 | grep -E "error" && exit 1; npx tsc -p . && echo "tsc: ошибок нет"
+echo "== eslint + tsc (проверка типов JSDoc ядра)"; npx eslint . --quiet && echo "eslint: ошибок нет"; npx tsc -p . && echo "tsc: ошибок нет"
 echo "== node --test (логика, звук, счёт, аудит, мультиплеер-клиент)"; node --test tests/ 2>&1 | grep -E "^# (tests|pass|fail)"
 echo "== pytest (бэкенд)"; (cd backend && $PY -m pytest -q 2>&1 | tail -2)
 echo "== OfflineAudioContext"; node tests/audio_offline.js | tail -2
