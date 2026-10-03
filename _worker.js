@@ -13,7 +13,8 @@
  */
 export const BACKEND = 'https://185-255-133-179.sslip.io/steam';
 export const ADMIN_HOSTS = new Set(['steam-engine-game.pages.dev']);
-const PUBLIC_ROUTES = { '/api/g/leaderboard': 'GET', '/api/g/run': 'POST', '/api/g/event': 'POST', '/api/g/score': 'POST', '/api/g/note': 'GET' };
+const PUBLIC_ROUTES = { '/api/g/leaderboard': 'GET', '/api/g/run': 'POST', '/api/g/event': 'POST', '/api/g/score': 'POST', '/api/g/note': 'GET',
+  '/api/g/daily': 'GET', '/api/g/daily/score': 'POST', '/api/g/daily/board': 'GET', '/api/g/review': 'POST' };   // 2.0: испытание дня и разбор партии
 const METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'DELETE']);
 const MAX_BODY = 8 * 1024;
 const FORWARD_REQ = ['accept', 'content-type', 'cookie', 'origin', 'x-csrf-token'];
@@ -49,9 +50,9 @@ export async function proxy(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'HEAD') init.body = await request.arrayBuffer();
   if (init.body && init.body.byteLength > MAX_BODY) return plain(413, 'too large');
 
-  // бэкенд не должен «вешать» игру: публичные вызовы — не дольше 2,5 с (клиент всё равно ждёт максимум 3 с), админка — до 15 с
+  // бэкенд не должен «вешать» игру: публичные вызовы — не дольше 2,5 с (клиент всё равно ждёт максимум 3 с; разбор партии ИИ — до 14 с), админка — до 15 с
   const ac = new AbortController(); init.signal = ac.signal;
-  const limit = url.pathname.startsWith('/api/g/') ? 2500 : url.pathname.startsWith('/api/admin/ai') ? 40000 : 15000;   // раздел «ИИ»: проверка ключа/пример могут идти до ~30 с
+  const limit = url.pathname === '/api/g/review' ? 14000 : url.pathname.startsWith('/api/g/') ? 2500 : url.pathname.startsWith('/api/admin/ai') ? 40000 : 15000;   // раздел «ИИ»: проверка ключа/пример могут идти до ~30 с
   const timer = setTimeout(() => ac.abort(), limit);
   let up;
   try { up = await fetch(base + url.pathname + url.search, init); } catch (e) { clearTimeout(timer); return plain(ac.signal.aborted ? 504 : 502, ac.signal.aborted ? 'backend timeout' : 'backend unavailable'); }

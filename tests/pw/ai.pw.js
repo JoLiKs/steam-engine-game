@@ -28,6 +28,17 @@ const GROQ = 'gsk_' + 'a1B2c3D4e5'.repeat(5);
     await lp.page.click('[data-tab=ai]'); await sleep(900);
     ok(await lp.page.isVisible('#tab-ai') && (await lp.page.$$('#aiTable tbody tr')).length === 4, 'раздел «ИИ»: 4 встроенных бесплатных провайдера в списке');
     ok(!(await lp.page.isVisible('#aiVaultWarn')), 'шифрование ключей настроено — предупреждения нет');
+    // 2.0 м2: переключатели ИИ-функций игры (ведущий, разбор, напарник, сюжет дня)
+    ok(await lp.page.isChecked('#aiHost') && await lp.page.isChecked('#aiReview') && await lp.page.isChecked('#aiCompanion') && await lp.page.isChecked('#aiDaily'), 'вкладка «ИИ»: четыре новых переключателя по умолчанию включены');
+    const rv = async () => (await fetch(base + '/api/g/review', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nights: 10, pop: 800, burnouts: 0, smog: 20, ending: 'light', mode: 'solo' }) })).json();
+    ok((await rv()).enabled === true && (await rv()).text.length > 20, 'разбор партии отвечает, пока включён');
+    await lp.page.uncheck('#aiReview'); await lp.page.uncheck('#aiDaily'); await lp.page.click('#aiSave'); await sleep(700);
+    const st0 = await (await adminLogin(base, stack.password, '198.51.100.93')).json('/api/admin/ai');
+    ok(st0.settings.review === false && st0.settings.daily === false && st0.settings.host === true && st0.settings.companion === true, 'выключатели сохранились на сервере (review/daily выкл., host/companion вкл.)');
+    await sleep(5200);   // кэш настроек ИИ на сервере живёт до 5 с
+    ok((await rv()).enabled === false, 'разбор выключен в админке → /api/g/review отдаёт enabled:false');
+    ok((await (await fetch(base + '/api/g/daily')).json()).quest.src === 'fallback', 'сюжет дня выключен → запасной текст задания');
+    await lp.page.check('#aiReview'); await lp.page.check('#aiDaily'); await lp.page.click('#aiSave'); await sleep(600);
     await lp.page.fill('#aiTopic', 'Котлы и давление в эпоху пара'); await lp.page.selectOption('#aiFreq', 'rare'); await lp.page.selectOption('#aiLength', 'long');
     await lp.page.click('#aiSave'); await sleep(500);
     const st = await (await adminLogin(base, stack.password, '198.51.100.92')).json('/api/admin/ai');

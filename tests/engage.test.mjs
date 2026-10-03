@@ -7,6 +7,7 @@ import { challengeFromSearch, challengeLink, dailyLink, shareText, SEED_RE } fro
 import { boardView, placeLabel, MODE_NAMES } from '../src/net/mp.js';
 import { hostEvents, HOST_EVENTS } from '../src/core/data.js';
 import { createState, beginNight, step } from '../src/core/sim.js';
+import { botAct } from '../src/core/bot.js';
 import { computeScore } from '../src/core/score.js';
 
 const ctx = (o = {}) => ({ mode: 'solo', ending: 'light', nights: 10, pop: 950, burnouts: 0, smog: 10, score: computeScore({ nights: 10, pop: 950, ending: 'light', smog: 10 }), leaksFixed: 3, shovels: 100, spills: 0, ...o });
@@ -119,7 +120,7 @@ test('ведущий в симуляции: host выключен по умол�
   const plain = createState(77), host = createState(77, { host: true });
   assert.equal(plain.hostOn, undefined || plain.hostOn); assert.ok(!plain.hostOn); assert.ok(host.hostOn);
   beginNight(host, 1); assert.ok(Array.isArray(host.xev));
-  let seen = 0; for (let i = 0; i < 60 * 240; i++) { step(host, 1 / 60); for (const e of host.events) if (e.type === 'hostev') seen++; host.events.length = 0; if (host.phase !== 'night') break; }
+  let seen = 0; for (let i = 0; i < 60 * 240; i++) { botAct(host, 'good', {}); step(host, 1 / 60); for (const e of host.events) if (e.type === 'hostev') seen++; host.events.length = 0; if (host.phase !== 'night') break; }
   assert.ok(seen >= 1, 'событие ведущего показано');
   const p2 = createState(77); beginNight(p2, 1); assert.ok(!p2.xev || p2.xev.length === 0);
 });

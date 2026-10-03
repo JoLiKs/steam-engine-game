@@ -57,6 +57,7 @@ class Limits:
     ping_every_s: float = 25
     board_every_ticks: int = 30         # живая таблица соревнования ≈2 раза в секунду
     bot_chat_gap_s: float = 18.0
+    timescale: float = 1.0              # ТОЛЬКО для тестов (SEG_MP_TIMESCALE): ускорение игровых часов комнат; в проде 1
 
     @classmethod
     def from_env(cls, env: Any = None) -> "Limits":
@@ -74,6 +75,7 @@ class Limits:
         lim.create_window_s = num("SEG_MP_CREATE_WINDOW", lim.create_window_s, 10, 86400)
         lim.max_rooms = int(num("SEG_MP_MAX_ROOMS", lim.max_rooms, 1, 5000))
         lim.conns_per_ip = int(num("SEG_MP_CONNS_PER_IP", lim.conns_per_ip, 1, 100))
+        lim.timescale = num("SEG_MP_TIMESCALE", lim.timescale, 1, 40)
         return lim
 
 
@@ -1179,13 +1181,13 @@ class Hub:
                 continue
             if room.last_tick_t is None:
                 room.last_tick_t = now
-            room._acc += min(0.1, max(0.0, now - room.last_tick_t))
+            room._acc += min(0.1, max(0.0, now - room.last_tick_t)) * self.lim.timescale
             room.last_tick_t = now
             n = int(room._acc / sc.DT)
             if n:
                 room._acc -= n * sc.DT
                 try:
-                    room.advance(min(n, 6))
+                    room.advance(min(n, 6 * int(self.lim.timescale)))
                 except Exception:                        # сбой в одной комнате не должен останавливать остальные
                     log.exception("room %s: tick failed", room.code)
                     room.state = "ended"; room.broadcast({"t": "left", "reason": "room_closed"}); room.players.clear()
