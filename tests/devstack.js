@@ -32,7 +32,8 @@ async function start(opts = {}) {
   for (let i = 0; i < 60; i++) { try { const r = await fetch(`http://127.0.0.1:${bport}/api/health`); if (r.ok) break; } catch (e) { /* ждём */ } await sleep(150); if (i === 59) throw new Error('backend не поднялся: ' + log); }
 
   const worker = (await import(path.join(root, '_worker.js'))).default;
-  const hdr = parseHeaders();
+  const hdr0 = parseHeaders();
+  const hdr = p => { const h = hdr0(p); if (h['Content-Security-Policy']) h['Content-Security-Policy'] = h['Content-Security-Policy'].replace("connect-src 'self'", `connect-src 'self' ws://127.0.0.1:${bport}`); return h; };   // стенд ходит на WebSocket бэкенда напрямую, как прод
   const wenv = { SEG_PROXY_SECRET: secrets.SEG_PROXY_SECRET, SEG_BACKEND: `http://127.0.0.1:${bport}`, SEG_HOSTS: '127.0.0.1,localhost', ASSETS: { fetch: async req => {
     let p = decodeURIComponent(new URL(req.url).pathname); if (p.endsWith('/')) p += 'index.html'; if (p === '/admin') p = '/admin/index.html';
     const f = path.join(root, p);
@@ -52,7 +53,7 @@ async function start(opts = {}) {
     } catch (e) { res.writeHead(500); res.end(String(e)); }
   }).listen(wport, '127.0.0.1');
   await new Promise(r => srv.on('listening', r));
-  return { base: origin, password, dbPath: env.SEG_DB_PATH, log: () => log, async stop() { srv.close(); py.kill(); await sleep(100); fs.rmSync(dir, { recursive: true, force: true }); } };
+  return { base: origin, ws: `ws://127.0.0.1:${bport}/ws`, password, dbPath: env.SEG_DB_PATH, log: () => log, async stop() { srv.close(); py.kill(); await sleep(100); fs.rmSync(dir, { recursive: true, force: true }); } };
 }
 module.exports = { start };
 if (require.main === module) start().then(s => console.log(s.base, 'admin password:', s.password));

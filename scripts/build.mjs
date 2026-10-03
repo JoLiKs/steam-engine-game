@@ -21,7 +21,7 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 if (!GH) { fs.mkdirSync(path.join(out, 'src'), { recursive: true }); fs.mkdirSync(path.join(out, 'admin'), { recursive: true }); }
 
-const r = await build({ entryPoints: [path.join(root, 'src/main.js')], bundle: true, format: 'iife', target: TARGETS, write: false, legalComments: 'none', logLevel: 'warning', define: GH ? { __SEG_API_BASE__: JSON.stringify(API) } : {} });
+const r = await build({ entryPoints: [path.join(root, 'src/main.js')], bundle: true, format: 'iife', target: TARGETS, write: false, legalComments: 'none', logLevel: 'warning', define: { ...(GH ? { __SEG_API_BASE__: JSON.stringify(API) } : {}), __SEG_WS_BASE__: JSON.stringify(process.env.SEG_WS_BASE || 'wss://185-255-133-179.sslip.io/steam/ws') } });
 const game = r.outputFiles[0].contents;
 const boot = fs.readFileSync(path.join(root, 'boot.js'));
 const css = fs.readFileSync(path.join(root, 'style.css'));

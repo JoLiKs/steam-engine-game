@@ -13,6 +13,8 @@ import { Coach } from './ui/coach.js';
 import { Notes } from './ui/notes.js';
 import { Run, deviceInfo, fetchBoard, randomId, call as netCall } from './net/net.js';
 import { runResult } from './core/score.js';
+import { MpClient, wsUrl, normalizeCode, roomFromSearch, inviteLink, ownership, roleSummary, errText, CODE_RE } from './net/mp.js';
+import { LobbyUi } from './ui/lobby.js';
 
 const DT = 1 / 60;
 const SAVE_KEY = 'last-boiler-save-v1', SET_KEY = 'last-boiler-settings-v1', META_KEY = 'last-boiler-meta-v1', NICK_KEY = 'last-boiler-nick-v1', PID_KEY = 'last-boiler-pid-v1';
@@ -152,9 +154,10 @@ let lastPhase = null, lastNight = -1;
 function trackPhase() {
   if (s.phase !== lastPhase || s.night !== lastNight) {
     lastPhase = s.phase; lastNight = s.night;
-    if (s.phase === 'night' && s.t === 0) { snap = serialize(s); saveGame(); }
-    else if (s.phase === 'summary' || s.phase === 'card') { saveGame(); if (s.phase === 'summary' && s.summary) run.event('night_end', nightPayload(s.summary)); }
-    else if (s.phase === 'ended') { store.del(SAVE_KEY); recordEnding(); }
+    const online = !!(mp && mp.inGame);   // в кооперативе одиночное сохранение и статистика прохождения не трогаются
+    if (s.phase === 'night' && s.t === 0) { if (!online) { snap = serialize(s); saveGame(); } }
+    else if (s.phase === 'summary' || s.phase === 'card') { if (!online) { saveGame(); if (s.phase === 'summary' && s.summary) run.event('night_end', nightPayload(s.summary)); } }
+    else if (s.phase === 'ended') { if (online) { if (!meta.endings.includes(s.ending)) { meta.endings.push(s.ending); store.set(META_KEY, JSON.stringify(meta)); } } else { store.del(SAVE_KEY); recordEnding(); } }
     routeUi();
   }
 }
@@ -169,7 +172,7 @@ function recordEnding() {
 }
 
 // ---------- интерфейс
-const screens = ['title', 'prologue', 'pause', 'settings', 'help', 'card', 'summary', 'ending', 'board'];
+const screens = ['title', 'lobby', 'prologue', 'pause', 'settings', 'help', 'card', 'summary', 'ending', 'board'];
 function show(id) {
   for (const k of screens) $(k).hidden = k !== id;
   if (id) { const first = $(id).querySelector('.btn.primary, .choice'); if (first) setTimeout(() => first.focus({ preventScroll: true }), 30); }
@@ -232,8 +235,8 @@ function retryNight() {
 function goMenu() { stopToTitle(); }
 function stopToTitle() { if (s.phase !== 'ended') saveGame(); ui = 'title'; updateTitle(); show('title'); }
 function openOverlay(id) { prevUi = ui; ui = id; show(id); }
-function closeOverlay() { ui = prevUi; if (ui === 'play') show(null); else show(ui); if (ui === 'title') updateTitle(); }
-function pauseGame() { if (ui !== 'play') return; ui = 'pause'; show('pause'); sound.silence(); }
+function closeOverlay() { ui = prevUi; if (ui === 'play') show(null); else show(ui); if (ui === 'title') updateTitle(); if (mp && mp.inGame) routeUi(); }
+function pauseGame() { if (ui !== 'play' || (mp && mp.inGame)) return; /* общую игру не поставить на паузу */ ui = 'pause'; show('pause'); sound.silence(); }
 function resumeGame() { ui = 'play'; show(null); }
 
 function renderCard() {
@@ -245,7 +248,11 @@ function renderCard() {
     b.addEventListener('click', () => pickCard(o.key)); box.appendChild(b);
   });
 }
-function pickCard(key) { if (s.phase !== 'card') return; sound.play('click'); chooseCard(s, key); handleEvents(); trackPhase(); }
+function pickCard(key) {
+  if (s.phase !== 'card') return; sound.play('click');
+  if (mp && mp.inGame) { mp.myVote = key; mp.client.send({ t: 'card', key }); mpRefresh(); return; }   // в кооперативе — голосование, решает сервер
+  chooseCard(s, key); handleEvents(); trackPhase();
+}
 const NIGHT_LINES = [
   'Первая ночь позади. Город запомнит, как вы растопили Агафью.',
   'Утро. Иней на окнах медленно тает.', 'Госпиталь пережил лихорадку.', 'Смена вернулась домой. Не все — своим шагом.',
@@ -287,6 +294,7 @@ function renderEnding() {
   const left = Object.keys(ENDINGS).length - meta.endings.length;
   const hints = { light: 'Это лучшая концовка. Остальные цены тоже есть — попробуйте принять «выгодные» решения и посмотрите, чем платят другие.', smoke: 'Попробуйте отказаться от бурого угля и держать фильтры открытыми.', iron: 'Попробуйте не продлевать смену и дать усталости остыть: снижайте вентиль завода, когда шкала красная.', cold: 'Госпиталь и кварталы важнее всего. Не жалейте им пара.', boom: 'Следите за стрелкой: в красной зоне больше двух секунд — взрыв. Не перебарщивайте с углём.', silence: 'Держите хотя бы госпиталь и кварталы в тепле — и утечки заделывайте сразу.' };
   $('e-hint').textContent = hints[s.ending] + (left > 0 ? `  Открыто концовок: ${meta.endings.length} из ${Object.keys(ENDINGS).length}.` : '  Вы открыли все концовки.');
+  $('b-again').textContent = mp && mp.inGame ? 'В лобби комнаты' : 'Сыграть снова';
   sound.play(tone === 'good' ? 'end-good' : tone === 'fail' ? 'end-fail' : 'end-bitter');
   setupRank();
 }
@@ -294,6 +302,7 @@ function renderEnding() {
 // ---------- рейтинг (необязательный, только онлайн)
 function setupRank() {
   const box = $('e-rank'); box.hidden = true;
+  if (mp && mp.inGame) return;   // кооперативные партии в рейтинг не идут
   $('e-nick').value = store.get(NICK_KEY) || '';
   $('b-submit').disabled = false; $('e-rank-msg').textContent = '';
   run.pending ? run.pending.then(() => { box.hidden = !run.online; }) : (box.hidden = !run.online);
@@ -331,6 +340,163 @@ async function openBoard(which) {
   });
 }
 
+
+// ---------- мультиплеер (кооператив 2–4 игрока; сервер авторитетный — см. MULTIPLAYER.md)
+const SESS_KEY = 'last-boiler-mp-v1';
+const sstore = {
+  get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { /* ignore */ } },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) { /* ignore */ } },
+};
+let mp = null, lobbyUi = null;
+function mpEnsure() {
+  if (!mp) mp = { client: null, code: '', pid: '', nick: '', players: [], host: '', state: 'lobby', max: 2, roles: null, mine: null, own: null, inGame: false, votes: {}, voted: [], acks: [], left: 0, paused: false, touch: [0, 0, 0, 0], sent: [0, 0, 0, 0], timers: [null, null, null, null], lastDeny: 0, lastShovel: 0, net: 'idle', myVote: null, myAck: false };
+  if (!mp.client) mp.client = new MpClient({ url: wsUrl(location.search, DEBUG), onMsg: mpOnMsg, onStatus: mpOnStatus });
+  return mp;
+}
+function mpNick(raw) { const n = String(raw || '').trim().slice(0, 16); store.set(NICK_KEY, n); return n || 'Кочегар'; }
+async function mpOpenSocket(first) {
+  mpEnsure(); lobbyUi.setBusy(true); lobbyUi.setStatus('Подключаемся…');
+  try { await mp.client.connect(); } catch (e) { lobbyUi.setBusy(false); lobbyUi.setStatus('Не удалось подключиться к серверу. Проверьте интернет и попробуйте ещё раз.', true); return; }
+  if (first) mp.client.send(first);
+}
+function mpOpen() {
+  $('mp-nick').value = store.get(NICK_KEY) || '';
+  const want = roomFromSearch(location.search); if (want && !$('mp-code').value) $('mp-code').value = want;
+  ui = 'lobby'; show('lobby');
+  if (mp && mp.code) lobbyUi.renderRoom({ code: mp.code, players: mp.players, host: mp.host, state: mp.state, max: mp.max }, mp.pid); else { lobbyUi.showEntry(); lobbyUi.setBusy(false); lobbyUi.setStatus(''); }
+}
+function mpInit() {
+  lobbyUi = new LobbyUi($, {
+    onCreate: (nick, max) => mpOpenSocket({ t: 'create', nick: mpNick(nick), max: max || 2, mode: 'coop' }),
+    onJoin: (nick, code) => { code = normalizeCode(code); if (!CODE_RE.test(code)) { lobbyUi.setStatus('Код комнаты — 5 символов, например K7M2P.', true); return; } mpOpenSocket({ t: 'join', code, nick: mpNick(nick) }); },
+    onReady: () => { const me = mp && mp.players.find(p => p.pid === mp.pid); mp.client.send({ t: 'ready', ready: !(me && me.ready) }); },
+    onStart: () => mp.client.send({ t: mp.state === 'ended' ? 'again' : 'start' }),
+    onLeave: () => mpLeave(false), onBack: () => mpLeave(true), onKick: pid => mp.client.send({ t: 'kick', pid }),
+    onChat: text => mp && mp.client.send({ t: 'chat', text }), onEmo: e => mp && mp.client.send({ t: 'emo', e }),
+    onCopy: async () => {
+      const link = inviteLink(location, mp.code);
+      try { await navigator.clipboard.writeText(link); lobbyUi.setStatus('Ссылка скопирована: ' + link); } catch (e) { lobbyUi.setStatus('Ссылка для друзей: ' + link); }
+    },
+  });
+  $('mp-chatin').addEventListener('keydown', e => { if (e.key === 'Escape') lobbyUi.toggleChat(false); });
+  // вернуться в комнату после обновления страницы/обрыва; ссылка ?room=КОД открывает лобби с готовым кодом
+  let sess = null; try { sess = JSON.parse(sstore.get(SESS_KEY) || 'null'); } catch (e) { /* ignore */ }
+  const want = roomFromSearch(location.search);
+  if (sess && CODE_RE.test(sess.code) && (!want || want === sess.code)) {
+    mpEnsure(); mp.code = sess.code; mp.pid = sess.pid; mp.nick = sess.nick; mp.client.setSession({ code: sess.code, pid: sess.pid, secret: sess.secret });
+    ui = 'lobby'; show('lobby'); lobbyUi.setStatus('Возвращаемся в комнату…'); lobbyUi.hud(true);
+    mp.client.connect().catch(() => mpReset('Не удалось вернуться в комнату.'));
+  } else if (want) mpOpen();
+}
+function mpOnStatus(st) {
+  if (!mp) return; mp.net = st;
+  const el = $('mp-net');
+  if (st === 'reconnecting') { el.textContent = 'Связь потеряна — переподключаемся…'; el.hidden = false; }
+  else if (st === 'lost') mpReset('Связь с комнатой потеряна.');
+  else mpRefreshNet();
+}
+function mpRefreshNet() {
+  const el = $('mp-net'); if (!mp) { el.hidden = true; return; }
+  if (mp.net === 'reconnecting') return;
+  const wait = mp.inGame && mp.paused; el.textContent = wait ? 'Пауза: ждём отключившегося игрока (до 60 с)…' : ''; el.hidden = !wait;
+}
+function mpReset(msg) {
+  if (mp) { try { mp.client.close(); } catch (e) { /* ignore */ } for (const t of mp.timers) clearTimeout(t); }
+  sstore.del(SESS_KEY); mp = null;
+  if (lobbyUi) { lobbyUi.hud(false); lobbyUi.clearChat(); }
+  $('mp-net').hidden = true; $('mp-role').hidden = true; $('c-vote').hidden = true;
+  if (s.phase !== 'ended' || ui === 'lobby') { /* локальное состояние игры пересоздаётся при следующем запуске */ }
+  sound.silence(); ui = 'title'; updateTitle(); if (msg) $('t-endings').textContent = msg; show('title');
+}
+function mpLeave(toTitle) {
+  if (!mp) return;
+  if (mp.client) mp.client.send({ t: 'leave' });
+  if (toTitle) { mpReset(''); return; }
+  mp.code = ''; mp.players = []; sstore.del(SESS_KEY); mp.client.setSession(null); mp.inGame = false;
+  lobbyUi.clearChat(); lobbyUi.hud(false); lobbyUi.showEntry(); lobbyUi.setBusy(false); lobbyUi.setStatus('Вы вышли из комнаты.'); ui = 'lobby'; show('lobby');
+}
+function mpLeaveAsk() { if (confirm('Покинуть комнату? Остальные продолжат без вас.')) mpLeave(true); }
+function mpBackToLobby() {
+  if (mp.host === mp.pid && mp.state === 'ended') mp.client.send({ t: 'again' });
+  mp.inGame = false; lobbyUi.hud(true); mpOpen();
+}
+function mpDeny(what) { const now = performance.now(); if (now - mp.lastDeny < 1500) return; mp.lastDeny = now; showToast('Это управление другого игрока', what, '#e0b866', 3); }
+function mpOwnerLabel(i) { const o = mp.own && mp.own.valve[i]; return DISTRICTS[i].name + ': ' + (o ? o.nick : 'никто'); }
+function mpValve(i) {   // команды вентиля уходят не чаще ~16 раз в секунду, всегда с последним значением
+  mp.touch[i] = performance.now();
+  const send = () => { mp.timers[i] = null; mp.sent[i] = performance.now(); mp.client.send({ t: 'valve', i, v: s.valves[i] }); };
+  const wait = 60 - (performance.now() - mp.sent[i]);
+  if (wait <= 0) send(); else if (!mp.timers[i]) mp.timers[i] = setTimeout(send, wait);
+}
+function mpRoles(roles) {
+  mp.roles = roles; mp.own = ownership(roles, mp.players); mp.mine = roles[mp.pid] || { valves: [], shovel: false, leaks: false };
+  const el = $('mp-role'); el.textContent = 'Вы: ' + (roleSummary(mp.mine) || 'наблюдатель'); el.hidden = false;
+}
+function mpStartGame(m) {
+  mpRoles(m.roles);
+  coach.reset(); notes.reset(); toast = null;
+  s = createState(m.seed, { skipTutorial: true }); lastPhase = null; lastNight = -1; snap = null; playTime = 0; endTimer = 0;
+  log = []; fx.clear(); banner = null; vis.satShown = [1, 1, 1, 1]; vis.popShown = POP_START; vis.needle = s.P; vis.fireShown = 0;
+  mp.inGame = true; mp.myVote = null; mp.myAck = false; mp.paused = false;
+  sound.ensure(); sound.startMusic(); lobbyUi.hud(true);
+  ui = 'play'; show(null);
+  say('Агафья', 'Вы у одного котла: каждый ведёт свою часть. Говорите друг с другом (T)!', 'talk', '#e39a62');
+}
+function mpApplySnap(m) {
+  const d = m.s, keep = s.valves.slice(), now = performance.now(), prevPhase = s.phase;
+  Object.assign(s, d);
+  s.card = d.card ? (Object.values(CARDS).find(c => c.id === d.card) || null) : null;
+  if (s.phase === 'night') for (const i of mp.mine.valves) if (now - mp.touch[i] < 500) s.valves[i] = keep[i];   // свой вентиль не «дёргается» назад, пока сервер догоняет
+  mp.votes = m.votes || {}; mp.voted = m.voted || []; mp.acks = m.acks || []; mp.left = m.left | 0; mp.paused = !!m.paused;
+  if (s.phase !== prevPhase) { mp.myVote = null; mp.myAck = false; }
+  for (const e of m.ev || []) s.events.push(e);
+  handleEvents(); trackPhase(); mpRefresh(); mpRefreshNet();
+}
+function mpRefresh() {   // подписи голосования и ожидания на экранах карточки и рассвета
+  if (!mp || !mp.inGame) return;
+  const online = mp.players.filter(p => p.online).length || mp.players.length;
+  if (ui === 'card') {
+    const v = $('c-vote'); v.hidden = false; v.textContent = `Проголосовали: ${mp.voted.length} из ${online}. Решает большинство; при ничьей — первый вариант. Осталось ${mp.left} с.`;
+    [...$('c-opts').children].forEach((b, i) => { const o = s.card && s.card.options[i]; b.classList.toggle('picked', !!(o && mp.myVote === o.key)); });
+  } else $('c-vote').hidden = true;
+  if (ui === 'summary') {
+    const b = $('b-next'), last = s.summary && s.summary.night + 1 >= NIGHTS.length;
+    const acked = mp.myAck || mp.acks.includes(mp.pid);
+    b.disabled = acked; b.textContent = acked ? `Ждём остальных (${mp.acks.length}/${online})` : `${last ? 'Встретить обоз' : 'Дальше'} (${mp.left})`;
+  } else $('b-next').disabled = false;
+}
+function mpOnMsg(m) {
+  if (!mp) return;
+  switch (m.t) {
+    case 'joined':
+      mp.code = m.code; mp.pid = m.pid; mp.nick = m.nick; mp.client.setSession({ code: m.code, pid: m.pid, secret: m.secret });
+      sstore.set(SESS_KEY, JSON.stringify({ code: m.code, pid: m.pid, secret: m.secret, nick: m.nick }));
+      lobbyUi.clearChat(); (m.chat || []).forEach(c => lobbyUi.addChat(c)); lobbyUi.hud(true); lobbyUi.setBusy(false);
+      if (!mp.inGame) { ui = 'lobby'; show('lobby'); }
+      break;
+    case 'lobby':
+      mp.players = m.players; mp.host = m.host; mp.state = m.state; mp.max = m.max;
+      if (mp.inGame && m.state === 'playing') mpRoles(Object.fromEntries(m.players.filter(p => p.role).map(p => [p.pid, p.role])));   // роли могли перераспределиться (кто-то ушёл)
+      lobbyUi.renderRoom(m, mp.pid);
+      if (m.state === 'lobby' && mp.inGame) { mp.inGame = false; sound.silence(); ui = 'lobby'; show('lobby'); }
+      break;
+    case 'start': if (!mp.inGame) mpStartGame(m); else mpRoles(m.roles); break;
+    case 'snap': if (mp.inGame) mpApplySnap(m); break;
+    case 'chat': lobbyUi.addChat(m); break;
+    case 'emo': lobbyUi.floatEmoji(m); break;
+    case 'end': mp.result = m.result; break;
+    case 'left': mpReset({ kicked: 'Хозяин убрал вас из комнаты.', timeout: 'Вы слишком долго были без связи — место освобождено.', room_closed: 'Комната закрыта.', replaced: 'Вы подключились с другой вкладки.' }[m.reason] || ''); break;
+    case 'err':
+      lobbyUi.setBusy(false);
+      if (m.code === 'no_such_room' && !mp.inGame && (mp.client.session || mp.code) && !$('mp-room').hidden === false && ui === 'lobby' && mp.code && mp.players.length === 0) { mpReset('Комната уже закрыта.'); break; }
+      if (m.code === 'forbidden') break;
+      if (ui === 'lobby') lobbyUi.setStatus(errText(m.code), true); else showToast('Кооператив', errText(m.code), '#e0523c', 4);
+      break;
+    default: break;
+  }
+}
+
 // ---------- события интерфейса
 function wire() {
   const click = (id, fn) => $(id).addEventListener('click', () => { sound.ensure(); sound.play('click'); fn(); });
@@ -343,8 +509,10 @@ function wire() {
   click('b-resume', resumeGame); click('b-retry', retryNight); click('b-menu', goMenu);
   click('b-pset', () => openOverlay('settings')); click('b-phelp', () => openOverlay('help'));
   click('b-sclose', closeOverlay); click('b-hclose', closeOverlay);
-  click('b-next', () => { continueSummary(s); handleEvents(); trackPhase(); });
-  click('b-again', () => { newGame(); }); click('b-emenu', () => { ui = 'title'; updateTitle(); show('title'); });
+  click('b-next', () => { if (mp && mp.inGame) { mp.client.send({ t: 'next' }); mp.myAck = true; mpRefresh(); return; } continueSummary(s); handleEvents(); trackPhase(); });
+  click('b-again', () => { if (mp && mp.inGame) { mpBackToLobby(); return; } newGame(); });
+  click('b-emenu', () => { if (mp) { mpLeave(true); return; } ui = 'title'; updateTitle(); show('title'); });
+  click('b-mp', mpOpen);
   click('b-wipe', () => { if (confirm('Стереть сохранение и открытые концовки?')) { store.del(SAVE_KEY); meta = { endings: [], plays: 0 }; store.set(META_KEY, JSON.stringify(meta)); updateTitle(); } });
   $('o-sound').addEventListener('change', e => { settings.sound = e.target.checked; applySettings(); sound.ensure(); sound.play('click'); });
   $('o-sfx').addEventListener('input', e => { settings.sfx = +e.target.value; applySettings(); sound.ensure(); sound.play('valve', 0.5); });
@@ -382,18 +550,41 @@ function leakR() { return Math.max(32, 23 / view.scale); }
 function hitPause(x, y) { const r = pauseHit(); return x >= r.x && x <= r.x + r.w + 12 && y >= r.y && y <= r.y + r.h; }
 function valveFromY(i, y) { const c = column(L, i); return Math.max(0, Math.min(1, (c.ty1 - y) / (c.ty1 - c.ty0))); }
 function setV(i, v) {
+  if (mp && mp.inGame && !mp.mine.valves.includes(i)) { mpDeny(mpOwnerLabel(i)); return; }
   v = Math.round(v * 100) / 100; if (Math.abs(v - s.valves[i]) < 0.005) return;
   setValve(s, i, v); sound.play('valve', v); vis.wheelKick[i] += (v - s.valves[i]) * 3;
+  if (mp && mp.inGame) mpValve(i);
+}
+function adjV(i, dv) {
+  if (mp && mp.inGame && !mp.mine.valves.includes(i)) { mpDeny(mpOwnerLabel(i)); return; }
+  const before = s.valves[i]; adjustValve(s, i, dv);
+  if (s.valves[i] !== before) { sound.play('valve', s.valves[i]); vis.wheelKick[i] += dv * 6; if (mp && mp.inGame) mpValve(i); }
+}
+function actShovel() {
+  input.shovelDown = 0.15;
+  if (mp && mp.inGame) {
+    if (!mp.mine.shovel) { mpDeny('Лопата: ' + (mp.own.shovel ? mp.own.shovel.nick : 'никто')); return; }
+    const now = performance.now(); if (now - mp.lastShovel > 120) { mp.lastShovel = now; mp.client.send({ t: 'shovel' }); }
+    return;
+  }
+  shovel(s); handleEvents();
+}
+function actFix(id) {
+  if (mp && mp.inGame) {
+    if (!mp.mine.leaks) { mpDeny('Утечки: ' + (mp.own.leaks ? mp.own.leaks.nick : 'никто')); return; }
+    mp.client.send({ t: 'fix', id: id == null ? null : id }); return;
+  }
+  if (fixLeak(s, id)) handleEvents();
 }
 canvas.addEventListener('pointerdown', ev => {
   sound.ensure();
   if (ui !== 'play') return;
   const [x, y] = toLogical(ev);
   canvas.setPointerCapture?.(ev.pointerId);
-  if (hitPause(x, y)) { pauseGame(); return; }
+  if (hitPause(x, y)) { if (mp && mp.inGame) mpLeaveAsk(); else pauseGame(); return; }
   // утечки
-  for (const lk of s.leaks) { const c = column(L, lk.pipe); if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR()) { fixLeak(s, lk.id); handleEvents(); return; } }
-  if (inRect(x, y, L.shovel)) { input.shovelDown = 0.15; shovel(s); handleEvents(); return; }
+  for (const lk of s.leaks) { const c = column(L, lk.pipe); if (Math.hypot(x - c.leak.x, y - c.leak.y) < leakR()) { actFix(lk.id); return; } }
+  if (inRect(x, y, L.shovel)) { actShovel(); return; }
   for (let i = 0; i < 4; i++) {
     const c = column(L, i);
     if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) {
@@ -414,25 +605,26 @@ canvas.addEventListener('pointermove', ev => {
 const endDrag = () => { input.drag = -1; };
 canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-canvas.addEventListener('wheel', ev => { if (ui !== 'play') return; const [x, y] = toLogical(ev); for (let i = 0; i < 4; i++) { const c = column(L, i); if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) { adjustValve(s, i, ev.deltaY < 0 ? 0.05 : -0.05); input.sel = i; ev.preventDefault(); } } }, { passive: false });
+canvas.addEventListener('wheel', ev => { if (ui !== 'play') return; const [x, y] = toLogical(ev); for (let i = 0; i < 4; i++) { const c = column(L, i); if (x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h) { adjV(i, ev.deltaY < 0 ? 0.05 : -0.05); input.sel = i; ev.preventDefault(); } } }, { passive: false });
 
 window.addEventListener('keydown', ev => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey || shouldIgnoreKey(ev.target)) return;
   const k = ev.key;
   sound.ensure();
   if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { settings.sound = !settings.sound; $('o-sound').checked = settings.sound; applySettings(); return; }
+  if (mp && mp.inGame && (k === 't' || k === 'T' || k === 'е' || k === 'Е') && (ui === 'play' || ui === 'card' || ui === 'summary')) { ev.preventDefault(); lobbyUi.toggleChat(true); return; }
   if (ui === 'card') { if (k === '1' || k === '2') { const o = s.card.options[+k - 1]; if (o) { ev.preventDefault(); pickCard(o.key); } } return; }
   if (ui === 'settings' || ui === 'help' || ui === 'board') { if (k === 'Escape') closeOverlay(); return; }
   if (ui === 'pause') { if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') resumeGame(); return; }
   if (ui !== 'play') return;
   if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') { pauseGame(); return; }
-  if (k === ' ' || k === 'Spacebar') { ev.preventDefault(); input.shovelDown = 0.15; shovel(s); handleEvents(); return; }   // удержание пробела = повторные броски (ограничивает перезарядка)
+  if (k === ' ' || k === 'Spacebar') { ev.preventDefault(); actShovel(); return; }   // удержание пробела = повторные броски (ограничивает перезарядка)
   if (k >= '1' && k <= '4') { input.sel = +k - 1; return; }
   const nav = { ArrowLeft: -1, ArrowRight: 1, a: -1, d: 1, ф: -1, в: 1 };
   if (nav[k] !== undefined) { ev.preventDefault(); input.sel = (input.sel + nav[k] + 4) % 4; return; }
   const ud = { ArrowUp: 1, ArrowDown: -1, w: 1, s: -1, ц: 1, ы: -1, PageUp: 5, PageDown: -5 };
-  if (ud[k] !== undefined) { ev.preventDefault(); const i = input.sel, before = s.valves[i]; adjustValve(s, i, ud[k] * (ev.shiftKey ? 0.2 : 0.05)); if (s.valves[i] !== before) { sound.play('valve', s.valves[i]); vis.wheelKick[i] += ud[k] * 0.3; } return; }
-  if (k === 'f' || k === 'F' || k === 'а' || k === 'А' || k === 'Enter') { if (fixLeak(s, null)) handleEvents(); }
+  if (ud[k] !== undefined) { ev.preventDefault(); adjV(input.sel, ud[k] * (ev.shiftKey ? 0.2 : 0.05)); return; }
+  if (k === 'f' || k === 'F' || k === 'а' || k === 'А' || k === 'Enter') actFix(null);
 });
 
 // ---------- цикл
@@ -471,7 +663,7 @@ function render() {
   const [sx, sy] = fx.shakeOffset();
   ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, (L.offX * view.scale + sx) * dpr, sy * dpr);
   fxAcc += 1;
-  const R = { s, L, vis, input, log, toast, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: (fxAcc % 6) === 0 };
+  const R = { s, L, vis, input, log, toast, time, banner, fx, city, gears, reduced: fx.reduced, dpr, scale: view.scale, tutHint: coach.ring(s.clock), fxTick: (fxAcc % 6) === 0, mp: (mp && mp.inGame && mp.own) ? { me: mp.pid, own: mp.own } : null };
   drawScene(ctx, R);
   void cssW; void cssH;
 }
@@ -485,9 +677,10 @@ function ambient() {
 function frame(now) {
   requestAnimationFrame(frame);
   const dtReal = Math.min(0.1, (now - last) / 1000 || 0); last = now;
-  const playing = ui === 'play';
-  if (playing) playTime += dtReal;
-  if (playing) {
+  const playing = ui === 'play', mpg = !!(mp && mp.inGame);
+  if (playing && !(mpg && mp.paused)) playTime += dtReal;
+  if (mpg) { s.clock += dtReal; acc = 0; }   // в кооперативе состояние приходит с сервера (≈12 раз в секунду), локально шагов симуляции нет
+  else if (playing) {
     acc += dtReal * dbg.speed; let n = 0;
     while (acc >= DT && n < 60 * dbg.speed + 5) { update(DT); acc -= DT; n++; if (ui !== 'play') { acc = 0; break; } }
   } else acc = 0;
@@ -507,6 +700,8 @@ if (DEBUG) {
   window.__game = {
     get pill() { return !$('b-snd').hidden; }, updatePill,
     get toast() { return toast; }, get notes() { return notes; },
+    get mp() { return mp && { code: mp.code, pid: mp.pid, inGame: mp.inGame, players: mp.players, roles: mp.roles, mine: mp.mine, state: mp.state, net: mp.net, votes: mp.votes }; }, pt(i, v) { const c = column(L, i), r = canvas.getBoundingClientRect(); return { x: r.left + (c.cx + L.offX) * view.scale, y: r.top + (c.ty1 - v * (c.ty1 - c.ty0)) * view.scale }; },
+    shovelPt() { const q = L.shovel, r = canvas.getBoundingClientRect(); return { x: r.left + (q.x + q.w / 2 + L.offX) * view.scale, y: r.top + (q.y + q.h / 2) * view.scale }; },
     get s() { return s; }, get ui() { return ui; }, get L() { return L; }, get view() { return view; }, get run() { return run; }, resize, pauseHit,
     setBot(skill, opts) { dbg.bot = skill; dbg.botOpts = opts || {}; }, setSpeed(v) { dbg.speed = v; },
     setUiState: (u) => { ui = u; }, input, settings, meta, log, fx, sound,
@@ -520,7 +715,7 @@ if (DEBUG) {
 
 // ---------- запуск
 function init() {
-  wire(); applySettings(); resize(); updateTitle(); show('title');
+  wire(); applySettings(); resize(); updateTitle(); show('title'); mpInit();
   fetchBoard('score').then(e => { boardAvailable = e !== null; updateBoardBtn(); });
   requestAnimationFrame(t => { last = t; frame(t); });
   window.__gameReady = true; if (window.__bootReady) window.__bootReady();   // сообщаем стражу загрузки (boot.js), что всё поднялось

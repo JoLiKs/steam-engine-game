@@ -24,6 +24,7 @@
     <div class="btns">
       <button class="btn primary" id="b-continue" hidden>Продолжить</button>
       <button class="btn primary" id="b-new">Новая игра</button>
+      <button class="btn" id="b-mp">Играть вместе</button>
       <button class="btn" id="b-board" hidden>Рейтинг</button>
       <button class="btn" id="b-help">Как играть</button>
       <button class="btn" id="b-settings">Настройки</button>
@@ -99,12 +100,32 @@
   </div>
 </section>
 
+<section id="lobby" class="screen" hidden aria-labelledby="mp-h">
+  <div class="panel wide">
+    <p class="kicker">Вместе у одного котла · 2–4 игрока</p>
+    <h2 id="mp-h">Играть вместе</h2>
+    <div id="mp-entry">
+      <label class="row"><span>Ваш ник</span><input type="text" id="mp-nick" maxlength="16" placeholder="Кочегар" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Ваш ник в комнате"></label>
+      <div class="mp-line"><label for="mp-max">Игроков</label><select id="mp-max" aria-label="Сколько игроков в комнате"><option>2</option><option>3</option><option>4</option></select><button class="btn primary" id="mp-create" type="button">Создать комнату</button></div>
+      <div class="mp-line"><input type="text" id="mp-code" maxlength="8" placeholder="КОД КОМНАТЫ" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Код комнаты"><button class="btn" id="mp-join" type="button">Войти по коду</button></div>
+    </div>
+    <div id="mp-room" hidden>
+      <p class="mp-code">Код комнаты: <b id="mp-roomcode" class="roomcode"></b> <button class="btn small" id="mp-copy" type="button">Скопировать ссылку</button></p>
+      <ul id="mp-players" class="players" aria-label="Игроки в комнате"></ul>
+      <div class="btns"><button class="btn" id="mp-ready" type="button">Готов</button><button class="btn primary" id="mp-start" type="button" hidden>Начать игру</button><button class="btn" id="mp-leave" type="button">Выйти из комнаты</button></div>
+    </div>
+    <p id="mp-status" class="small" role="status"></p>
+    <div class="btns" id="mp-backrow"><button class="btn" id="mp-back" type="button">В меню</button></div>
+  </div>
+</section>
+
 <section id="card" class="screen" hidden aria-labelledby="c-h">
   <div class="panel wide">
     <p class="kicker" id="c-who"></p>
     <h2 id="c-h"></h2>
     <p class="quote" id="c-text"></p>
     <div class="choices" id="c-opts"></div>
+    <p class="small" id="c-vote" role="status" hidden></p>
     <p class="small">Это решение изменит ход игры и финал.</p>
   </div>
 </section>
@@ -145,6 +166,18 @@
     <div class="btns"><button class="btn primary" id="b-lbclose">Закрыть</button></div>
   </div>
 </section>
+
+<div id="mp-hud" hidden>
+  <div id="mp-net" role="status" hidden></div>
+  <div id="mp-role" class="mp-role" hidden></div>
+  <div id="mp-float" aria-hidden="true"></div>
+  <ul id="mp-chatlog" aria-label="Чат комнаты" aria-live="polite"></ul>
+  <div id="mp-tray" hidden>
+    <div id="mp-emos" class="emos"></div>
+    <form id="mp-chatform" autocomplete="off"><input id="mp-chatin" type="text" maxlength="120" placeholder="Сообщение (Enter)" aria-label="Сообщение в чат"><button class="btn small" type="submit" aria-label="Отправить">➤</button></form>
+  </div>
+  <button id="mp-chatbtn" class="btn small" type="button" aria-expanded="false" aria-label="Чат и реакции (клавиша T)">💬</button>
+</div>
 
 <noscript><p style="color:#f1e6c8;padding:2em">Для игры нужен JavaScript.</p></noscript>
 <script type="module" src="src/main.js"></script>

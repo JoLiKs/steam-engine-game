@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: ['2.0', main, '1.*']
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip, cache-dependency-path: backend/requirements.txt }
+      - run: npm ci
+      - run: pip install -r backend/requirements.txt pytest
+      - name: Линтер
+        run: npm run lint
+      - name: Проверка типов (JSDoc, ядро симуляции)
+        run: npm run typecheck
+      - name: Тест-векторы и данные Python-порта актуальны
+        run: node tools/gen-simdata.mjs --check && node tools/gen-simvectors.mjs --check
+      - name: Юнит-тесты (node)
+        run: npm run test:unit
+      - name: Бэкенд (pytest: API, ИИ, мультиплеер, порт ядра)
+        run: npm run test:backend

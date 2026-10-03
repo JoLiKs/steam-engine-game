@@ -1,11 +1,17 @@
 {
   "name": "steam-engine-game",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "private": true,
   "description": "Последний котёл — паропанк-игра (v2.0: мультиплеер, ИИ-комментатор, рейтинг, админка)",
   "scripts": {
-    "test": "bash tests/run-all.sh",
-    "test:backend": "cd backend && python -m pytest -q",
+    "lint": "eslint .",
+    "typecheck": "tsc -p .",
+    "test:unit": "node --test tests/",
+    "test:backend": "cd backend && \"${SEG_PY:-python}\" -m pytest -q",
+    "test": "npm run lint --silent && npm run typecheck --silent && npm run test:unit --silent && npm run test:backend --silent",
+    "test:e2e": "node tests/pw/coop.pw.js && node tests/pw/rating_admin.pw.js && node tests/pw/mobile_visual.pw.js && node tests/e2e.js",
+    "test:all": "bash tests/run-all.sh",
+    "gen:sim": "node tools/gen-simdata.mjs && node tools/gen-simvectors.mjs",
     "build": "node scripts/build.mjs",
     "test:compat": "node tests/compat/boot.pw.js"
   },

@@ -495,6 +495,32 @@ function drawBanner(ctx, R) {
 }
 
 // ------------------------------------------------------------ главная функция
+// Метки владельцев управления в кооперативе: чьи это клапаны, лопата и утечки; чужие колонки слегка затемняются.
+function mpTag(ctx, x, y, w, label, mine, size) {
+  const h = size + 8; ctx.save();
+  ctx.fillStyle = mine ? 'rgba(224,180,85,.96)' : 'rgba(20,14,10,.88)'; rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = mine ? '#fff3d0' : '#7d5f21'; ctx.stroke();
+  text(ctx, label, x, y + 1, size, mine ? '#24160a' : '#f1e6c8', 'center', 'bold', false);
+  ctx.restore();
+}
+function drawMpOverlay(ctx, R) {
+  const { L, mp } = R, por = L.portrait, size = por ? 10 : 12;
+  for (let i = 0; i < 4; i++) {
+    const c = column(L, i), o = mp.own.valve[i], mine = !!(o && o.pid === mp.me);
+    if (!mine) { ctx.save(); ctx.fillStyle = 'rgba(10,7,5,.32)'; rr(ctx, c.x, c.y, c.w, c.h, 9); ctx.fill(); ctx.restore(); }
+    const label = o ? (mine ? 'ВЫ' : o.nick) : '—';
+    mpTag(ctx, c.cx, c.y + c.h - (por ? 12 : 14), Math.min(c.w - 6, 20 + label.length * (size * 0.62)), label, mine, size);
+  }
+  const sh = L.shovel, so = mp.own.shovel, smine = !!(so && so.pid === mp.me);
+  if (!smine) { ctx.save(); ctx.fillStyle = 'rgba(10,7,5,.38)'; rr(ctx, sh.x, sh.y, sh.w, sh.h, 8); ctx.fill(); ctx.restore(); }
+  const sl = smine ? 'ЛОПАТА: ВЫ' : 'лопата: ' + (so ? so.nick : '—');
+  mpTag(ctx, sh.x + sh.w / 2, sh.y + 10, Math.min(Math.max(sh.w, 96), 20 + sl.length * (size * 0.6)), sl, smine, size);
+  const lo = mp.own.leaks; if (lo) for (const lk of R.s.leaks) {
+    const c = column(L, lk.pipe), lmine = lo.pid === mp.me;
+    mpTag(ctx, c.leak.x, c.leak.y - 26, 18 + (lmine ? 'ВЫ' : lo.nick).length * (size * 0.6), lmine ? 'ВЫ' : lo.nick, lmine, size);
+  }
+}
+
 export function drawScene(ctx, R) {
   const { L } = R;
   ctx.save();
@@ -514,6 +540,7 @@ export function drawScene(ctx, R) {
   if (R.tutHint === 'shovel') pulseRing(ctx, L.shovel.x - 3, L.shovel.y - 3, L.shovel.w + 6, L.shovel.h + 6, R.time, R.reduced);
   if (R.tutHint === 'gauge') pulseRing(ctx, L.gauge.cx - L.gauge.r - 8, L.gauge.cy - L.gauge.r - 8, L.gauge.r * 2 + 16, L.gauge.r * 2 + 16, R.time, R.reduced);
   if (R.tutHint === 'leak') for (const lk of R.s.leaks) { const c = column(L, lk.pipe); pulseRing(ctx, c.leak.x - 22, c.leak.y - 22, 44, 44, R.time, R.reduced); }
+  if (R.mp) drawMpOverlay(ctx, R);
   drawBanner(ctx, R);
   R.fx.draw(ctx, 'main');
   // опасность

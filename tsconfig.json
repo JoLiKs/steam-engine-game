@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "allowJs": true, "checkJs": true, "noEmit": true, "strict": false, "noImplicitAny": false, "skipLibCheck": true, "lib": ["ES2022", "DOM"], "types": [] },
+  "include": ["src/globals.d.ts", "src/core/**/*.js", "src/net/mp.js", "src/ui/keys.js"]
+}

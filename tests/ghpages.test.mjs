@@ -29,7 +29,7 @@ test('обычная сборка (pages.dev): запросы на тот же o
   const files = fs.readdirSync(out);
   assert.ok(files.includes('admin') && files.includes('_worker.js'));
   const game = fs.readFileSync(path.join(out, files.find(f => f.startsWith('game.'))), 'utf8');
-  assert.ok(game.includes('/api/g') && !game.includes('sslip.io'));
+  assert.ok(game.includes('/api/g') && !game.includes('sslip.io/steam/api') && game.includes('wss://185-255-133-179.sslip.io/steam/ws'));
   fs.rmSync(out, { recursive: true, force: true });
 });
 test('ghpages без SEG_API_BASE — ошибка сборки', () => {

@@ -135,6 +135,14 @@
 Выкладка: `GITHUB_TOKEN=… bash tools/deploy-ghpages.sh` (собирает `SEG_TARGET=ghpages`, коммитит в `gh-pages`, при первом запуске включает Pages через API — источник `gh-pages`, `/`, — и ждёт публикации; токен передаётся только одноразовым `http.extraheader`, в remote/вывод не попадает). Ветки `1.x` и теги скрипт не трогает. Проверка: `node tests/live/ghpages.pw.js` (Chromium+WebKit, десктоп и телефон) и `node tests/live/ghpages_score.pw.js` (запись в рейтинг) — создают тестовые данные на проде, их нужно удалить.
 Серверная часть: в `/etc/steam-engine-game.env` — `SEG_ALLOWED_ORIGINS=https://steam-engine-game.pages.dev,https://joliks.github.io` и `SEG_DIRECT_ORIGINS=https://joliks.github.io`; в `location /steam/` nginx — `proxy_set_header X-Real-IP $remote_addr;` (см. `backend/deploy/nginx-location.conf`).
 
+## Версия 2.0 — что нового (веха 1)
+
+* **Играть вместе**: кнопка на титульном экране → лобби, комната по коду или ссылке, 2–4 игрока управляют одним котлом (разные клапаны, лопата, утечки), чат и эмодзи, голосование по карточкам, реконнект. Сервер авторитетный (анти-чит), см. [`MULTIPLAYER.md`](MULTIPLAYER.md).
+* **Аудит**: [`AUDIT.md`](AUDIT.md) — находки с серьёзностью; для каждой исправленной есть падавший тест.
+* **Структура**: `src/core` (детерминированное ядро без DOM — общее для клиента и ботов; Python-порт `backend/app/simcore.py` для сервера), `src/ui`, `src/audio`, `src/net`.
+* **Проверки**: `npm run lint`, `npm run typecheck` (JSDoc + `tsc`), `npm test` (lint + tsc + node + pytest; для pytest задайте `SEG_PY`), `npm run test:all` (всё, включая Playwright), CI — `.github/workflows/ci.yml`.
+* При изменении `src/core/data.js` или `sim.js` выполните `npm run gen:sim` (обновляет `backend/app/simdata.json` и `tests/fixtures/sim_vectors.json`); CI проверяет актуальность.
+
 ## Тесты и баланс
 
 ```bash
@@ -165,8 +173,8 @@ node scripts/balance.mjs                     # таблица: бот × пол�
 ```
 index.html  style.css  _headers  _worker.js  _routes.json
 admin/                страница входа в админку (Pages)
-src/                  sim.js data.js rng.js layout.js render.js draw.js fx.js audio.js bot.js main.js score.js net.js coach.js notes.js
-backend/              FastAPI+SQLite: app/ (main, db, scoring, security, ratelimit, ai, aiproviders, ainotes, aicrypto, static/ — панель), tests/, deploy/ (systemd, nginx)
+src/                  main.js · core/ (sim data rng score bot validate) · ui/ (render draw layout fx coach notes lobby keys) · audio/ · net/ (net mp)
+backend/              FastAPI+SQLite: app/ (main, db, scoring, security, ratelimit, ai, aiproviders, ainotes, aicrypto, mp, simcore, static/ — панель), tests/, deploy/ (systemd, nginx)
 tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты версии 1.1)
 ```
 
@@ -176,10 +184,11 @@ tests/  scripts/  screenshots/  (screenshots/v1.1 — скриншоты вер�
 * **Сборка** (`node scripts/build.mjs [dir]`): `src/*.js` → один классический скрипт `game.<хеш>.js` (esbuild, цели Safari 11+/Chrome 64+/Firefox 60+/Edge 79+), `boot.<хеш>.js` — страж загрузки, который показывает экран ошибки вместо чёрного экрана. Модули `src/` остаются для разработки и тестов (`index.html` в репозитории подключает их напрямую).
 
 * **Игра/Pages**: `scripts/deploy.sh` (wrangler 3, проект `steam-engine-game`; публикуются только файлы сайта). Секрет прокси задаётся в проекте Pages как `SEG_PROXY_SECRET`.
-* **Бэкенд**: `backend/deploy/` — unit systemd (`steam-engine-game.service`, порт 8932, пользователь без shell, `ProtectSystem=strict`) и фрагмент nginx (`location /steam/`). Переменные окружения (`SEG_*`) — в `/etc/steam-engine-game.env` (chmod 640 root:seg): `SEG_SECRET_KEY`, `SEG_PROXY_SECRET`, `SEG_ADMIN_PASSWORD_HASH` (получить: `echo -n 'пароль' | python -m app.hashpw`), `SEG_ALLOWED_ORIGINS`, `SEG_ADMIN_ORIGINS`, `SEG_AI_MASTER_KEY` (Fernet-ключ для ИИ-ключей админа). Зависимости бэкенда: `pip install -r backend/requirements.txt` (fastapi, uvicorn, httpx, cryptography).
+* **Бэкенд**: `backend/deploy/` — unit systemd (`steam-engine-game.service`, порт 8932, пользователь без shell, `ProtectSystem=strict`) и фрагмент nginx (`location /steam/`). Переменные окружения (`SEG_*`) — в `/etc/steam-engine-game.env` (chmod 640 root:seg): `SEG_SECRET_KEY`, `SEG_PROXY_SECRET`, `SEG_ADMIN_PASSWORD_HASH` (получить: `echo -n 'пароль' | python -m app.hashpw`), `SEG_ALLOWED_ORIGINS`, `SEG_ADMIN_ORIGINS`, `SEG_AI_MASTER_KEY` (Fernet-ключ для ИИ-ключей админа). Зависимости бэкенда: `pip install -r backend/requirements.txt` (fastapi, uvicorn, httpx, cryptography, websockets). Мультиплеер: `SEG_MP=0` выключает WebSocket; nginx — `location = /steam/ws` с Upgrade (см. `MULTIPLAYER.md`).
 
 ## Ветки
 
 * `1.0` / тег `v1.0` — исходная версия игры (без онлайна). `main` = 1.0.
 * `1.1` — онлайн-рейтинг, админка, мобильная версия (теги `v1.1`, `v1.1.1`).
-* `1.2` — эта версия (теги `v1.2.0`, `v1.2.1`): тренер вместо обучения, звук на телефонах, ИИ-комментатор и раздел «ИИ» в админке.
+* `1.2` — теги `v1.2.0`, `v1.2.1`: тренер вместо обучения, звук на телефонах, ИИ-комментатор и раздел «ИИ» в админке.
+* `2.0` — эта версия (ветка от `1.2`): мультиплеер, аудит, рефакторинг. Веха 1 — тег `v2.0.0-m1`.

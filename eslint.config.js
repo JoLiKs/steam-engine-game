@@ -12,7 +12,7 @@ module.exports = [
   { files: ['admin/**/*.js'], languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals: globals.browser }, rules: { 'no-unused-vars': 'off' } },
   { files: ['boot.js'], languageOptions: { sourceType: 'script' } },
   {
-    files: ['tests/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}', 'tools/**/*.js', 'eslint.config.js'],
+    files: ['tests/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}', 'tools/**/*.{js,mjs}', 'eslint.config.js'],
     languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
     rules: { 'no-unused-vars': 'off', 'no-empty': 'off', 'no-undef': 'off', 'no-useless-escape': 'off', 'no-control-regex': 'off', 'no-cond-assign': 'off', 'no-unsafe-finally': 'off', 'no-redeclare': 'off' },
   },

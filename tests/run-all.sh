@@ -6,9 +6,11 @@ if [ -d /workspace/pw-browsers ]; then export PLAYWRIGHT_BROWSERS_PATH=/workspac
 export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1
 cd "$(dirname "$0")/.."
 PY=${SEG_PY:-/workspace/venv-test/bin/python}
-echo "== node --test (логика, звук, счёт)"; node --test tests/ 2>&1 | grep -E "^# (tests|pass|fail)"
+echo "== eslint + tsc (проверка типов JSDoc ядра)"; npx eslint . 2>&1 | tail -3 | grep -E "error" && exit 1; npx tsc -p . && echo "tsc: ошибок нет"
+echo "== node --test (логика, звук, счёт, аудит, мультиплеер-клиент)"; node --test tests/ 2>&1 | grep -E "^# (tests|pass|fail)"
 echo "== pytest (бэкенд)"; (cd backend && $PY -m pytest -q 2>&1 | tail -2)
 echo "== OfflineAudioContext"; node tests/audio_offline.js | tail -2
+echo "== Playwright: кооператив на два браузера (лобби, роли, чат, голосование, реконнект)"; node tests/pw/coop.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
 echo "== Playwright: звук на телефонах (Android Chromium + iPhone WebKit)"; node tests/pw/audio_mobile.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
 echo "== Playwright: ИИ-комментатор и раздел «ИИ» в админке"; node tests/pw/ai.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"
 echo "== Playwright: рейтинг/админка"; node tests/pw/rating_admin.pw.js 2>&1 | grep -E "✗|ПРОВАЛЕНО|ВСЕ ПРОВЕРКИ"

@@ -1,3 +1,4 @@
+// @ts-check
 // Чистая логика игры «Последний котёл». Никаких обращений к DOM/Canvas/Audio — всё детерминировано
 // и тестируется в node. Один шаг = фиксированный dt (1/60 с).
 import { NIGHTS, CARDS, CAP, TUTORIAL, TICKER, POP_START, COAL_MAX } from './data.js';
@@ -15,6 +16,8 @@ export const IRON_TOLL = 40;
 export const SMOKE_AVG = 30;
 export const COLD_POP = 0.74;
 export const SILENCE_POP = 0.50;
+
+/** @typedef {ReturnType<typeof createState>} State  Состояние партии: единый изменяемый объект, целиком сериализуется в JSON. */
 
 export function createState(seed = 1, opts = {}) {
   const s = {
@@ -67,8 +70,10 @@ const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const isValveIdx = i => Number.isInteger(i) && i >= 0 && i < 4;
 /** Вентиль i (0..3) → v (0..1). Нечисловые/нефинитные значения и чужие индексы игнорируются (иначе NaN отравит всю симуляцию; важно для сетевого ввода). */
 export function setValve(s, i, v) { if (isValveIdx(i) && isNum(v)) s.valves[i] = Math.max(0, Math.min(1, v)); }
+/** @param {State} s */
 export function adjustValve(s, i, dv) { if (isValveIdx(i) && isNum(dv)) setValve(s, i, Math.round((s.valves[i] + dv) * 100) / 100); }
 
+/** @param {State} s */
 export function shovel(s) {
   if (s.phase !== 'night') return false;
   if (s.shovelCd > 0) return false;
@@ -86,6 +91,7 @@ export function shovel(s) {
   return true;
 }
 
+/** @param {State} s */
 export function fixLeak(s, id) {
   if (id != null && !Number.isInteger(id)) return false;
   const idx = id == null ? (s.leaks.length ? 0 : -1) : s.leaks.findIndex(l => l.id === id);
@@ -105,6 +111,7 @@ export function spawnLeak(s, pipe) {
   emit(s, 'leak', { pipe, id: l.id });
 }
 
+/** @param {State} s */
 export function chooseCard(s, key) {
   if (s.phase !== 'card' || !s.card) return;
   const c = s.card;
@@ -134,6 +141,7 @@ export function beginNight(s, n) {
   emit(s, 'night', { n });
 }
 
+/** @param {State} s */
 export function continueSummary(s) {
   if (s.phase !== 'summary') return;
   const c = CARDS[s.night + 1];
@@ -148,6 +156,7 @@ export function toll(s) {
 }
 export function smogAvg(s) { return s.smogTime > 0 ? s.smogSum / s.smogTime : 0; }
 
+/** @param {State} s */
 export function computeEnding(s) {
   const pop = s.pop / POP_START;
   if (pop < COLD_POP) return 'cold';
@@ -162,6 +171,7 @@ function finish(s, id) {
 }
 
 // ---------------------------------------------------------------- основной шаг
+/** @param {State} s */
 export function step(s, dt) {
   s.clock += dt;
   if (s.shake > 0) s.shake = Math.max(0, s.shake - dt * 2.2);
@@ -298,6 +308,7 @@ function endNight(s) {
 }
 
 // ---------------------------------------------------------------- сохранение
+/** @param {State} s */
 export function serialize(s) {
   const { events, msgs, ...rest } = s;
   return JSON.stringify(rest);

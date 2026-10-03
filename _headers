@@ -1,7 +1,7 @@
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
-  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' wss://185-255-133-179.sslip.io; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
 /game.*
   Cache-Control: public, max-age=31536000, immutable
 /boot.*
