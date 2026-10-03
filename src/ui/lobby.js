@@ -1,5 +1,5 @@
 // DOM лобби и панель чата/реакций мультиплеера. Весь пользовательский текст попадает в DOM только через textContent.
-import { EMOJI, EMOJI_NAMES, roleSummary } from '../net/mp.js';
+import { EMOJI, EMOJI_NAMES, roleSummary, MODE_NAMES } from '../net/mp.js';
 
 export class LobbyUi {
   /** @param {(id: string) => HTMLElement} $  @param {Record<string, Function>} cb */
@@ -12,7 +12,11 @@ export class LobbyUi {
     }
     $('mp-chatbtn').addEventListener('click', () => this.toggleChat());
     $('mp-chatform').addEventListener('submit', e => { e.preventDefault(); const i = $('mp-chatin'), v = i.value.trim(); if (v) { cb.onChat(v); i.value = ''; } });
-    $('mp-create').addEventListener('click', () => cb.onCreate($('mp-nick').value, +$('mp-max').value));
+    $('mp-create').addEventListener('click', () => cb.onCreate($('mp-nick').value, +$('mp-max').value, $('mp-mode').value));
+    $('mp-mode').addEventListener('change', () => { $('mp-modehint').hidden = false; });
+    $('mp-bot').addEventListener('click', () => cb.onBot());
+    $('mp-share').addEventListener('click', () => cb.onShare());
+    if (!(typeof navigator !== 'undefined' && navigator.share)) $('mp-share').hidden = true; else $('mp-share').hidden = false;
     $('mp-join').addEventListener('click', () => cb.onJoin($('mp-nick').value, $('mp-code').value));
     $('mp-code').addEventListener('keydown', e => { if (e.key === 'Enter') cb.onJoin($('mp-nick').value, $('mp-code').value); });
     $('mp-ready').addEventListener('click', () => cb.onReady());
@@ -35,25 +39,29 @@ export class LobbyUi {
     this.me = me;
     this.$('mp-entry').hidden = true; this.$('mp-room').hidden = false;
     this.$('mp-roomcode').textContent = m.code;
+    this.$('mp-modename').textContent = MODE_NAMES[m.mode] || MODE_NAMES.coop;
     const ul = this.$('mp-players'); ul.textContent = '';
     for (const p of m.players) {
       const li = document.createElement('li'); li.className = (p.online ? '' : 'off ') + (p.pid === me ? 'me' : '');
       const dot = document.createElement('i'); dot.className = 'dot ' + (p.online ? 'on' : 'off'); dot.setAttribute('aria-hidden', 'true');
-      const name = document.createElement('b'); name.textContent = p.nick + (p.pid === me ? ' (вы)' : '');
+      const name = document.createElement('b'); name.textContent = (p.bot ? '🤖 ' : '') + p.nick + (p.pid === me ? ' (вы)' : '');
+      if (p.bot) li.classList.add('bot');
       const tag = document.createElement('span'); tag.className = 'tag';
-      tag.textContent = (p.pid === m.host ? '★ хозяин' : p.ready ? '✓ готов' : 'не готов') + (p.online ? '' : ' · нет связи');
+      tag.textContent = (p.bot ? 'ИИ-напарник' : p.pid === m.host ? '★ хозяин' : p.ready ? '✓ готов' : 'не готов') + (p.online ? '' : ' · нет связи');
       li.append(dot, name, tag);
       if (m.state === 'playing' && p.role) { const r = document.createElement('small'); r.textContent = roleSummary(p.role); li.append(r); }
       if (m.host === me && p.pid !== me && m.state === 'lobby') {
         const k = document.createElement('button'); k.type = 'button'; k.className = 'btn small'; k.textContent = 'Убрать'; k.setAttribute('aria-label', 'Убрать игрока ' + p.nick);
-        k.addEventListener('click', () => this.cb.onKick(p.pid)); li.append(k);
+        k.addEventListener('click', () => (p.bot ? this.cb.onBot(true) : this.cb.onKick(p.pid))); li.append(k);
       }
       ul.append(li);
     }
+    const hasBot = m.players.some(p => p.bot);
     const isHost = m.host === me, mine = m.players.find(p => p.pid === me);
-    const others = m.players.filter(p => p.pid !== m.host);
-    const canStart = m.players.length >= 2 && m.players.every(p => p.online) && others.every(p => p.ready);
+    const others = m.players.filter(p => p.pid !== m.host && !p.bot);
+    const canStart = m.players.length >= 2 && m.players.every(p => p.online || p.bot) && others.every(p => p.ready);
     const lobbyState = m.state === 'lobby';
+    const botBtn = this.$('mp-bot'); botBtn.hidden = !(isHost && m.mode !== 'versus' && m.state === 'lobby' && !hasBot && m.players.length < m.max);
     this.$('mp-start').hidden = !isHost; this.$('mp-start').disabled = lobbyState && !canStart; this.$('mp-start').textContent = lobbyState ? 'Начать игру' : 'Новая игра';
     this.$('mp-ready').hidden = isHost || !lobbyState; this.$('mp-ready').textContent = mine && mine.ready ? 'Не готов' : 'Готов';
     if (!lobbyState) { this.setStatus(m.state === 'playing' ? 'Идёт игра.' : isHost ? 'Игра окончена. Нажмите «Новая игра», чтобы вернуть всех в лобби.' : 'Игра окончена. Ждём хозяина.'); return; }

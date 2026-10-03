@@ -96,3 +96,15 @@ export function applyShare(meta, now = Date.now()) {
   if (a && !meta.ach[a.id]) { meta.ach[a.id] = now; return [a]; }
   return [];
 }
+
+/** Выполнено ли сюжетное задание дня (та же логика, что quest_done на сервере). goal — объект из /api/g/daily. */
+export function questDone(goal, r) {
+  if (!goal || typeof goal !== 'object') return false;
+  if ('pop_min' in goal && r.pop < goal.pop_min) return false;
+  if ('burn_max' in goal && r.burnouts > goal.burn_max) return false;
+  if ('smog_max' in goal && r.smog > goal.smog_max) return false;
+  if ('nights_min' in goal && r.nights < goal.nights_min) return false;
+  if ('ending' in goal && r.ending !== goal.ending) return false;
+  if ('score_min' in goal && r.score < goal.score_min) return false;
+  return true;
+}

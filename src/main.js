@@ -1,6 +1,6 @@
 // «Последний котёл» — контроллер: цикл, ввод, интерфейс, сохранение, звук.
 import { createState, beginNight, step, setValve, adjustValve, shovel, fixLeak, chooseCard, continueSummary, serialize, deserialize, toll, smogAvg, P_VENT } from './core/sim.js';
-import { NIGHTS, CARDS, ENDINGS, POP_START, TUTORIAL, DISTRICTS } from './core/data.js';
+import { NIGHTS, CARDS, ENDINGS, POP_START, TUTORIAL, DISTRICTS, HOST_EVENTS } from './core/data.js';
 import { viewFor, makeLayout, column } from './ui/layout.js';
 import { drawScene, makeBackground, makeCity } from './ui/render.js';
 import { Fx } from './ui/fx.js';
@@ -11,9 +11,12 @@ import { shouldIgnoreKey } from './ui/keys.js';
 import { makeRng } from './core/rng.js';
 import { Coach } from './ui/coach.js';
 import { Notes } from './ui/notes.js';
-import { Run, deviceInfo, fetchBoard, randomId, call as netCall } from './net/net.js';
+import { Run, deviceInfo, fetchBoard, randomId, call as netCall, fetchDaily, fetchDailyBoard, fetchSeason, fetchReview } from './net/net.js';
+import { ACHIEVEMENTS, cleanMeta, applyRun, applyShare, questDone } from './core/achievements.js';
+import { badge } from './ui/icons.js';
+import { challengeFromSearch, challengeLink, dailyLink, shareText, drawShareCard, canvasToBlob } from './ui/share.js';
 import { runResult } from './core/score.js';
-import { MpClient, wsUrl, normalizeCode, roomFromSearch, inviteLink, ownership, roleSummary, errText, CODE_RE } from './net/mp.js';
+import { MpClient, wsUrl, normalizeCode, roomFromSearch, inviteLink, ownership, roleSummary, errText, CODE_RE, boardView, MODE_NAMES } from './net/mp.js';
 import { LobbyUi } from './ui/lobby.js';
 
 const DT = 1 / 60;
@@ -39,10 +42,11 @@ try {
   delete saved.vol; Object.assign(settings, saved);
 } catch (e) { /* ignore */ }
 for (const k of ['sfx', 'music']) settings[k] = Math.max(0, Math.min(100, +settings[k] || 0));
-let meta = { endings: [], plays: 0 };
-try { Object.assign(meta, JSON.parse(store.get(META_KEY) || '{}')); } catch (e) { /* ignore */ }
+let meta = cleanMeta(null);
+try { meta = cleanMeta(JSON.parse(store.get(META_KEY) || '{}')); } catch (e) { /* ignore */ }
 
 // ---------- состояние контроллера
+const game = { mode: 'solo', daily: null, chal: 0, counted: false, review: null, fresh: [] };   // solo | daily | challenge (coop/versus — в mp)
 let s = createState(1);
 let ui = 'title', prevUi = 'title';
 let snap = null;                 // снимок начала ночи для «переиграть ночь»
@@ -133,6 +137,7 @@ function handleEvents() {
       case 'loss': sound.play('loss'); break;
       case 'talk': say(e.who, e.text, 'talk'); break;
       case 'event': sound.play('event'); banner = { label: e.label, at: time }; say('', e.label + '.', 'warn'); break;
+      case 'hostev': { sound.play('event'); const h = HOST_EVENTS.find(x => x.id === e.id); const txt = e.text || (h ? h.text : ''); banner = { label: e.label, at: time }; say('Ведущий', txt || (e.label + '.'), 'warn', '#9fd8f0'); break; }
       case 'night': sound.play('night'); log = []; toast = null; break;
       case 'nightend': sound.play('nightend'); break;
       case 'ending': sound.play(e.id === 'boom' ? 'boom' : 'warn'); if (e.id === 'boom') { fx.shake(1.2); const g = L.gauge; for (let k = 0; k < 6; k++) fx.steam(L.tank.x + L.tank.w / 2, L.tank.y + L.tank.h / 2, 30, { spread: 160, vy: -140, jx: 220, r: 16, grow: 80, life: 2.2, a: 0.8 }); void g; } break;
@@ -143,7 +148,7 @@ function handleEvents() {
 }
 
 // ---------- сохранение
-function saveGame() { if (s.phase === 'ended') return; const str = serialize(s); store.set(SAVE_KEY, str); }
+function saveGame() { if (s.phase === 'ended' || game.mode !== 'solo' || (mp && mp.inGame)) return; const str = serialize(s); store.set(SAVE_KEY, str); }
 function hasSave() { return !!store.get(SAVE_KEY); }
 function loadGame() {
   const o = loadSaved(store.get(SAVE_KEY));
@@ -154,10 +159,11 @@ let lastPhase = null, lastNight = -1;
 function trackPhase() {
   if (s.phase !== lastPhase || s.night !== lastNight) {
     lastPhase = s.phase; lastNight = s.night;
-    const online = !!(mp && mp.inGame);   // в кооперативе одиночное сохранение и статистика прохождения не трогаются
+    const online = !!(mp && mp.inGame) || game.mode !== 'solo';   // в кооперативе/соревновании/испытании одиночное сохранение и статистика прохождения не трогаются
+    if (s.phase !== 'ended') game.counted = false;
     if (s.phase === 'night' && s.t === 0) { if (!online) { snap = serialize(s); saveGame(); } }
     else if (s.phase === 'summary' || s.phase === 'card') { if (!online) { saveGame(); if (s.phase === 'summary' && s.summary) run.event('night_end', nightPayload(s.summary)); } }
-    else if (s.phase === 'ended') { if (online) { if (!meta.endings.includes(s.ending)) { meta.endings.push(s.ending); store.set(META_KEY, JSON.stringify(meta)); } } else { store.del(SAVE_KEY); recordEnding(); } }
+    else if (s.phase === 'ended') { if (online) { if (!meta.endings.includes(s.ending)) { meta.endings.push(s.ending); store.set(META_KEY, JSON.stringify(meta)); } if (game.mode !== 'solo' && !(mp && mp.inGame)) { meta.plays++; store.set(META_KEY, JSON.stringify(meta)); } } else { store.del(SAVE_KEY); recordEnding(); } }
     routeUi();
   }
 }
@@ -172,7 +178,7 @@ function recordEnding() {
 }
 
 // ---------- интерфейс
-const screens = ['title', 'lobby', 'prologue', 'pause', 'settings', 'help', 'card', 'summary', 'ending', 'board'];
+const screens = ['title', 'lobby', 'prologue', 'pause', 'settings', 'help', 'card', 'summary', 'ending', 'board', 'daily', 'ach'];
 function show(id) {
   for (const k of screens) $(k).hidden = k !== id;
   if (id) { const first = $(id).querySelector('.btn.primary, .choice'); if (first) setTimeout(() => first.focus({ preventScroll: true }), 30); }
@@ -201,11 +207,14 @@ function updateTitle() {
   const n = meta.endings.length;
   $('t-endings').textContent = n ? `Открыто концовок: ${n} из ${Object.keys(ENDINGS).length}` : 'Десять ночей. Шесть судеб.';
 }
-function newGame() {
+function newGame(o = {}) {
   coach.reset(); notes.reset(); toast = null;
-  s = createState((Math.random() * 2 ** 31) | 0 || 1); lastPhase = null; lastNight = -1;
+  snap = null; game.mode = o.mode || 'solo'; game.daily = o.daily || null; game.chal = o.chal || 0; game.review = null; game.counted = false;
+  s = createState(o.seed || (Math.random() * 2 ** 31) | 0 || 1, o.mode ? { skipTutorial: true, host: o.mode === 'daily' } : {}); lastPhase = null; lastNight = -1;
   log = []; fx.clear(); banner = null; vis.satShown = [1, 1, 1, 1]; vis.popShown = POP_START; vis.needle = s.P; vis.fireShown = 0;
-  store.del(SAVE_KEY); show('prologue'); ui = 'prologue'; startRun();
+  if (game.mode === 'solo') store.del(SAVE_KEY);
+  startRun();
+  if (o.mode) { startPlay(); if (o.toast) showToast(o.toast[0], o.toast[1], '#e0b866', 12); } else { show('prologue'); ui = 'prologue'; }
 }
 function startPlay() {
   sound.ensure(); sound.startMusic();
@@ -218,7 +227,7 @@ function beginPlayFromState() {
   if (s.night === 0 && s.t === 0 && !s.tut?.done) say('Агафья', 'Топка остыла. Город ждёт тепла.', 'talk', '#e39a62');
 }
 function continueGame() {
-  coach.reset(); notes.reset(); toast = null;
+  coach.reset(); notes.reset(); toast = null; game.mode = 'solo'; game.chal = 0; game.daily = null;
   if (!loadGame()) { newGame(); return; }
   log = []; fx.clear(); banner = null; vis.satShown = s.sat.slice(); vis.popShown = s.pop; vis.needle = s.P; vis.fireShown = s.fire;
   sound.ensure(); sound.startMusic(); startRun();
@@ -294,17 +303,20 @@ function renderEnding() {
   const left = Object.keys(ENDINGS).length - meta.endings.length;
   const hints = { light: 'Это лучшая концовка. Остальные цены тоже есть — попробуйте принять «выгодные» решения и посмотрите, чем платят другие.', smoke: 'Попробуйте отказаться от бурого угля и держать фильтры открытыми.', iron: 'Попробуйте не продлевать смену и дать усталости остыть: снижайте вентиль завода, когда шкала красная.', cold: 'Госпиталь и кварталы важнее всего. Не жалейте им пара.', boom: 'Следите за стрелкой: в красной зоне больше двух секунд — взрыв. Не перебарщивайте с углём.', silence: 'Держите хотя бы госпиталь и кварталы в тепле — и утечки заделывайте сразу.' };
   $('e-hint').textContent = hints[s.ending] + (left > 0 ? `  Открыто концовок: ${meta.endings.length} из ${Object.keys(ENDINGS).length}.` : '  Вы открыли все концовки.');
-  $('b-again').textContent = mp && mp.inGame ? 'В лобби комнаты' : 'Сыграть снова';
+  $('b-again').textContent = mp && mp.inGame ? 'В лобби комнаты' : game.mode === 'daily' ? 'Ещё попытка' : 'Сыграть снова';
+  $('e-share-msg').textContent = ''; $('e-review').hidden = true; $('e-ach').hidden = true; $('e-daily').hidden = true; $('e-places').hidden = true;
   sound.play(tone === 'good' ? 'end-good' : tone === 'fail' ? 'end-fail' : 'end-bitter');
   setupRank();
+  endExtras();
 }
 
 // ---------- рейтинг (необязательный, только онлайн)
 function setupRank() {
   const box = $('e-rank'); box.hidden = true;
-  if (mp && mp.inGame) return;   // кооперативные партии в рейтинг не идут
+  if (mp && mp.inGame) return;   // кооперативные партии и соревнования в общий рейтинг не идут
   $('e-nick').value = store.get(NICK_KEY) || '';
-  $('b-submit').disabled = false; $('e-rank-msg').textContent = '';
+  $('b-submit').disabled = false; $('b-submit').hidden = false; $('e-rank-msg').textContent = '';
+  $('b-submit').textContent = game.mode === 'daily' ? 'Записать в рейтинг дня' : 'Отправить в рейтинг';
   run.pending ? run.pending.then(() => { box.hidden = !run.online; }) : (box.hidden = !run.online);
 }
 function playerId() { let id = store.get(PID_KEY); if (!id || !/^[0-9a-f]{24}$/.test(id)) { id = randomId(); store.set(PID_KEY, id); } return id; }
@@ -312,13 +324,18 @@ async function submitScore() {
   if (submitted) return;
   const nick = $('e-nick').value.trim(); store.set(NICK_KEY, nick);
   const btn = $('b-submit'), msg = $('e-rank-msg'); btn.disabled = true; msg.textContent = 'Отправляем…';
-  const r = await run.submit(endingResult(), nick, playerId());
-  if (r && r.ok && r.data && r.data.ok) {
+  const daily = game.mode === 'daily' && game.daily;
+  const r = daily ? await run.submitDaily(endingResult(), nick, playerId(), game.daily.day) : await run.submit(endingResult(), nick, playerId());
+  if (daily && r && r.ok && r.data && r.data.ok) {
+    submitted = true; const me = r.data.me;
+    msg.textContent = `Записано как «${nick || 'Аноним'}». ` + (me ? `Ваш лучший результат дня: ${me.score} очк., место ${me.rank} из ${me.total}.` : '') + (r.data.done ? ' Задание выполнено!' : '');
+    btn.hidden = true; boardAvailable = true;
+  } else if (r && r.ok && r.data && r.data.ok) {
     submitted = true; msg.textContent = `Записано как «${r.data.nick}». Место: ${r.data.rank.score} по очкам, ${r.data.rank.survival} по выживанию.`;
     btn.hidden = true; boardAvailable = true; openBoard('score');
   } else {
     btn.disabled = false;
-    msg.textContent = !r ? 'Нет связи с сервером рейтинга. Игра от этого не страдает — попробуйте позже.' : r.status === 429 ? 'Слишком часто. Подождите минуту.' : r.status === 409 ? 'Этот результат уже отправлен.' : r.status === 422 ? 'Сервер не принял результат (проверка правдоподобия).' : 'Не удалось отправить результат.';
+    msg.textContent = !r ? 'Нет связи с сервером рейтинга. Игра от этого не страдает — попробуйте позже.' : r.status === 429 ? 'Слишком часто. Подождите минуту.' : r.status === 409 ? (daily ? 'Этот результат уже отправлен (или день закончился).' : 'Этот результат уже отправлен.') : r.status === 422 ? 'Сервер не принял результат (проверка правдоподобия).' : 'Не удалось отправить результат.';
   }
 }
 function updateBoardBtn() { $('b-board').hidden = !boardAvailable; }
@@ -327,17 +344,169 @@ async function openBoard(which) {
   boardCur = which || boardCur;
   document.querySelectorAll('#board .tab').forEach(b => { const on = b.dataset.board === boardCur; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   const list = $('lb-list'), msg = $('lb-msg'); list.textContent = ''; msg.textContent = 'Загружаем…';
-  const entries = await fetchBoard(boardCur);
+  let entries = null, extra = '';
+  if (boardCur === 'season') { const r = await fetchSeason(playerId()); if (r) { entries = r.entries; extra = `Сезон ${r.season}.` + (r.me ? ` Ваше место: ${r.me.rank} из ${r.me.total} (${r.me.score} очк.).` : ''); } }
+  else if (boardCur === 'day') { const r = await fetchDailyBoard(game.daily ? game.daily.day : '', playerId()); if (r) { entries = r.entries; extra = `Испытание дня ${r.day}.` + (r.me ? ` Ваше место: ${r.me.rank} из ${r.me.total} (${r.me.score} очк.).` : ''); } }
+  else entries = await fetchBoard(boardCur);
   if (ui !== 'board') return;
   if (!entries) { msg.textContent = 'Рейтинг сейчас недоступен.'; return; }
-  msg.textContent = entries.length ? '' : 'Пока пусто — станьте первым.';
-  entries.forEach((e, i) => {
+  msg.textContent = (entries.length ? '' : 'Пока пусто — станьте первым.') + (extra ? ' ' + extra : '');
+  const byScore = boardCur !== 'survival';
+  entries.forEach((e) => {
     const li = document.createElement('li');
     const nick = document.createElement('b'); nick.textContent = String(e.nick);
-    const sc = document.createElement('span'); sc.textContent = boardCur === 'score' ? `${e.score} очк.` : `${e.nights} ноч. · ${e.pop} жит.`;
-    const sub = document.createElement('small'); sub.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} · ${boardCur === 'score' ? `${e.nights} ноч.` : `${e.score} очк.`}`;
+    const sc = document.createElement('span'); sc.textContent = byScore ? `${e.score} очк.` : `${e.nights} ноч. · ${e.pop} жит.`;
+    const sub = document.createElement('small'); sub.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} · ${byScore ? `${e.nights} ноч.` : `${e.score} очк.`}${e.done ? ' · задание ✓' : ''}`;
     li.append(nick, sc, sub); list.append(li);
   });
+}
+
+// ---------- 2.0: итоги партии (достижения, разбор, места), шаринг, испытание дня
+function aggOf(rr, extra = {}) {
+  return { nights: rr.nights, pop: rr.pop, burnouts: rr.burnouts, smog: rr.smog, leaksFixed: Math.min(500, s.leaksFixed | 0), shovels: Math.min(3000, (extra.shovels === undefined ? s.shovels : extra.shovels) | 0), ending: rr.ending, players: extra.players || 1, mode: extra.mode || game.mode };
+}
+function runCtx() {
+  const rr = endingResult(), inMp = !!(mp && mp.inGame);
+  /** @type {any} */ const c = { mode: inMp ? (mp.mode || 'coop') : game.mode, ending: rr.ending, nights: rr.nights, pop: rr.pop, burnouts: rr.burnouts, smog: rr.smog, score: rr.score, leaksFixed: s.leaksFixed | 0 };
+  if (!inMp) { c.shovels = s.shovels | 0; c.spills = s.spills | 0; }   // в сетевой партии клиент не знает этих счётчиков — достижения по ним там не выдаём
+  else if (c.mode === 'versus') {
+    const pl = mp.result && mp.result.places || []; const me = pl.find(x => x.pid === mp.pid);
+    c.players = pl.length; c.place = me ? me.place : 0; c.dnf = !!(me && me.dnf);
+  } else c.players = mp.players.filter(p => !p.bot).length;
+  if (game.mode === 'daily' && game.daily) c.questDone = questDone(game.daily.quest.goal, rr);
+  return c;
+}
+function showAchToasts(list) {
+  if (!list.length) return;
+  const box = $('ach-toast'); let k = 0;
+  const next = () => {
+    if (k >= list.length) { box.hidden = true; return; }
+    const a = list[k++]; box.textContent = '';
+    box.insertAdjacentHTML('beforeend', badge(a.icon, a.tier));
+    const d = document.createElement('div'); const b = document.createElement('b'); b.textContent = 'Достижение: ' + a.name; const sm = document.createElement('small'); sm.textContent = a.desc; d.append(b, sm); box.append(d);
+    box.hidden = false; $('sr-status').textContent = 'Достижение: ' + a.name; setTimeout(next, 3200);
+  };
+  next();
+}
+function renderAchNew(list) {
+  const ul = $('e-ach-list'); ul.textContent = ''; $('e-ach').hidden = !list.length;
+  for (const a of list) { const li = document.createElement('li'); li.insertAdjacentHTML('beforeend', badge(a.icon, a.tier)); const b = document.createElement('b'); b.textContent = a.name; const sm = document.createElement('small'); sm.textContent = a.desc; li.append(b, sm); ul.append(li); }
+}
+function renderPlaces(result) {
+  const box = $('e-places'); if (!result || !result.places) { box.hidden = true; return; }
+  box.hidden = false; const ol = $('e-places-list'); ol.textContent = '';
+  for (const e of result.places) {
+    const li = document.createElement('li'); if (e.pid === (mp && mp.pid)) li.className = 'me';
+    const nm = document.createElement('b'); nm.textContent = e.nick + (e.pid === (mp && mp.pid) ? ' (вы)' : '');
+    const sc = document.createElement('span'); sc.textContent = e.dnf ? 'вышел' : `${e.score} очк.`;
+    const sm = document.createElement('small'); sm.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} · ${e.nights} ноч. · ${e.pop} жит. · `;
+    const v = document.createElement('i'); v.className = e.verified ? 'ok' : 'no'; v.textContent = e.dnf ? '' : e.verified ? '✓ проверено сервером' : '⚠ сервер пересчитал иначе'; sm.append(v);
+    li.append(nm, sc, sm); ol.append(li);
+  }
+}
+function showReview(m) {
+  if (!m || !m.text) return; game.review = m;
+  const el = $('e-review'); el.textContent = m.text; el.hidden = false;
+  const sm = document.createElement('small'); sm.textContent = m.src === 'ai' ? 'Разбор партии · ИИ' : 'Разбор партии · по правилам'; el.append(sm);
+}
+/** Всё, что делается один раз при показе финала: достижения, места, разбор, строка испытания дня. */
+function endExtras() {
+  renderBoardHud();
+  const inMp = !!(mp && mp.inGame), versus = inMp && mp.mode === 'versus';
+  if (versus) renderPlaces(mp.result || livePlaces());
+  if (inMp && game.review) showReview(game.review);
+  if (game.counted) renderAchNew(game.fresh || []);
+  else if (!(versus && !mp.result)) {   // в соревновании ждём итоговых мест от сервера
+    game.counted = true;
+    const ctx = runCtx(), rr = endingResult();
+    const fresh = applyRun(meta, ctx, { day: game.daily && game.daily.day });
+    if (!meta.endings.includes(s.ending)) meta.endings.push(s.ending);
+    store.set(META_KEY, JSON.stringify(meta)); game.fresh = fresh;
+    renderAchNew(fresh); showAchToasts(fresh);
+    if (!inMp && settings.stats) fetchReview(aggOf(rr)).then(r => { if (r && ui === 'ending' && !game.review) showReview(r); }, () => { /* без разбора */ });
+  }
+  if (game.mode === 'daily' && game.daily && !inMp) {
+    const q = game.daily.quest, done = questDone(q.goal, endingResult());
+    $('e-daily').hidden = false; $('e-daily-msg').textContent = `Задание «${q.title}»: ${done ? 'выполнено ✓' : 'не выполнено — ' + q.goal_text}.`;
+  } else if (game.mode === 'challenge' && !inMp) {
+    const sc = endingResult().score; $('e-daily').hidden = false;
+    $('e-daily-msg').textContent = game.chal ? (sc > game.chal ? `Вызов принят: ${sc} против ${game.chal} — вы победили!` : sc === game.chal ? `Вызов: ${sc} против ${game.chal} — ничья.` : `Вызов: ${sc} против ${game.chal}. Чуть-чуть не хватило.`) : 'Вызов принят. Покажите результат другу!';
+  }
+  $('b-share').hidden = false;
+}
+function livePlaces() {
+  if (!mp || !mp.board) return null;
+  return { places: mp.board.map((r, i) => ({ place: i + 1, pid: r.pid, nick: r.nick, score: r.score, nights: r.night, pop: r.pop, ending: r.ending || 'silence', dnf: r.state === 'dnf', verified: true })) };
+}
+async function shareResult() {
+  const msg = $('e-share-msg'); msg.textContent = '';
+  const rr = endingResult(), inMp = !!(mp && mp.inGame);
+  const mode = inMp ? (mp.mode || 'coop') : game.mode;
+  const sc = inMp && mp.result && mp.result.score ? mp.result.score : rr.score;
+  const url = mode === 'daily' ? dailyLink(location) : challengeLink(location, s.seed, sc);
+  const mine = inMp && mp.result && mp.result.places ? mp.result.places.find(x => x.pid === mp.pid) : null;
+  const data = { score: mine ? mine.score : sc, nights: rr.nights, pop: rr.pop, endingTitle: ENDINGS[s.ending] ? ENDINGS[s.ending].title : '', mode, nick: store.get(NICK_KEY) || '', seed: s.seed, place: mine && !mine.dnf ? mine.place : 0 };
+  const cv = drawShareCard($('share-cv'), data);
+  const text = shareText({ mode, score: data.score, nights: rr.nights, pop: rr.pop });
+  let how = '';
+  try {
+    const blob = await canvasToBlob(cv);
+    const file = blob ? new File([blob], 'last-boiler.png', { type: 'image/png' }) : null;
+    if (navigator.share && file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, url }); how = 'Отправлено.'; }
+    else if (navigator.share) { await navigator.share({ text, url }); how = 'Отправлено.'; }
+    else {
+      if (blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'last-boiler.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); how = 'Картинка сохранена. '; }
+      try { await navigator.clipboard.writeText(text + ' ' + url); how += 'Ссылка-вызов скопирована.'; } catch (e) { how += 'Ссылка-вызов: ' + url; }
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; how = 'Ссылка-вызов: ' + url; }
+  msg.textContent = how;
+  const fresh = applyShare(meta); store.set(META_KEY, JSON.stringify(meta)); showAchToasts(fresh);
+}
+
+// ---------- достижения
+function openAch() {
+  openOverlay('ach');
+  const have = ACHIEVEMENTS.filter(a => meta.ach[a.id]).length;
+  $('a-count').textContent = `Получено: ${have} из ${ACHIEVEMENTS.length}`;
+  const ul = $('a-list'); ul.textContent = '';
+  for (const a of ACHIEVEMENTS) {
+    const got = !!meta.ach[a.id], li = document.createElement('li'); if (!got) li.className = 'lock';
+    li.insertAdjacentHTML('beforeend', badge(a.icon, a.tier, !got));
+    const b = document.createElement('b'); b.textContent = a.name; const sm = document.createElement('small'); sm.textContent = a.desc + (got ? '' : ' (не получено)');
+    li.append(b, sm); ul.append(li);
+  }
+}
+
+// ---------- испытание дня и ссылки-вызовы
+async function openDaily() {
+  openOverlay('daily');
+  const play = $('d-play'); play.disabled = true; $('d-msg').textContent = 'Загружаем…'; $('d-me').textContent = '';
+  const info = await fetchDaily();
+  if (ui !== 'daily') return;
+  if (!info) { $('d-msg').textContent = 'Испытание дня сейчас недоступно (нет связи с сервером). Обычная игра работает как всегда.'; $('d-title').textContent = ''; $('d-story').textContent = ''; $('d-goal').textContent = ''; return; }
+  game.daily = info;
+  $('d-day').textContent = 'Сегодня · ' + info.day + ' (UTC)'; $('d-title').textContent = info.quest.title;
+  $('d-story').textContent = info.quest.text || ''; $('d-goal').textContent = 'Задание: ' + info.quest.goal_text + '.';
+  $('d-msg').textContent = ''; play.disabled = false;
+  const st = meta.st; if (st.streak > 0) $('d-me').textContent = `Серия дней: ${st.streak}. `;
+  const b = await fetchDailyBoard(info.day, playerId());
+  if (ui === 'daily' && b && b.me) $('d-me').textContent += `Ваш лучший результат сегодня: ${b.me.score} очк., место ${b.me.rank} из ${b.me.total}${b.me.done ? ', задание выполнено' : ''}.`;
+}
+function startDaily() {
+  const info = game.daily; if (!info) return;
+  newGame({ mode: 'daily', seed: info.seed, daily: info, toast: ['Задание дня: ' + info.quest.title, info.quest.goal_text] });
+}
+const incoming = challengeFromSearch(location.search);
+function showChallengeBanner() {
+  const el = $('t-chal'); if (!incoming) return;
+  el.hidden = false;
+  el.textContent = incoming.kind === 'daily' ? 'Вас зовут на испытание дня — один сид на всех, личный рейтинг дня.' : `Вам бросили вызов: сид ${incoming.seed}${incoming.score ? ', нужно набрать больше ' + incoming.score + ' очк.' : ''}.`;
+  const b = $('b-chal'); b.hidden = false; b.textContent = incoming.kind === 'daily' ? 'Принять вызов дня' : 'Принять вызов';
+}
+function acceptChallenge() {
+  if (!incoming) return;
+  if (incoming.kind === 'daily') { openDaily(); return; }
+  newGame({ mode: 'challenge', seed: incoming.seed, chal: incoming.score, toast: ['Вызов друга', incoming.score ? `Набрать больше ${incoming.score} очков на этом сиде.` : 'Один сид на двоих — сыграйте лучше.'] });
 }
 
 
@@ -350,7 +519,7 @@ const sstore = {
 };
 let mp = null, lobbyUi = null;
 function mpEnsure() {
-  if (!mp) mp = { client: null, code: '', pid: '', nick: '', players: [], host: '', state: 'lobby', max: 2, roles: null, mine: null, own: null, inGame: false, votes: {}, voted: [], acks: [], left: 0, paused: false, touch: [0, 0, 0, 0], sent: [0, 0, 0, 0], timers: [null, null, null, null], lastDeny: 0, lastShovel: 0, net: 'idle', myVote: null, myAck: false };
+  if (!mp) mp = { client: null, mode: 'coop', board: null, result: null, code: '', pid: '', nick: '', players: [], host: '', state: 'lobby', max: 2, roles: null, mine: null, own: null, inGame: false, votes: {}, voted: [], acks: [], left: 0, paused: false, touch: [0, 0, 0, 0], sent: [0, 0, 0, 0], timers: [null, null, null, null], lastDeny: 0, lastShovel: 0, net: 'idle', myVote: null, myAck: false };
   if (!mp.client) mp.client = new MpClient({ url: wsUrl(location.search, DEBUG), onMsg: mpOnMsg, onStatus: mpOnStatus });
   return mp;
 }
@@ -364,11 +533,13 @@ function mpOpen() {
   $('mp-nick').value = store.get(NICK_KEY) || '';
   const want = roomFromSearch(location.search); if (want && !$('mp-code').value) $('mp-code').value = want;
   ui = 'lobby'; show('lobby');
-  if (mp && mp.code) lobbyUi.renderRoom({ code: mp.code, players: mp.players, host: mp.host, state: mp.state, max: mp.max }, mp.pid); else { lobbyUi.showEntry(); lobbyUi.setBusy(false); lobbyUi.setStatus(''); }
+  if (mp && mp.code) lobbyUi.renderRoom({ code: mp.code, players: mp.players, host: mp.host, state: mp.state, max: mp.max, mode: mp.mode }, mp.pid); else { lobbyUi.showEntry(); lobbyUi.setBusy(false); lobbyUi.setStatus(''); }
 }
 function mpInit() {
   lobbyUi = new LobbyUi($, {
-    onCreate: (nick, max) => mpOpenSocket({ t: 'create', nick: mpNick(nick), max: max || 2, mode: 'coop' }),
+    onCreate: (nick, max, mode) => mpOpenSocket({ t: 'create', nick: mpNick(nick), max: max || 2, mode: mode === 'versus' ? 'versus' : 'coop' }),
+    onBot: rm => mp && mp.client.send({ t: rm ? 'rmbot' : 'addbot' }),
+    onShare: async () => { const link = inviteLink(location, mp.code); try { await navigator.share({ title: 'Последний котёл', text: `Заходи в комнату ${mp.code} — ${(MODE_NAMES[mp.mode] || '').toLowerCase()}!`, url: link }); } catch (e) { /* отмена */ } },
     onJoin: (nick, code) => { code = normalizeCode(code); if (!CODE_RE.test(code)) { lobbyUi.setStatus('Код комнаты — 5 символов, например K7M2P.', true); return; } mpOpenSocket({ t: 'join', code, nick: mpNick(nick) }); },
     onReady: () => { const me = mp && mp.players.find(p => p.pid === mp.pid); mp.client.send({ t: 'ready', ready: !(me && me.ready) }); },
     onStart: () => mp.client.send({ t: mp.state === 'ended' ? 'again' : 'start' }),
@@ -405,7 +576,7 @@ function mpReset(msg) {
   if (mp) { try { mp.client.close(); } catch (e) { /* ignore */ } for (const t of mp.timers) clearTimeout(t); }
   sstore.del(SESS_KEY); mp = null;
   if (lobbyUi) { lobbyUi.hud(false); lobbyUi.clearChat(); }
-  $('mp-net').hidden = true; $('mp-role').hidden = true; $('c-vote').hidden = true;
+  $('mp-net').hidden = true; $('mp-role').hidden = true; $('c-vote').hidden = true; $('mp-board').hidden = true;
   if (s.phase !== 'ended' || ui === 'lobby') { /* локальное состояние игры пересоздаётся при следующем запуске */ }
   sound.silence(); ui = 'title'; updateTitle(); if (msg) $('t-endings').textContent = msg; show('title');
 }
@@ -418,6 +589,7 @@ function mpLeave(toTitle) {
 }
 function mpLeaveAsk() { if (confirm('Покинуть комнату? Остальные продолжат без вас.')) mpLeave(true); }
 function mpBackToLobby() {
+  $('mp-board').hidden = true;
   if (mp.host === mp.pid && mp.state === 'ended') mp.client.send({ t: 'again' });
   mp.inGame = false; lobbyUi.hud(true); mpOpen();
 }
@@ -436,12 +608,14 @@ function mpRoles(roles) {
 function mpStartGame(m) {
   mpRoles(m.roles);
   coach.reset(); notes.reset(); toast = null;
-  s = createState(m.seed, { skipTutorial: true }); lastPhase = null; lastNight = -1; snap = null; playTime = 0; endTimer = 0;
+  mp.mode = m.mode === 'versus' ? 'versus' : 'coop'; mp.result = null; mp.board = null; game.counted = false; game.review = null; game.fresh = []; game.mode = 'solo'; game.daily = null;
+  s = createState(m.seed, { skipTutorial: true, host: true }); lastPhase = null; lastNight = -1; snap = null; playTime = 0; endTimer = 0;
   log = []; fx.clear(); banner = null; vis.satShown = [1, 1, 1, 1]; vis.popShown = POP_START; vis.needle = s.P; vis.fireShown = 0;
   mp.inGame = true; mp.myVote = null; mp.myAck = false; mp.paused = false;
   sound.ensure(); sound.startMusic(); lobbyUi.hud(true);
   ui = 'play'; show(null);
-  say('Агафья', 'Вы у одного котла: каждый ведёт свою часть. Говорите друг с другом (T)!', 'talk', '#e39a62');
+  say('Агафья', mp.mode === 'versus' ? 'Гонка! У каждого свой котёл и общий сид — выигрывает тот, у кого больше очков.' : 'Вы у одного котла: каждый ведёт свою часть. Говорите друг с другом (T)!', 'talk', '#e39a62');
+  renderBoardHud();
 }
 function mpApplySnap(m) {
   const d = m.s, keep = s.valves.slice(), now = performance.now(), prevPhase = s.phase;
@@ -457,14 +631,28 @@ function mpRefresh() {   // подписи голосования и ожида�
   if (!mp || !mp.inGame) return;
   const online = mp.players.filter(p => p.online).length || mp.players.length;
   if (ui === 'card') {
-    const v = $('c-vote'); v.hidden = false; v.textContent = `Проголосовали: ${mp.voted.length} из ${online}. Решает большинство; при ничьей — первый вариант. Осталось ${mp.left} с.`;
+    const v = $('c-vote'); v.hidden = false; if (mp.mode === 'versus') v.textContent = `Решение за вами — в соревновании у каждого свой котёл. Осталось ${mp.left} с.`; else v.textContent = `Проголосовали: ${mp.voted.length} из ${online}. Решает большинство; при ничьей — первый вариант. Осталось ${mp.left} с.`;
     [...$('c-opts').children].forEach((b, i) => { const o = s.card && s.card.options[i]; b.classList.toggle('picked', !!(o && mp.myVote === o.key)); });
   } else $('c-vote').hidden = true;
   if (ui === 'summary') {
     const b = $('b-next'), last = s.summary && s.summary.night + 1 >= NIGHTS.length;
     const acked = mp.myAck || mp.acks.includes(mp.pid);
-    b.disabled = acked; b.textContent = acked ? `Ждём остальных (${mp.acks.length}/${online})` : `${last ? 'Встретить обоз' : 'Дальше'} (${mp.left})`;
+    b.disabled = acked; b.textContent = acked ? (mp.mode === 'versus' ? 'Дальше…' : `Ждём остальных (${mp.acks.length}/${online})`) : `${last ? 'Встретить обоз' : 'Дальше'} (${mp.left})`;
   } else $('b-next').disabled = false;
+}
+function renderBoardHud() {
+  const el = $('mp-board');
+  if (!mp || !mp.inGame || mp.mode !== 'versus' || !mp.board || ui === 'ending' || ui === 'lobby') { el.hidden = true; return; }
+  const rows = boardView(mp.board, mp.pid); el.textContent = '';
+  const ol = document.createElement('ol');
+  for (const r of rows) {
+    const li = document.createElement('li'); if (r.me) li.className = 'me';
+    const n = document.createElement('i'); n.textContent = r.place; n.style.fontStyle = 'normal';
+    const b = document.createElement('b'); b.textContent = r.nick; const sc = document.createElement('span'); sc.textContent = r.score;
+    const sm = document.createElement('small'); sm.textContent = r.state === 'playing' ? `ночь ${r.night} · ${r.pop} жит.` : r.state === 'done' ? 'финиш' : r.state === 'dnf' ? 'вышел' : 'нет связи';
+    li.append(n, b, sc, sm); ol.append(li);
+  }
+  el.append(ol); el.hidden = false;
 }
 function mpOnMsg(m) {
   if (!mp) return;
@@ -476,7 +664,7 @@ function mpOnMsg(m) {
       if (!mp.inGame) { ui = 'lobby'; show('lobby'); }
       break;
     case 'lobby':
-      mp.players = m.players; mp.host = m.host; mp.state = m.state; mp.max = m.max;
+      mp.players = m.players; mp.host = m.host; mp.state = m.state; mp.max = m.max; mp.mode = m.mode === 'versus' ? 'versus' : 'coop';
       if (mp.inGame && m.state === 'playing') mpRoles(Object.fromEntries(m.players.filter(p => p.role).map(p => [p.pid, p.role])));   // роли могли перераспределиться (кто-то ушёл)
       lobbyUi.renderRoom(m, mp.pid);
       if (m.state === 'lobby' && mp.inGame) { mp.inGame = false; sound.silence(); ui = 'lobby'; show('lobby'); }
@@ -485,7 +673,9 @@ function mpOnMsg(m) {
     case 'snap': if (mp.inGame) mpApplySnap(m); break;
     case 'chat': lobbyUi.addChat(m); break;
     case 'emo': lobbyUi.floatEmoji(m); break;
-    case 'end': mp.result = m.result; break;
+    case 'end': mp.result = m.result; if (m.result && m.result.mode === 'versus' && ui === 'ending') { renderPlaces(m.result); endExtras(); } renderBoardHud(); break;
+    case 'board': mp.board = Array.isArray(m.rows) ? m.rows : null; renderBoardHud(); break;
+    case 'review': game.review = { text: String(m.text || '').slice(0, 900), src: m.src === 'ai' ? 'ai' : 'rules' }; if (ui === 'ending') showReview(game.review); break;
     case 'left': mpReset({ kicked: 'Хозяин убрал вас из комнаты.', timeout: 'Вы слишком долго были без связи — место освобождено.', room_closed: 'Комната закрыта.', replaced: 'Вы подключились с другой вкладки.' }[m.reason] || ''); break;
     case 'err':
       lobbyUi.setBusy(false);
@@ -512,8 +702,10 @@ function wire() {
   click('b-next', () => { if (mp && mp.inGame) { mp.client.send({ t: 'next' }); mp.myAck = true; mpRefresh(); return; } continueSummary(s); handleEvents(); trackPhase(); });
   click('b-again', () => { if (mp && mp.inGame) { mpBackToLobby(); return; } newGame(); });
   click('b-emenu', () => { if (mp) { mpLeave(true); return; } ui = 'title'; updateTitle(); show('title'); });
-  click('b-mp', mpOpen);
-  click('b-wipe', () => { if (confirm('Стереть сохранение и открытые концовки?')) { store.del(SAVE_KEY); meta = { endings: [], plays: 0 }; store.set(META_KEY, JSON.stringify(meta)); updateTitle(); } });
+  click('b-mp', mpOpen); click('b-daily', openDaily); click('b-ach', openAch); click('a-close', closeOverlay); click('b-chal', acceptChallenge); click('b-share', shareResult);
+  click('d-play', startDaily); click('d-close', closeOverlay); click('d-board', () => openBoard('day'));
+  click('d-share', () => { const url = dailyLink(location); (navigator.share ? navigator.share({ text: 'Испытание дня в «Последнем котле»: один сид на всех. Побьёте?', url }) : navigator.clipboard.writeText(url).then(() => { $('d-msg').textContent = 'Ссылка скопирована: ' + url; })).catch(() => { $('d-msg').textContent = 'Ссылка: ' + url; }); });
+  click('b-wipe', () => { if (confirm('Стереть сохранение, открытые концовки и достижения?')) { store.del(SAVE_KEY); meta = cleanMeta(null); store.set(META_KEY, JSON.stringify(meta)); updateTitle(); } });
   $('o-sound').addEventListener('change', e => { settings.sound = e.target.checked; applySettings(); sound.ensure(); sound.play('click'); });
   $('o-sfx').addEventListener('input', e => { settings.sfx = +e.target.value; applySettings(); sound.ensure(); sound.play('valve', 0.5); });
   $('o-music').addEventListener('input', e => { settings.music = +e.target.value; applySettings(); });
@@ -614,7 +806,7 @@ window.addEventListener('keydown', ev => {
   if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { settings.sound = !settings.sound; $('o-sound').checked = settings.sound; applySettings(); return; }
   if (mp && mp.inGame && (k === 't' || k === 'T' || k === 'е' || k === 'Е') && (ui === 'play' || ui === 'card' || ui === 'summary')) { ev.preventDefault(); lobbyUi.toggleChat(true); return; }
   if (ui === 'card') { if (k === '1' || k === '2') { const o = s.card.options[+k - 1]; if (o) { ev.preventDefault(); pickCard(o.key); } } return; }
-  if (ui === 'settings' || ui === 'help' || ui === 'board') { if (k === 'Escape') closeOverlay(); return; }
+  if (ui === 'settings' || ui === 'help' || ui === 'board' || ui === 'daily' || ui === 'ach') { if (k === 'Escape') closeOverlay(); return; }
   if (ui === 'pause') { if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') resumeGame(); return; }
   if (ui !== 'play') return;
   if (k === 'Escape' || k === 'p' || k === 'P' || k === 'з' || k === 'З') { pauseGame(); return; }
@@ -715,7 +907,7 @@ if (DEBUG) {
 
 // ---------- запуск
 function init() {
-  wire(); applySettings(); resize(); updateTitle(); show('title'); mpInit();
+  wire(); applySettings(); resize(); updateTitle(); show('title'); mpInit(); showChallengeBanner();
   fetchBoard('score').then(e => { boardAvailable = e !== null; updateBoardBtn(); });
   requestAnimationFrame(t => { last = t; frame(t); });
   window.__gameReady = true; if (window.__bootReady) window.__bootReady();   // сообщаем стражу загрузки (boot.js), что всё поднялось
