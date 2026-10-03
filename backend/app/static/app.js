@@ -122,7 +122,7 @@ function fillSel(sel, map, keys, val) { sel.replaceChildren(...keys.map(k => el(
 function renderAi(d) {
   aiState = d; const s = d.settings;
   $('#aiVaultWarn').hidden = d.vault;
-  $('#aiEnabled').checked = s.enabled; $('#aiTopic').value = s.topic; $('#aiStyle').value = s.style;
+  $('#aiEnabled').checked = s.enabled; $('#aiHost').checked = s.host !== false; $('#aiReview').checked = s.review !== false; $('#aiCompanion').checked = s.companion !== false; $('#aiDaily').checked = s.daily !== false; $('#aiTopic').value = s.topic; $('#aiStyle').value = s.style;
   fillSel($('#aiLength'), LEN_RU, d.options.length, s.length); fillSel($('#aiFreq'), FREQ_RU, Object.keys(d.options.frequency), s.frequency);
   if (!$('#aiSit').options.length) fillSel($('#aiSit'), SIT_RU, Object.keys(d.options.situations), 'calm');
   $('#aiTable thead').replaceChildren(el('tr', {}, ...['№', 'Название', 'Провайдер', 'Модель', 'Ключ', 'Статус', 'Вкл', ''].map(t => el('th', { textContent: t }))));
@@ -146,7 +146,7 @@ async function aiDo(fn) { try { await fn(); } catch (e) { toast(e.message); } aw
 async function loadAi() { try { renderAi(await aiReq('/api/admin/ai')); } catch (e) { if (e.message !== '401') toast(e.message); } }
 $('#aiSave').addEventListener('click', async () => {
   try {
-    const r = await aiReq('/api/admin/ai/settings', 'POST', { enabled: $('#aiEnabled').checked, topic: $('#aiTopic').value, style: $('#aiStyle').value, length: $('#aiLength').value, frequency: $('#aiFreq').value });
+    const r = await aiReq('/api/admin/ai/settings', 'POST', { enabled: $('#aiEnabled').checked, host: $('#aiHost').checked, review: $('#aiReview').checked, companion: $('#aiCompanion').checked, daily: $('#aiDaily').checked, topic: $('#aiTopic').value, style: $('#aiStyle').value, length: $('#aiLength').value, frequency: $('#aiFreq').value });
     $('#aiSaveRes').textContent = 'Сохранено'; toast('Сохранено'); aiState.settings = r.settings;
   } catch (e) { $('#aiSaveRes').textContent = e.message; }
 });

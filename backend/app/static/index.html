@@ -62,6 +62,13 @@
       <h3>Заметки механика</h3>
       <p class="muted">Редко показываются в игре короткой строкой. ИИ вызывает только сервер; если он недоступен — игра показывает запасные тексты.</p>
       <label class="chk"><input id="aiEnabled" type="checkbox"> ИИ-заметки включены</label>
+      <fieldset class="blk"><legend>ИИ-функции мультиплеера и испытания дня</legend>
+        <label class="chk"><input id="aiHost" type="checkbox"> ИИ-ведущий событий (тексты событий ночи)</label>
+        <label class="chk"><input id="aiReview" type="checkbox"> ИИ-разбор партии после финала</label>
+        <label class="chk"><input id="aiCompanion" type="checkbox"> Реплики ИИ-напарника в кооперативе</label>
+        <label class="chk"><input id="aiDaily" type="checkbox"> Сюжет ежедневного испытания</label>
+        <p class="muted">Выключенная функция не вызывает ИИ вообще — игра показывает запасные тексты. Механика (события, бот-напарник) от тумблеров не зависит.</p>
+      </fieldset>
       <label class="blk">О чём писать (тема / инструкция)<textarea id="aiTopic" rows="3" maxlength="400"></textarea></label>
       <label class="blk">Стиль<input id="aiStyle" type="text" maxlength="200"></label>
       <div class="rowf">

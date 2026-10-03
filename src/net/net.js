@@ -7,7 +7,7 @@ export const TIMEOUT = 3000;   // жёсткий предел на любой з
 // Всегда завершается за ≤ TIMEOUT мс: и по AbortController, и по «гонке» с таймером (на случай браузеров, где fetch не реагирует на abort).
 export function call(path, body, opts = {}) {
   if (typeof fetch !== 'function') return Promise.resolve(null);
-  const limit = Math.min(opts.timeout || TIMEOUT, TIMEOUT);
+  const limit = Math.min(opts.timeout || TIMEOUT, opts.cap || TIMEOUT);   // opts.cap — только для редких долгих запросов (разбор партии ИИ)
   const ctl = typeof AbortController === 'function' ? new AbortController() : null;
   let timer = 0;
   const deadline = new Promise(res => { timer = setTimeout(() => { try { if (ctl) ctl.abort(); } catch (e) { /* */ } res(null); }, limit); });
@@ -52,6 +52,11 @@ export class Run {
     if (r && r.ok) { this.sent++; return true; }
     return false;
   }
+  async submitDaily(result, nick, pid, day) {
+    if (this.pending) await this.pending;
+    if (!this.token) return null;
+    return call('/daily/score', { token: this.token, pid, nick, day, ...result });
+  }
   async submit(result, nick, pid) {
     if (this.pending) await this.pending;
     if (!this.token) return null;
@@ -68,4 +73,23 @@ export function randomId() {
   const a = new Uint8Array(12);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(a); else for (let i = 0; i < a.length; i++) a[i] = Math.random() * 256;
   return [...a].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Испытание дня: { day, seed, quest:{id,title,goal_text,text,src} } или null. */
+export async function fetchDaily() {
+  const r = await call('/daily');
+  return r && r.ok && r.data && typeof r.data.seed === 'number' && r.data.quest ? r.data : null;
+}
+export async function fetchDailyBoard(day, pid) {
+  const r = await call('/daily/board?limit=20' + (day ? '&day=' + encodeURIComponent(day) : '') + (pid ? '&pid=' + encodeURIComponent(pid) : ''));
+  return r && r.ok && r.data && Array.isArray(r.data.entries) ? r.data : null;
+}
+export async function fetchSeason(pid) {
+  const r = await call('/leaderboard?board=season&limit=20' + (pid ? '&pid=' + encodeURIComponent(pid) : ''));
+  return r && r.ok && r.data && Array.isArray(r.data.entries) ? r.data : null;
+}
+/** Разбор партии: 3–4 предложения. Ждёт до 12 с; любой сбой/выключенный ИИ → null (тогда экран просто без разбора). */
+export async function fetchReview(agg) {
+  const r = await call('/review', agg, { cap: 12000, timeout: 12000 });
+  return r && r.ok && r.data && r.data.enabled && typeof r.data.text === 'string' ? { text: r.data.text, src: r.data.src } : null;
 }

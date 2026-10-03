@@ -27,6 +27,16 @@ export const ERR_TEXT = {
   forbidden: 'Этим управляете не вы.', bad_value: 'Некорректное значение.', bad_json: 'Ошибка связи.', bad_message: 'Ошибка связи.', unknown: 'Неизвестная команда.',
   no_room: 'Вы не в комнате.', not_playing: 'Игра ещё не идёт.', bad_state: 'Сейчас так нельзя.',
 };
+export const MODE_NAMES = { coop: 'Кооператив', versus: 'Соревнование' };
+export const BOARD_STATE = { playing: 'играет', done: 'финиш', dnf: 'вышел', offline: 'нет связи' };
+/** Строки живой таблицы для HUD: сортировка уже на сервере; здесь — только безопасное приведение типов и метка «вы». */
+export function boardView(rows, me) {
+  if (!Array.isArray(rows)) return [];
+  return rows.slice(0, 4).map((r, i) => ({ place: i + 1, pid: String(r.pid), nick: String(r.nick || '?').slice(0, 16), score: Math.max(0, r.score | 0), night: Math.max(1, Math.min(10, r.night | 0)),
+    pop: Math.max(0, r.pop | 0), state: BOARD_STATE[r.state] ? r.state : 'playing', me: r.pid === me }));
+}
+/** Подпись места: «1-е», «DNF». */
+export function placeLabel(e) { return e.dnf ? 'вышел' : e.place + '-е'; }
 export const errText = code => ERR_TEXT[code] || 'Что-то пошло не так (' + String(code).slice(0, 24) + ').';
 
 /** Кому принадлежит клапан/лопата/утечки: из roles и списка игроков → подписи для интерфейса. */
