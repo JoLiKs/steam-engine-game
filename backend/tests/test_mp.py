@@ -484,6 +484,13 @@ def test_limits_from_env_and_default_is_ten_per_ten_minutes(clock):
     a.send(t="create", nick="A", max=2); assert "create_limit" in a.errs()
 
 
+def test_timescale_env_is_bounded_and_default_is_one():
+    assert Limits().timescale == 1.0
+    assert Limits.from_env({"SEG_MP_TIMESCALE": "30"}).timescale == 30.0
+    assert Limits.from_env({"SEG_MP_TIMESCALE": "1000"}).timescale == 1.0      # вне диапазона → по умолчанию
+    assert Limits.from_env({"SEG_MP_TIMESCALE": "0"}).timescale == 1.0
+
+
 def test_ws_versus_two_clients_live_race_and_board(ws_app):
     with TestClient(ws_app) as c:
         with c.websocket_connect("/ws", headers={"origin": GH}) as w1, c.websocket_connect("/ws", headers={"origin": ORIGIN}) as w2:

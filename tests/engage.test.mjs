@@ -118,9 +118,46 @@ test('события ведущего: детерминированы по си�
 });
 test('ведущий в симуляции: host выключен по умолчанию и не меняет обычную игру', () => {
   const plain = createState(77), host = createState(77, { host: true });
-  assert.equal(plain.hostOn, undefined || plain.hostOn); assert.ok(!plain.hostOn); assert.ok(host.hostOn);
+  assert.ok(!plain.hostOn); assert.ok(host.hostOn);
   beginNight(host, 1); assert.ok(Array.isArray(host.xev));
   let seen = 0; for (let i = 0; i < 60 * 240; i++) { botAct(host, 'good', {}); step(host, 1 / 60); for (const e of host.events) if (e.type === 'hostev') seen++; host.events.length = 0; if (host.phase !== 'night') break; }
   assert.ok(seen >= 1, 'событие ведущего показано');
   const p2 = createState(77); beginNight(p2, 1); assert.ok(!p2.xev || p2.xev.length === 0);
+});
+
+// ---- сетевые вызовы 2.0 с поддельным fetch
+import { fetchDaily, fetchDailyBoard, fetchSeason, fetchReview, Run } from '../src/net/net.js';
+const withFetch = async (impl, fn) => { const old = globalThis.fetch; globalThis.fetch = impl; try { return await fn(); } finally { globalThis.fetch = old; } };
+const J = (status, body) => async () => ({ ok: status < 300, status, json: async () => body });
+test('fetchDaily: разбор ответа и отказоустойчивость', async () => {
+  const good = { day: '2026-10-03', seed: 123, quest: { id: 'warm', title: 'T', goal: { pop_min: 700 }, goal_text: 'g', text: 'x', src: 'fallback' } };
+  assert.deepEqual(await withFetch(J(200, good), fetchDaily), good);
+  assert.equal(await withFetch(J(200, { nope: 1 }), fetchDaily), null);
+  assert.equal(await withFetch(J(500, {}), fetchDaily), null);
+  assert.equal(await withFetch(async () => { throw new Error('offline'); }, fetchDaily), null);
+});
+test('fetchDailyBoard / fetchSeason: параметры и null при сбое', async () => {
+  let url = ''; const spy = async u => { url = u; return { ok: true, status: 200, json: async () => ({ entries: [{ nick: 'a' }] }) }; };
+  assert.equal((await withFetch(spy, () => fetchDailyBoard('2026-10-03', 'abc12345'))).entries.length, 1);
+  assert.match(url, /daily\/board\?limit=20&day=2026-10-03&pid=abc12345/);
+  await withFetch(spy, () => fetchSeason('pid12345')); assert.match(url, /board=season/);
+  assert.equal(await withFetch(J(429, {}), () => fetchSeason('x')), null);
+});
+test('fetchReview: только включённый ответ с текстом; выключено/ошибка → null', async () => {
+  assert.deepEqual(await withFetch(J(200, { enabled: true, text: 'Хорошая смена.', src: 'ai' }), () => fetchReview({ nights: 3 })), { text: 'Хорошая смена.', src: 'ai' });
+  assert.equal(await withFetch(J(200, { enabled: false }), () => fetchReview({})), null);
+  assert.equal(await withFetch(J(422, {}), () => fetchReview({})), null);
+});
+test('Run.submitDaily шлёт билет, день и результат; без билета — null', async () => {
+  let sent = null;
+  const run = new Run(() => true); run.token = 'TK';
+  await withFetch(async (u, o) => { sent = { u, b: JSON.parse(o.body) }; return { ok: true, status: 200, json: async () => ({ ok: true }) }; }, () => run.submitDaily({ score: 5, nights: 1 }, 'Ник', 'pid', '2026-10-03'));
+  assert.match(sent.u, /daily\/score$/); assert.deepEqual(sent.b, { token: 'TK', pid: 'pid', nick: 'Ник', day: '2026-10-03', score: 5, nights: 1 });
+  const run2 = new Run(() => true); assert.equal(await run2.submitDaily({}, '', 'p', 'd'), null);
+});
+
+import { isPublicApi } from '../_worker.js';
+test('воркер Pages пропускает новые публичные маршруты 2.0 и не больше', () => {
+  for (const p of ['/api/g/daily', '/api/g/daily/score', '/api/g/daily/board', '/api/g/review', '/api/g/leaderboard']) assert.ok(isPublicApi(p), p);
+  for (const p of ['/api/g/admin', '/api/g/daily/../x', '/api/g/', '/api/g/review/x', '/api/g/constructor', '/api/g/__proto__']) assert.ok(!isPublicApi(p), p);
 });
