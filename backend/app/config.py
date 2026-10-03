@@ -38,6 +38,8 @@ class Settings:
     rl_read_per_min: int = 120
     max_events_per_run: int = 80
     ai_master_key: str = ""             # ключ Fernet для шифрования API-ключей админа (только env-файл сервера)
+    ws_allow_no_origin: bool = False    # WebSocket без заголовка Origin (боты/тесты); браузеры всегда шлют Origin
+    mp_enabled: bool = True
     min_time_factor: float = 0.5        # доля суммарной длительности пройденных ночей, быстрее которой пройти нельзя
 
     @classmethod
@@ -59,6 +61,8 @@ class Settings:
         s.require_proxy = g("SEG_REQUIRE_PROXY", "1") not in ("0", "false", "no")
         s.ai_master_key = g("SEG_AI_MASTER_KEY", "")
         s.min_time_factor = float(g("SEG_MIN_TIME_FACTOR", str(s.min_time_factor)))   # 0 — только для локальных e2e-тестов
+        s.ws_allow_no_origin = g("SEG_WS_ALLOW_NO_ORIGIN", "0") in ("1", "true", "yes")
+        s.mp_enabled = g("SEG_MP", "1") not in ("0", "false", "no")
         s.rl_score_per_min = int(g("SEG_RL_SCORE_PER_MIN", str(s.rl_score_per_min)))
         return s
 

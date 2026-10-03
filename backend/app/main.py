@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 
 from . import __version__
@@ -21,6 +21,7 @@ from .db import DB, SESSION_SORT
 from .ai import AiError, AiService
 from .aicrypto import KeyVault
 from .ainotes import SITUATIONS
+from .mp import Hub
 from .ratelimit import LoginGuard, RateLimiter
 from .scoring import ENDING_BONUS, PLATFORMS, Invalid, clean_nick, int_in, score_js, validate_result
 from .security import AdminAuth, Tickets, client_ip, hash_ip, hash_pid, proxy_verified
@@ -85,7 +86,7 @@ def validate_event(etype: str, d: Any) -> tuple[dict[str, Any], dict[str, Any]]:
     return out, meta
 
 
-def create_app(settings: Settings | None = None, db: DB | None = None, clock=time.time, ai_transport=None, ai_background: bool = True) -> FastAPI:
+def create_app(settings: Settings | None = None, db: DB | None = None, clock=time.time, ai_transport=None, ai_background: bool = True, mp_autotick: bool = True, mp_limits=None) -> FastAPI:
     s = settings or Settings.from_env()
     s.validate()
     db = db or DB(s.db_path)
@@ -98,6 +99,7 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
     rl_score, rl_score_day = RateLimiter(s.rl_score_per_min, 60), RateLimiter(s.rl_score_per_day, 86400)
     rl_read, rl_admin = RateLimiter(s.rl_read_per_min, 60), RateLimiter(300, 60)
     guard = LoginGuard(max_fails=5, lock_s=900, global_max=60, global_lock_s=300)
+    hub = Hub(clock=clock, limits=mp_limits)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -110,12 +112,26 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
                         r.gc()
                 except Exception:
                     pass
-        t = asyncio.create_task(cleanup())
+        async def mp_loop() -> None:
+            n = 0
+            while True:
+                await asyncio.sleep(1 / 60)
+                try:
+                    hub.tick()
+                    n += 1
+                    if n % 60 == 0:
+                        hub.housekeeping()
+                except Exception:
+                    pass
+        tasks = [asyncio.create_task(cleanup())]
+        if mp_autotick and s.mp_enabled:
+            tasks.append(asyncio.create_task(mp_loop()))
         yield
-        t.cancel()
+        for t in tasks:
+            t.cancel()
 
     app = FastAPI(title="Last Boiler API", version=__version__, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    app.state.db, app.state.settings, app.state.ai = db, s, ai
+    app.state.db, app.state.settings, app.state.ai, app.state.hub = db, s, ai, hub
 
     def ip_of(request: Request) -> str:
         return client_ip(request.headers, request.client.host if request.client else None, s.proxy_secret)
@@ -502,6 +518,62 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
     def admin_unknown(rest: str, request: Request):
         require_admin(request)
         raise HTTPException(404, "not found")
+
+    # ====================================================== мультиплеер (WebSocket)
+    ws_origins = set(s.allowed_origins) | set(s.direct_origins)
+
+    @app.websocket("/ws")
+    async def mp_socket(ws: WebSocket):
+        # Middleware HTTP на WebSocket не действует — Origin проверяем сами (защита от чужих сайтов; куки и пароли здесь не используются).
+        origin = (ws.headers.get("origin") or "").rstrip("/").lower()
+        if not s.mp_enabled or not ((origin and origin in ws_origins) or (not origin and s.ws_allow_no_origin)):
+            await ws.close(code=1008)
+            return
+        ip = client_ip(ws.headers, ws.client.host if ws.client else None, s.proxy_secret)
+        wake = asyncio.Event()
+        conn = hub.connect(ip, on_wake=wake.set)
+        if conn is None:
+            await ws.close(code=1013)
+            return
+        await ws.accept()
+
+        async def writer() -> None:
+            try:
+                while True:
+                    while conn.outbox:
+                        await ws.send_text(conn.outbox.popleft())
+                    if conn.closed:
+                        break
+                    wake.clear()
+                    if conn.outbox or conn.closed:
+                        continue
+                    await wake.wait()
+            except Exception:
+                conn.close()
+            try:
+                await ws.close(code=conn.close_code if 1000 <= conn.close_code < 5000 else 1000)
+            except Exception:
+                pass
+
+        wtask = asyncio.create_task(writer())
+        try:
+            while not conn.closed:
+                try:
+                    text = await asyncio.wait_for(ws.receive_text(), timeout=75)
+                except asyncio.TimeoutError:
+                    conn.close(1001, "idle")
+                    break
+                hub.handle(conn, text)
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        except Exception:
+            conn.close(1011, "internal")
+        finally:
+            hub.disconnect(conn)
+            try:
+                await asyncio.wait_for(wtask, timeout=2)
+            except Exception:
+                wtask.cancel()
 
     # Панель отдаётся ТОЛЬКО с действующей сессией; без неё — 401 (страница входа живёт на Cloudflare Pages: /admin/).
     PANEL = {"": ("index.html", "text/html; charset=utf-8"), "index.html": ("index.html", "text/html; charset=utf-8"),
