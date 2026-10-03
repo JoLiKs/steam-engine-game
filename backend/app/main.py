@@ -6,6 +6,7 @@ import csv
 import hmac
 import io
 import json
+import logging
 import re
 import time
 from contextlib import asynccontextmanager
@@ -122,7 +123,7 @@ def create_app(settings: Settings | None = None, db: DB | None = None, clock=tim
                     if n % 60 == 0:
                         hub.housekeeping()
                 except Exception:
-                    pass
+                    logging.getLogger("seg.mp").exception("mp loop")
         tasks = [asyncio.create_task(cleanup())]
         if mp_autotick and s.mp_enabled:
             tasks.append(asyncio.create_task(mp_loop()))

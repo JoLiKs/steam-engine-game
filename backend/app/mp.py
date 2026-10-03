@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import math
 import re
 import secrets
@@ -20,6 +21,7 @@ from typing import Any, Callable
 from . import simcore as sc
 from .scoring import clean_nick, score_js
 
+log = logging.getLogger("seg.mp")
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"      # без I, L, O, 0, 1 — не путаются при диктовке
 CODE_LEN = 5
 EMOJI = frozenset({"thumbs", "fire", "scream", "heart", "clap", "cold", "steam", "sos"})
@@ -688,12 +690,21 @@ class Hub:
             n = int(room._acc / sc.DT)
             if n:
                 room._acc -= n * sc.DT
-                room.advance(min(n, 6))
+                try:
+                    room.advance(min(n, 6))
+                except Exception:                        # сбой в одной комнате не должен останавливать остальные
+                    log.exception("room %s: tick failed", room.code)
+                    room.state = "ended"; room.broadcast({"t": "left", "reason": "room_closed"}); room.players.clear()
 
     def housekeeping(self, now: float | None = None) -> None:
         now = self.clock() if now is None else now
         for code, room in list(self.rooms.items()):
-            if room.housekeeping(now):
+            try:
+                close = room.housekeeping(now)
+            except Exception:
+                log.exception("room %s: housekeeping failed", code)
+                close = True
+            if close:
                 for p in list(room.players.values()):
                     if p.conn:
                         p.conn.send({"t": "left", "reason": "room_closed"})
