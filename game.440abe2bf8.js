@@ -145,6 +145,41 @@
     { id: "leak", text: "\u0423\u0442\u0435\u0447\u043A\u0430! \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043E\u0431\u043B\u0430\u0447\u043A\u043E \u043F\u0430\u0440\u0430 \u043D\u0430\u0434 \u0442\u0440\u0443\u0431\u043E\u0439 (\u0438\u043B\u0438 F), \u0447\u0442\u043E\u0431\u044B \u0437\u0430\u0442\u043A\u043D\u0443\u0442\u044C \u0435\u0451.", hint: "leak" },
     { id: "go", text: "\u0413\u043E\u0442\u043E\u0432\u043E! \u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u0437\u0435\u043B\u0451\u043D\u043E\u0439 \u0437\u043E\u043D\u0435 \u0438 \u043F\u043E\u0434\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0433\u043E\u043B\u044C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043D\u043E\u0447\u044C.", hint: null }
   ];
+  var HOST_EVENTS = [
+    { id: "frost", d: 0, m: 1.3, dur: 14, label: "\u041D\u043E\u0447\u043D\u043E\u0439 \u043C\u043E\u0440\u043E\u0437", text: "\u0423\u0434\u0430\u0440\u0438\u043B \u0432\u043D\u0435\u0437\u0430\u043F\u043D\u044B\u0439 \u043C\u043E\u0440\u043E\u0437 \u2014 \u0432 \u043F\u0430\u043B\u0430\u0442\u0430\u0445 \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044F \u043F\u0440\u043E\u0441\u044F\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u0430\u0440\u0430." },
+    { id: "fever", d: 0, m: 1.35, dur: 12, label: "\u0422\u0440\u0435\u0432\u043E\u0433\u0430 \u0432 \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u0435", text: "\u041F\u0440\u0438\u0432\u0435\u0437\u043B\u0438 \u043D\u043E\u0432\u044B\u0445 \u0431\u043E\u043B\u044C\u043D\u044B\u0445: \u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044E \u043D\u0443\u0436\u0435\u043D \u043F\u0430\u0440, \u0438 \u043F\u043E\u0441\u043A\u043E\u0440\u0435\u0435." },
+    { id: "wind", d: 1, m: 1.3, dur: 16, label: "\u0412\u0435\u0442\u0435\u0440 \u0441 \u0440\u0435\u043A\u0438", text: "\u0412\u0435\u0442\u0435\u0440 \u0432\u044B\u0434\u0443\u0432\u0430\u0435\u0442 \u0442\u0435\u043F\u043B\u043E \u0438\u0437 \u041A\u0432\u0430\u0440\u0442\u0430\u043B\u043E\u0432 \u2014 \u0436\u0438\u0442\u0435\u043B\u0438 \u043A\u0440\u0443\u0442\u044F\u0442 \u0432\u0435\u043D\u0442\u0438\u043B\u0438 \u0441\u0430\u043C\u0438." },
+    { id: "feast", d: 1, m: 1.25, dur: 14, label: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A \u0432 \u041A\u0432\u0430\u0440\u0442\u0430\u043B\u0430\u0445", text: "\u0412 \u041A\u0432\u0430\u0440\u0442\u0430\u043B\u0430\u0445 \u0437\u0430\u0442\u0435\u044F\u043B\u0438 \u043F\u0440\u0430\u0437\u0434\u043D\u0438\u043A: \u0434\u0432\u0435\u0440\u0438 \u043D\u0430\u0440\u0430\u0441\u043F\u0430\u0448\u043A\u0443, \u0430 \u0442\u0435\u043F\u043B\u043E \u0443\u0445\u043E\u0434\u0438\u0442." },
+    { id: "order", d: 2, m: 1.4, dur: 14, label: "\u0421\u0440\u043E\u0447\u043D\u044B\u0439 \u0437\u0430\u043A\u0430\u0437", text: "\u041D\u0430 \u0417\u0430\u0432\u043E\u0434 \u043F\u0440\u0438\u0448\u0451\u043B \u0441\u0440\u043E\u0447\u043D\u044B\u0439 \u0437\u0430\u043A\u0430\u0437 \u2014 \u0441\u0442\u0430\u043D\u043A\u0438 \u043F\u0440\u043E\u0441\u044F\u0442 \u043F\u0430\u0440\u0430 \u0441\u0432\u0435\u0440\u0445 \u043D\u043E\u0440\u043C\u044B." },
+    { id: "inspect", d: 2, m: 1.25, dur: 12, label: "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0417\u0430\u0432\u043E\u0434\u0430", text: "\u041F\u0440\u043E\u0432\u0435\u0440\u044F\u044E\u0449\u0438\u0435 \u0437\u0430\u0433\u043B\u044F\u043D\u0443\u043B\u0438 \u043D\u0430 \u0417\u0430\u0432\u043E\u0434: \u0432\u0441\u0451 \u0434\u043E\u043B\u0436\u043D\u043E \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u043A\u0430\u043A \u0447\u0430\u0441\u044B." },
+    { id: "smogfront", d: 3, m: 1.35, dur: 16, label: "\u0421\u043C\u043E\u0433 \u043B\u043E\u0436\u0438\u0442\u0441\u044F", text: "\u041D\u0430\u0434 \u0433\u043E\u0440\u043E\u0434\u043E\u043C \u043B\u0451\u0433 \u0441\u043C\u043E\u0433 \u2014 \u0424\u0438\u043B\u044C\u0442\u0440\u0430\u043C \u043D\u0443\u0436\u043D\u043E \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u0430\u0440\u0430, \u0447\u0442\u043E\u0431\u044B \u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C\u0441\u044F." },
+    { id: "soot", d: 3, m: 1.3, dur: 12, label: "\u0421\u0430\u0436\u0430 \u0432 \u0442\u0440\u0443\u0431\u0430\u0445", text: "\u0421\u0430\u0436\u0430 \u0437\u0430\u0431\u0438\u043B\u0430 \u0442\u0440\u0443\u0431\u044B \u2014 \u0424\u0438\u043B\u044C\u0442\u0440\u044B \u0436\u0430\u0434\u043D\u043E \u043F\u0440\u043E\u0441\u044F\u0442 \u043F\u0430\u0440\u0430." }
+  ];
+  var mulberry = (st) => {
+    st.rs = st.rs + 1831565813 >>> 0;
+    let t = st.rs;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+  function hostEvents(seed, n) {
+    if (!(n >= 1))
+      return [];
+    const st = { rs: (Math.imul(seed >>> 0, 2654435761) ^ Math.imul(n + 1, 2246822507)) >>> 0 || 1 };
+    const nightDur = NIGHTS[n].dur, cnt = n >= 5 ? 2 : 1, out = [], used = [];
+    for (let k = 0; k < cnt; k++) {
+      let i = Math.floor(mulberry(st) * HOST_EVENTS.length) % HOST_EVENTS.length;
+      while (used.includes(i))
+        i = (i + 1) % HOST_EVENTS.length;
+      used.push(i);
+      const h = HOST_EVENTS[i];
+      const lo = k === 0 ? 0.15 : 0.55, hi = k === 0 ? 0.4 : 0.7;
+      const t0 = Math.round(nightDur * (lo + (hi - lo) * mulberry(st)) * 10) / 10;
+      const m = Math.round((h.m + (mulberry(st) - 0.5) * 0.1) * 100) / 100;
+      out.push({ id: h.id, d: h.d, m, t0, t1: Math.round((t0 + h.dur) * 10) / 10, label: h.label, shown: false });
+    }
+    return out;
+  }
 
   // src/core/rng.js
   function nextRand(s2) {
@@ -236,7 +271,12 @@
       coalBurned: 0,
       nightStartCoal: 24,
       nightStartPop: POP_START,
-      nightCoalMade: 0
+      nightCoalMade: 0,
+      hostOn: !!opts.host,
+      xev: (
+        /** @type {{id: string, d: number, m: number, t0: number, t1: number, label: string, shown: boolean}[]} */
+        []
+      )
     };
     return s2;
   }
@@ -254,6 +294,10 @@
         const ramp = Math.min(1, (s2.t - e.t0) / 2, (e.t1 - s2.t) / 2);
         m = Math.max(m, 1 + (e.m - 1) * Math.max(0, ramp));
       }
+    }
+    for (const e of s2.xev || []) {
+      if (e.d === d && s2.t >= e.t0 && s2.t <= e.t1)
+        m = Math.max(m, 1 + (e.m - 1) * Math.max(0, Math.min(1, (s2.t - e.t0) / 2, (e.t1 - s2.t) / 2)));
     }
     return m;
   }
@@ -369,6 +413,7 @@
     s2.nightStartPop = s2.pop;
     s2.nightStartCoal = s2.coal;
     s2.nightCoalMade = s2.coalMade;
+    s2.xev = s2.hostOn ? hostEvents(s2.seed, n) : [];
     emit(s2, "night", { n });
   }
   function continueSummary(s2) {
@@ -426,6 +471,11 @@
         emit(s2, "event", { label: e.label, d: e.d });
       }
     }
+    for (const e of s2.xev || [])
+      if (!e.shown && s2.t >= e.t0) {
+        e.shown = true;
+        emit(s2, "hostev", { id: e.id, d: e.d, m: e.m, label: e.label });
+      }
     const tk = TICKER[s2.night];
     if (tk && s2.tickerIdx < tk.length && s2.t >= tk[s2.tickerIdx].t) {
       emit(s2, "talk", tk[s2.tickerIdx]);
@@ -3119,7 +3169,7 @@
   function call(path, body, opts = {}) {
     if (typeof fetch !== "function")
       return Promise.resolve(null);
-    const limit = Math.min(opts.timeout || TIMEOUT, TIMEOUT);
+    const limit = Math.min(opts.timeout || TIMEOUT, opts.cap || TIMEOUT);
     const ctl = typeof AbortController === "function" ? new AbortController() : null;
     let timer = 0;
     const deadline = new Promise((res) => {
@@ -3202,6 +3252,13 @@
       }
       return false;
     }
+    async submitDaily(result, nick, pid, day) {
+      if (this.pending)
+        await this.pending;
+      if (!this.token)
+        return null;
+      return call("/daily/score", __spreadValues({ token: this.token, pid, nick, day }, result));
+    }
     async submit(result, nick, pid) {
       if (this.pending)
         await this.pending;
@@ -3222,6 +3279,278 @@
       for (let i = 0; i < a.length; i++)
         a[i] = Math.random() * 256;
     return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function fetchDaily() {
+    const r = await call("/daily");
+    return r && r.ok && r.data && typeof r.data.seed === "number" && r.data.quest ? r.data : null;
+  }
+  async function fetchDailyBoard(day, pid) {
+    const r = await call("/daily/board?limit=20" + (day ? "&day=" + encodeURIComponent(day) : "") + (pid ? "&pid=" + encodeURIComponent(pid) : ""));
+    return r && r.ok && r.data && Array.isArray(r.data.entries) ? r.data : null;
+  }
+  async function fetchSeason(pid) {
+    const r = await call("/leaderboard?board=season&limit=20" + (pid ? "&pid=" + encodeURIComponent(pid) : ""));
+    return r && r.ok && r.data && Array.isArray(r.data.entries) ? r.data : null;
+  }
+  async function fetchReview(agg) {
+    const r = await call("/review", agg, { cap: 12e3, timeout: 12e3 });
+    return r && r.ok && r.data && r.data.enabled && typeof r.data.text === "string" ? { text: r.data.text, src: r.data.src } : null;
+  }
+
+  // src/core/achievements.js
+  var FULL = ["light", "smoke", "iron", "cold"];
+  var full = (c) => FULL.includes(c.ending) && c.nights >= 10;
+  var ACHIEVEMENTS = [
+    { id: "first_dawn", name: "\u041F\u0435\u0440\u0432\u044B\u0439 \u0440\u0430\u0441\u0441\u0432\u0435\u0442", desc: "\u041F\u0435\u0440\u0435\u0436\u0438\u0432\u0438\u0442\u0435 \u0445\u043E\u0442\u044F \u0431\u044B \u043E\u0434\u043D\u0443 \u043D\u043E\u0447\u044C.", icon: "sun", tier: 1, test: (c) => c.nights >= 1 },
+    { id: "half_way", name: "\u041F\u043E\u043B\u043F\u0443\u0442\u0438", desc: "\u0414\u043E\u0436\u0438\u0432\u0438\u0442\u0435 \u0434\u043E \u0448\u0435\u0441\u0442\u043E\u0439 \u043D\u043E\u0447\u0438.", icon: "moon", tier: 1, test: (c) => c.nights >= 5 },
+    { id: "convoy", name: "\u041E\u0431\u043E\u0437 \u043F\u0440\u0438\u0448\u0451\u043B", desc: "\u041F\u0435\u0440\u0435\u0436\u0438\u0432\u0438\u0442\u0435 \u0432\u0441\u0435 \u0434\u0435\u0441\u044F\u0442\u044C \u043D\u043E\u0447\u0435\u0439.", icon: "flag", tier: 2, test: full },
+    { id: "light", name: "\u0421\u0432\u0435\u0442\u043B\u0430\u044F \u0437\u0438\u043C\u0430", desc: "\u0414\u043E\u0431\u0435\u0439\u0442\u0435\u0441\u044C \u0441\u0432\u0435\u0442\u043B\u043E\u0439 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438.", icon: "star", tier: 3, test: (c) => c.ending === "light" },
+    { id: "smoke_end", name: "\u0414\u044B\u043C\u043D\u0430\u044F \u043F\u0440\u0430\u0432\u0434\u0430", desc: "\u0423\u0432\u0438\u0434\u044C\u0442\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0443 \xAB\u0433\u043E\u0440\u043E\u0434 \u0432 \u0434\u044B\u043C\u0443\xBB.", icon: "cloud", tier: 1, test: (c) => c.ending === "smoke" },
+    { id: "iron_end", name: "\u0416\u0435\u043B\u0435\u0437\u043D\u0430\u044F \u0446\u0435\u043D\u0430", desc: "\u0423\u0432\u0438\u0434\u044C\u0442\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0443 \xAB\u0436\u0435\u043B\u0435\u0437\u043D\u0430\u044F \u0446\u0435\u043D\u0430\xBB.", icon: "gear", tier: 1, test: (c) => c.ending === "iron" },
+    { id: "cold_end", name: "\u0425\u043E\u043B\u043E\u0434\u043D\u0430\u044F \u0437\u0438\u043C\u0430", desc: "\u0414\u043E\u0439\u0434\u0438\u0442\u0435 \u0434\u043E \u043E\u0431\u043E\u0437\u0430, \u043F\u043E\u0442\u0435\u0440\u044F\u0432 \u043F\u043E\u0447\u0442\u0438 \u0432\u0435\u0441\u044C \u0433\u043E\u0440\u043E\u0434.", icon: "snow", tier: 1, test: (c) => c.ending === "cold" },
+    { id: "boom", name: "\u0411\u0430\u0431\u0430\u0445", desc: "\u0412\u0437\u043E\u0440\u0432\u0438\u0442\u0435 \u0410\u0433\u0430\u0444\u044C\u044E. \u0411\u044B\u0432\u0430\u0435\u0442.", icon: "skull", tier: 1, test: (c) => c.ending === "boom" },
+    { id: "silence", name: "\u0422\u0438\u0448\u0438\u043D\u0430", desc: "\u0414\u043E\u0436\u0434\u0438\u0442\u0435\u0441\u044C, \u043F\u043E\u043A\u0430 \u0432 \u0433\u043E\u0440\u043E\u0434\u0435 \u043F\u043E\u0433\u0430\u0441\u043D\u0443\u0442 \u043E\u0433\u043D\u0438.", icon: "moon", tier: 1, test: (c) => c.ending === "silence" },
+    { id: "all_endings", name: "\u0412\u0441\u0435 \u0441\u0443\u0434\u044C\u0431\u044B", desc: "\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u0441\u0435 \u0448\u0435\u0441\u0442\u044C \u043A\u043E\u043D\u0446\u043E\u0432\u043E\u043A.", icon: "book", tier: 3, test: (c, m) => (/* @__PURE__ */ new Set([...m ? m.endings : [], c.ending])).size >= 6 },
+    { id: "clean_shift", name: "\u0411\u0435\u0437 \u043F\u0430\u0434\u0435\u043D\u0438\u0439", desc: "\u041F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0438\u0433\u0440\u0443, \u043D\u0438 \u0440\u0430\u0437\u0443 \u043D\u0435 \u0443\u0440\u043E\u043D\u0438\u0432 \u0441\u043C\u0435\u043D\u0443.", icon: "shield", tier: 2, test: (c) => full(c) && c.burnouts === 0 },
+    { id: "clean_sky", name: "\u0427\u0438\u0441\u0442\u043E\u0435 \u043D\u0435\u0431\u043E", desc: "\u041F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0438\u0433\u0440\u0443 \u0441\u043E \u0441\u0440\u0435\u0434\u043D\u0438\u043C \u0434\u044B\u043C\u043E\u043C \u043D\u0435 \u0432\u044B\u0448\u0435 20%.", icon: "cloud", tier: 2, test: (c) => full(c) && c.smog <= 20 },
+    { id: "hospital_hero", name: "\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u0433\u043E\u0440\u043E\u0434\u0430", desc: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0435 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 900 \u0436\u0438\u0442\u0435\u043B\u0435\u0439.", icon: "heart", tier: 2, test: (c) => full(c) && c.pop >= 900 },
+    { id: "every_one", name: "\u041A\u0430\u0436\u0434\u044B\u0439 \u043D\u0430 \u0441\u0447\u0435\u0442\u0443", desc: "\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0435 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 950 \u0436\u0438\u0442\u0435\u043B\u0435\u0439.", icon: "heart", tier: 3, test: (c) => full(c) && c.pop >= 950 },
+    { id: "plumber", name: "\u0412\u043E\u0434\u043E\u043F\u0440\u043E\u0432\u043E\u0434\u0447\u0438\u043A", desc: "\u0417\u0430\u0434\u0435\u043B\u0430\u0439\u0442\u0435 15 \u0443\u0442\u0435\u0447\u0435\u043A \u0437\u0430 \u043E\u0434\u043D\u0443 \u043F\u0430\u0440\u0442\u0438\u044E.", icon: "wrench", tier: 2, test: (c) => (c.leaksFixed || 0) >= 15 },
+    { id: "coal_baron", name: "\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u0431\u0430\u0440\u043E\u043D", desc: "\u0411\u0440\u043E\u0441\u044C\u0442\u0435 200 \u043B\u043E\u043F\u0430\u0442 \u0443\u0433\u043B\u044F \u0437\u0430 \u043E\u0434\u043D\u0443 \u043F\u0430\u0440\u0442\u0438\u044E.", icon: "flame", tier: 2, test: (c) => (c.shovels || 0) >= 200 },
+    { id: "no_spill", name: "\u041D\u0438 \u043A\u0440\u043E\u0448\u043A\u0438 \u043C\u0438\u043C\u043E", desc: "\u041F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0438\u0433\u0440\u0443, \u043D\u0438 \u0440\u0430\u0437\u0443 \u043D\u0435 \u043F\u0435\u0440\u0435\u0441\u044B\u043F\u0430\u0432 \u0442\u043E\u043F\u043A\u0443.", icon: "drop", tier: 2, test: (c) => full(c) && c.spills === 0 },
+    { id: "master", name: "\u041C\u0430\u0441\u0442\u0435\u0440 \u043A\u043E\u0442\u043B\u0430", desc: "\u041D\u0430\u0431\u0435\u0440\u0438\u0442\u0435 1500 \u043E\u0447\u043A\u043E\u0432.", icon: "crown", tier: 2, test: (c) => c.score >= 1500 },
+    { id: "legend", name: "\u041B\u0435\u0433\u0435\u043D\u0434\u0430 \u0424\u0435\u0440\u0440\u043E\u0433\u0440\u0430\u0434\u0430", desc: "\u041D\u0430\u0431\u0435\u0440\u0438\u0442\u0435 1700 \u043E\u0447\u043A\u043E\u0432.", icon: "crown", tier: 3, test: (c) => c.score >= 1700 },
+    { id: "team", name: "\u041E\u0434\u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430", desc: "\u0414\u043E\u0439\u0434\u0438\u0442\u0435 \u0434\u043E \u043E\u0431\u043E\u0437\u0430 \u0432 \u043A\u043E\u043E\u043F\u0435\u0440\u0430\u0442\u0438\u0432\u0435.", icon: "hands", tier: 2, test: (c) => c.mode === "coop" && full(c) },
+    { id: "coop_light", name: "\u0414\u0440\u0443\u0436\u043D\u0430\u044F \u0437\u0438\u043C\u0430", desc: "\u0421\u0432\u0435\u0442\u043B\u0430\u044F \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0430 \u0432 \u043A\u043E\u043E\u043F\u0435\u0440\u0430\u0442\u0438\u0432\u0435.", icon: "star", tier: 3, test: (c) => c.mode === "coop" && c.ending === "light" },
+    { id: "rival", name: "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A", desc: "\u0421\u044B\u0433\u0440\u0430\u0439\u0442\u0435 \u0432 \u0441\u043E\u0440\u0435\u0432\u043D\u043E\u0432\u0430\u043D\u0438\u0438.", icon: "bolt", tier: 1, test: (c) => c.mode === "versus" },
+    { id: "champion", name: "\u0427\u0435\u043C\u043F\u0438\u043E\u043D \u043A\u043E\u0442\u0435\u043B\u044C\u043D\u043E\u0439", desc: "\u0417\u0430\u0439\u043C\u0438\u0442\u0435 \u043F\u0435\u0440\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E \u0432 \u0441\u043E\u0440\u0435\u0432\u043D\u043E\u0432\u0430\u043D\u0438\u0438.", icon: "trophy", tier: 3, test: (c) => c.mode === "versus" && c.place === 1 && (c.players || 0) >= 2 && !c.dnf },
+    { id: "quartet", name: "\u0427\u0435\u0442\u0432\u0451\u0440\u043A\u0430", desc: "\u0421\u044B\u0433\u0440\u0430\u0439\u0442\u0435 \u0441\u043E\u0440\u0435\u0432\u043D\u043E\u0432\u0430\u043D\u0438\u0435 \u0432\u0447\u0435\u0442\u0432\u0435\u0440\u043E\u043C.", icon: "hands", tier: 2, test: (c) => c.mode === "versus" && (c.players || 0) >= 4 },
+    { id: "daily_first", name: "\u0417\u0430\u0434\u0430\u043D\u0438\u0435 \u0434\u043D\u044F", desc: "\u0412\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u0435 \u0441\u044E\u0436\u0435\u0442\u043D\u043E\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435 \u0434\u043D\u044F.", icon: "scroll", tier: 2, test: (c) => c.mode === "daily" && !!c.questDone },
+    { id: "streak3", name: "\u0422\u0440\u0438 \u0434\u043D\u044F \u043F\u043E\u0434\u0440\u044F\u0434", desc: "\u0418\u0433\u0440\u0430\u0439\u0442\u0435 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F \u0442\u0440\u0438 \u0434\u043D\u044F \u043F\u043E\u0434\u0440\u044F\u0434.", icon: "clock", tier: 2, test: (c, m) => !!m && m.st.streak >= 3 },
+    { id: "streak7", name: "\u041D\u0435\u0434\u0435\u043B\u044F \u0443 \u043A\u043E\u0442\u043B\u0430", desc: "\u0418\u0433\u0440\u0430\u0439\u0442\u0435 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F \u0441\u0435\u043C\u044C \u0434\u043D\u0435\u0439 \u043F\u043E\u0434\u0440\u044F\u0434.", icon: "clock", tier: 3, test: (c, m) => !!m && m.st.streak >= 7 },
+    { id: "challenger", name: "\u0412\u044B\u0437\u043E\u0432 \u043F\u0440\u0438\u043D\u044F\u0442", desc: "\u0421\u044B\u0433\u0440\u0430\u0439\u0442\u0435 \u043F\u043E \u0441\u0441\u044B\u043B\u043A\u0435-\u0432\u044B\u0437\u043E\u0432\u0443 \u0434\u0440\u0443\u0433\u0430.", icon: "flag", tier: 1, test: (c) => c.mode === "challenge" },
+    { id: "sharer", name: "\u0420\u0430\u0441\u0441\u043A\u0430\u0437\u0430\u043B \u0434\u0440\u0443\u0437\u044C\u044F\u043C", desc: "\u041F\u043E\u0434\u0435\u043B\u0438\u0442\u0435\u0441\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u043C.", icon: "mail", tier: 1, test: (c, m) => !!m && m.st.shares >= 1 },
+    { id: "veteran", name: "\u0421\u0442\u0430\u0440\u044B\u0439 \u043A\u043E\u0447\u0435\u0433\u0430\u0440", desc: "\u0421\u044B\u0433\u0440\u0430\u0439\u0442\u0435 \u0434\u0435\u0441\u044F\u0442\u044C \u043F\u0430\u0440\u0442\u0438\u0439.", icon: "key", tier: 2, test: (c, m) => !!m && m.plays >= 10 }
+  ];
+  function emptyStats() {
+    return { coop: 0, versus: 0, wins: 0, dailyDone: 0, streak: 0, lastDay: "", shares: 0, challenges: 0, leaks: 0, shovels: 0 };
+  }
+  function cleanMeta(raw) {
+    const o = raw && typeof raw === "object" ? raw : {};
+    const st = emptyStats(), rs = o.st && typeof o.st === "object" ? o.st : {};
+    for (const k of Object.keys(st))
+      if (k !== "lastDay")
+        st[k] = Number.isFinite(rs[k]) ? Math.max(0, Math.min(1e6, Math.floor(rs[k]))) : 0;
+    st.lastDay = typeof rs.lastDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rs.lastDay) ? rs.lastDay : "";
+    const ach = {};
+    if (o.ach && typeof o.ach === "object") {
+      for (const a of ACHIEVEMENTS)
+        if (Number.isFinite(o.ach[a.id]))
+          ach[a.id] = o.ach[a.id];
+    }
+    const endings = Array.isArray(o.endings) ? o.endings.filter(
+      /** @param {any} e */
+      (e) => typeof e === "string"
+    ).slice(0, 12) : [];
+    return { plays: Number.isFinite(o.plays) ? Math.max(0, Math.floor(o.plays)) : 0, endings, ach, st };
+  }
+  function prevDay(day) {
+    const d = /* @__PURE__ */ new Date(day + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+  function applyRun(meta2, ctx2, opt = {}) {
+    var _a;
+    const st = meta2.st;
+    if (ctx2.mode === "coop")
+      st.coop++;
+    if (ctx2.mode === "versus") {
+      st.versus++;
+      if (ctx2.place === 1 && !ctx2.dnf && (ctx2.players || 0) >= 2)
+        st.wins++;
+    }
+    if (ctx2.mode === "challenge")
+      st.challenges++;
+    if (ctx2.mode === "daily" && opt.day) {
+      if (st.lastDay !== opt.day) {
+        st.streak = st.lastDay === prevDay(opt.day) ? st.streak + 1 : 1;
+        st.lastDay = opt.day;
+      }
+      if (ctx2.questDone)
+        st.dailyDone++;
+    }
+    st.leaks += ctx2.leaksFixed || 0;
+    st.shovels += ctx2.shovels || 0;
+    const now = (_a = opt.now) != null ? _a : Date.now();
+    const fresh = [];
+    for (const a of ACHIEVEMENTS) {
+      if (meta2.ach[a.id])
+        continue;
+      let ok = false;
+      try {
+        ok = !!a.test(ctx2, meta2);
+      } catch (e) {
+        ok = false;
+      }
+      if (ok) {
+        meta2.ach[a.id] = now;
+        fresh.push(a);
+      }
+    }
+    return fresh;
+  }
+  function applyShare(meta2, now = Date.now()) {
+    meta2.st.shares++;
+    const a = ACHIEVEMENTS.find((x) => x.id === "sharer");
+    if (a && !meta2.ach[a.id]) {
+      meta2.ach[a.id] = now;
+      return [a];
+    }
+    return [];
+  }
+  function questDone(goal, r) {
+    if (!goal || typeof goal !== "object")
+      return false;
+    if ("pop_min" in goal && r.pop < goal.pop_min)
+      return false;
+    if ("burn_max" in goal && r.burnouts > goal.burn_max)
+      return false;
+    if ("smog_max" in goal && r.smog > goal.smog_max)
+      return false;
+    if ("nights_min" in goal && r.nights < goal.nights_min)
+      return false;
+    if ("ending" in goal && r.ending !== goal.ending)
+      return false;
+    if ("score_min" in goal && r.score < goal.score_min)
+      return false;
+    return true;
+  }
+
+  // src/ui/icons.js
+  var G = {
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+    moon: '<path d="M16 4a8 8 0 1 0 4 14 7 7 0 0 1-4-14z"/><path d="M18 5v3M16.5 6.5h3"/>',
+    flag: '<path d="M6 21V4M6 5h11l-2.5 3.5L17 12H6"/>',
+    star: '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9L3.5 9.7l5.9-.8z"/>',
+    cloud: '<path d="M7 18h10a4 4 0 0 0 .6-7.9A5.5 5.5 0 0 0 7 9.5 4.3 4.3 0 0 0 7 18z"/>',
+    gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"/><circle cx="12" cy="12" r="6.6"/>',
+    snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M9.5 4.5L12 7l2.5-2.5M9.5 19.5L12 17l2.5 2.5"/>',
+    skull: '<path d="M6 11a6 6 0 1 1 12 0c0 2-.8 3-2 3.8V18H8v-3.2C6.8 14 6 13 6 11z"/><circle cx="9.5" cy="11" r="1.2"/><circle cx="14.5" cy="11" r="1.2"/><path d="M10.5 18v-2M13.5 18v-2"/>',
+    book: '<path d="M5 5.5C7.5 4.5 10 4.7 12 6c2-1.3 4.5-1.5 7-.5V19c-2.5-1-5-.8-7 .5-2-1.3-4.5-1.5-7-.5z"/><path d="M12 6v13.5"/>',
+    shield: '<path d="M12 3.5l7 2.6V12c0 4-3 7-7 8.5C8 19 5 16 5 12V6.1z"/><path d="M8.8 12.2l2.2 2.2 4.2-4.4"/>',
+    heart: '<path d="M12 19.5C5.5 15 3.8 11.8 3.8 9a4.2 4.2 0 0 1 8.2-1.2A4.2 4.2 0 0 1 20.2 9c0 2.8-1.7 6-8.2 10.5z"/>',
+    wrench: '<path d="M14.5 4.5a4.5 4.5 0 0 0-4.2 6.2L4 17l3 3 6.3-6.3a4.5 4.5 0 0 0 6.2-4.2l-3 2-2.5-.5-.5-2.5z"/>',
+    flame: '<path d="M12 3c.5 3-3.5 5-3.5 9a3.5 3.5 0 0 0 7 0c0-1.5-.7-2.4-1.5-3.4.4 2-1 2.6-1 2.6.8-3-.2-5.6-1-8.2z"/><path d="M12 21a5.5 5.5 0 0 0 5.5-5.5C17.5 12 15 10 14 8"/>',
+    drop: '<path d="M12 3.5c3.6 4.3 5.6 7.2 5.6 10a5.6 5.6 0 0 1-11.2 0c0-2.8 2-5.7 5.6-10z"/><path d="M9.5 14.5a2.6 2.6 0 0 0 2.4 2.4"/>',
+    crown: '<path d="M4 17.5l1.6-9 4.4 4 2-6 2 6 4.4-4 1.6 9z"/><path d="M4.5 20h15"/>',
+    hands: '<path d="M3.5 12.5l4-4 3 1 3-2 2.5 2L20.5 12l-3.8 4.4-3.2.9-3.5-1.4-2.5-.2z"/><path d="M8 11.5l3 3M12.5 9.5l2.5 3"/>',
+    bolt: '<path d="M13.2 3L5.5 13.2h5.3L10 21l8-10.5h-5.3z"/>',
+    trophy: '<path d="M7 4h10v4.5a5 5 0 0 1-10 0z"/><path d="M7 5.5H4.5c0 3 1.2 4.6 3 5M17 5.5h2.5c0 3-1.2 4.6-3 5M12 13.5V17M8.5 20.5h7M9.5 17h5l.5 3.5h-6z"/>',
+    scroll: '<path d="M7 4.5h10.5v13a2.5 2.5 0 0 1-2.5 2.5H6.5a2.5 2.5 0 0 0 2.5-2.5V6.5A2 2 0 0 0 7 4.5z"/><path d="M10 8.5h5M10 11.5h5M10 14.5h3"/>',
+    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
+    mail: '<rect x="4" y="6" width="16" height="12" rx="1.5"/><path d="M4.5 7l7.5 6 7.5-6"/>',
+    key: '<circle cx="8.5" cy="12" r="3.5"/><path d="M12 12h8.5M17 12v3M20.5 12v2.5"/>'
+  };
+  var GLYPHS = Object.keys(G);
+  var TIER = { 1: ["#a9733b", "#5a3a1a"], 2: ["#d6ac4a", "#6a4a14"], 3: ["#f4dc86", "#8a6418"] };
+  function badge(glyph, tier = 2, locked = false) {
+    const g = G[glyph] || G.star, [hi, lo] = TIER[tier] || TIER[2];
+    const ring = locked ? "#59504a" : hi, ring2 = locked ? "#2d2824" : lo, ink = locked ? "#7c726a" : "#f6ead0";
+    return `<svg class="ach-ic" viewBox="0 0 48 48" width="48" height="48" role="img" aria-hidden="true" focusable="false"><defs><linearGradient id="bg${tier}${locked ? "l" : ""}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ring}"/><stop offset="1" stop-color="${ring2}"/></linearGradient></defs><circle cx="24" cy="24" r="22" fill="url(#bg${tier}${locked ? "l" : ""})" stroke="#1a120b" stroke-width="2"/><circle cx="24" cy="24" r="17" fill="#1d1510" stroke="${ring2}" stroke-width="1.5"/><g transform="translate(10.5 10.5) scale(1.125)" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${g}</g><g fill="${ring}" opacity="${locked ? 0.4 : 0.9}"><circle cx="24" cy="4.6" r="1.2"/><circle cx="24" cy="43.4" r="1.2"/><circle cx="4.6" cy="24" r="1.2"/><circle cx="43.4" cy="24" r="1.2"/></g></svg>`;
+  }
+
+  // src/ui/share.js
+  var SEED_RE = /^[1-9]\d{0,9}$/;
+  function challengeFromSearch(search) {
+    const p = new URLSearchParams(search);
+    if (p.has("daily"))
+      return { kind: "daily" };
+    const seed = p.get("seed");
+    if (!seed || !SEED_RE.test(seed) || +seed >= 2 ** 32)
+      return null;
+    const c = p.get("c");
+    const score = c && /^\d{1,4}$/.test(c) ? Math.min(3e3, +c) : 0;
+    return { kind: "seed", seed: +seed, score };
+  }
+  function challengeLink(loc, seed, score) {
+    return `${loc.origin}${loc.pathname}?seed=${seed >>> 0}${score > 0 ? "&c=" + Math.min(3e3, Math.round(score)) : ""}`;
+  }
+  function dailyLink(loc) {
+    return `${loc.origin}${loc.pathname}?daily`;
+  }
+  function shareText(r) {
+    const base = r.mode === "daily" ? `\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F \u0432 \xAB\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u043C \u043A\u043E\u0442\u043B\u0435\xBB: ${r.score} \u043E\u0447\u043A\u043E\u0432.` : `\xAB\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043A\u043E\u0442\u0451\u043B\xBB: ${r.score} \u043E\u0447\u043A\u043E\u0432, ${r.nights} \u043D\u043E\u0447\u0435\u0439, ${r.pop} \u0436\u0438\u0442\u0435\u043B\u0435\u0439.`;
+    return base + " \u041F\u043E\u0431\u044C\u0451\u0442\u0435?";
+  }
+  function drawShareCard(canvas2, data) {
+    const W = 1200, H = 630;
+    canvas2.width = W;
+    canvas2.height = H;
+    const c = canvas2.getContext("2d");
+    const g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#2a1d14");
+    g.addColorStop(1, "#0f0a07");
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+    c.strokeStyle = "#c9a24a";
+    c.lineWidth = 8;
+    c.strokeRect(24, 24, W - 48, H - 48);
+    c.strokeStyle = "#6a4a14";
+    c.lineWidth = 2;
+    c.strokeRect(40, 40, W - 80, H - 80);
+    c.save();
+    c.translate(180, 200);
+    c.fillStyle = "#c9a24a";
+    c.beginPath();
+    c.arc(0, 0, 96, 0, 7);
+    c.fill();
+    c.fillStyle = "#f1e6c8";
+    c.beginPath();
+    c.arc(0, 0, 76, 0, 7);
+    c.fill();
+    c.strokeStyle = "#7a1f12";
+    c.lineWidth = 10;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(48, -50);
+    c.stroke();
+    c.fillStyle = "#2a2119";
+    c.beginPath();
+    c.arc(0, 0, 10, 0, 7);
+    c.fill();
+    c.restore();
+    c.fillStyle = "#f1e6c8";
+    c.font = "bold 64px Georgia, serif";
+    c.textBaseline = "alphabetic";
+    c.fillText("\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043A\u043E\u0442\u0451\u043B", 330, 190);
+    c.fillStyle = "#c9a24a";
+    c.font = "30px Georgia, serif";
+    c.fillText(data.mode === "daily" ? "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F" : data.mode === "versus" ? "\u0421\u043E\u0440\u0435\u0432\u043D\u043E\u0432\u0430\u043D\u0438\u0435" : data.mode === "coop" ? "\u041A\u043E\u043E\u043F\u0435\u0440\u0430\u0442\u0438\u0432" : "\u0414\u0435\u0441\u044F\u0442\u044C \u043D\u043E\u0447\u0435\u0439 \u0437\u0438\u043C\u044B", 332, 240);
+    c.fillStyle = "#ffd96a";
+    c.font = "bold 190px Georgia, serif";
+    c.fillText(String(data.score), 80, 470);
+    c.fillStyle = "#f1e6c8";
+    c.font = "34px Georgia, serif";
+    c.fillText("\u043E\u0447\u043A\u043E\u0432", 90, 520);
+    c.font = "38px Georgia, serif";
+    const lines = [`${data.nights} \u0438\u0437 10 \u043D\u043E\u0447\u0435\u0439`, `${data.pop} \u0436\u0438\u0442\u0435\u043B\u0435\u0439 \u0432\u044B\u0436\u0438\u043B\u043E`, data.endingTitle || ""];
+    if (data.place)
+      lines.push(`${data.place}-\u0435 \u043C\u0435\u0441\u0442\u043E`);
+    lines.forEach((t, i) => c.fillText(t, 640, 330 + i * 56));
+    c.fillStyle = "#9c8a64";
+    c.font = "26px Georgia, serif";
+    c.fillText((data.nick ? data.nick + " \xB7 " : "") + "\u0441\u0438\u0434 " + (data.seed >>> 0) + " \xB7 \u043F\u043E\u0431\u044C\u0451\u0442\u0435?", 80, 580);
+    return canvas2;
+  }
+  function canvasToBlob(canvas2) {
+    return new Promise((res) => {
+      try {
+        canvas2.toBlob((b) => res(b), "image/png");
+      } catch (e) {
+        res(null);
+      }
+    });
   }
 
   // src/core/score.js
@@ -3281,6 +3610,22 @@
     not_playing: "\u0418\u0433\u0440\u0430 \u0435\u0449\u0451 \u043D\u0435 \u0438\u0434\u0451\u0442.",
     bad_state: "\u0421\u0435\u0439\u0447\u0430\u0441 \u0442\u0430\u043A \u043D\u0435\u043B\u044C\u0437\u044F."
   };
+  var MODE_NAMES = { coop: "\u041A\u043E\u043E\u043F\u0435\u0440\u0430\u0442\u0438\u0432", versus: "\u0421\u043E\u0440\u0435\u0432\u043D\u043E\u0432\u0430\u043D\u0438\u0435" };
+  var BOARD_STATE = { playing: "\u0438\u0433\u0440\u0430\u0435\u0442", done: "\u0444\u0438\u043D\u0438\u0448", dnf: "\u0432\u044B\u0448\u0435\u043B", offline: "\u043D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438" };
+  function boardView(rows, me) {
+    if (!Array.isArray(rows))
+      return [];
+    return rows.slice(0, 4).map((r, i) => ({
+      place: i + 1,
+      pid: String(r.pid),
+      nick: String(r.nick || "?").slice(0, 16),
+      score: Math.max(0, r.score | 0),
+      night: Math.max(1, Math.min(10, r.night | 0)),
+      pop: Math.max(0, r.pop | 0),
+      state: BOARD_STATE[r.state] ? r.state : "playing",
+      me: r.pid === me
+    }));
+  }
   var errText = (code) => ERR_TEXT[code] || "\u0427\u0442\u043E-\u0442\u043E \u043F\u043E\u0448\u043B\u043E \u043D\u0435 \u0442\u0430\u043A (" + String(code).slice(0, 24) + ").";
   function ownership(roles, players) {
     const nick = (pid) => (players.find((p) => p.pid === pid) || {}).nick || "?";
@@ -3507,7 +3852,16 @@
           i.value = "";
         }
       });
-      $2("mp-create").addEventListener("click", () => cb.onCreate($2("mp-nick").value, +$2("mp-max").value));
+      $2("mp-create").addEventListener("click", () => cb.onCreate($2("mp-nick").value, +$2("mp-max").value, $2("mp-mode").value));
+      $2("mp-mode").addEventListener("change", () => {
+        $2("mp-modehint").hidden = false;
+      });
+      $2("mp-bot").addEventListener("click", () => cb.onBot());
+      $2("mp-share").addEventListener("click", () => cb.onShare());
+      if (!(typeof navigator !== "undefined" && navigator.share))
+        $2("mp-share").hidden = true;
+      else
+        $2("mp-share").hidden = false;
       $2("mp-join").addEventListener("click", () => cb.onJoin($2("mp-nick").value, $2("mp-code").value));
       $2("mp-code").addEventListener("keydown", (e) => {
         if (e.key === "Enter")
@@ -3551,6 +3905,7 @@
       this.$("mp-entry").hidden = true;
       this.$("mp-room").hidden = false;
       this.$("mp-roomcode").textContent = m.code;
+      this.$("mp-modename").textContent = MODE_NAMES[m.mode] || MODE_NAMES.coop;
       const ul = this.$("mp-players");
       ul.textContent = "";
       for (const p of m.players) {
@@ -3560,10 +3915,12 @@
         dot.className = "dot " + (p.online ? "on" : "off");
         dot.setAttribute("aria-hidden", "true");
         const name = document.createElement("b");
-        name.textContent = p.nick + (p.pid === me ? " (\u0432\u044B)" : "");
+        name.textContent = (p.bot ? "\u{1F916} " : "") + p.nick + (p.pid === me ? " (\u0432\u044B)" : "");
+        if (p.bot)
+          li.classList.add("bot");
         const tag = document.createElement("span");
         tag.className = "tag";
-        tag.textContent = (p.pid === m.host ? "\u2605 \u0445\u043E\u0437\u044F\u0438\u043D" : p.ready ? "\u2713 \u0433\u043E\u0442\u043E\u0432" : "\u043D\u0435 \u0433\u043E\u0442\u043E\u0432") + (p.online ? "" : " \xB7 \u043D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438");
+        tag.textContent = (p.bot ? "\u0418\u0418-\u043D\u0430\u043F\u0430\u0440\u043D\u0438\u043A" : p.pid === m.host ? "\u2605 \u0445\u043E\u0437\u044F\u0438\u043D" : p.ready ? "\u2713 \u0433\u043E\u0442\u043E\u0432" : "\u043D\u0435 \u0433\u043E\u0442\u043E\u0432") + (p.online ? "" : " \xB7 \u043D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438");
         li.append(dot, name, tag);
         if (m.state === "playing" && p.role) {
           const r = document.createElement("small");
@@ -3576,15 +3933,18 @@
           k.className = "btn small";
           k.textContent = "\u0423\u0431\u0440\u0430\u0442\u044C";
           k.setAttribute("aria-label", "\u0423\u0431\u0440\u0430\u0442\u044C \u0438\u0433\u0440\u043E\u043A\u0430 " + p.nick);
-          k.addEventListener("click", () => this.cb.onKick(p.pid));
+          k.addEventListener("click", () => p.bot ? this.cb.onBot(true) : this.cb.onKick(p.pid));
           li.append(k);
         }
         ul.append(li);
       }
+      const hasBot = m.players.some((p) => p.bot);
       const isHost = m.host === me, mine = m.players.find((p) => p.pid === me);
-      const others = m.players.filter((p) => p.pid !== m.host);
-      const canStart = m.players.length >= 2 && m.players.every((p) => p.online) && others.every((p) => p.ready);
+      const others = m.players.filter((p) => p.pid !== m.host && !p.bot);
+      const canStart = m.players.length >= 2 && m.players.every((p) => p.online || p.bot) && others.every((p) => p.ready);
       const lobbyState = m.state === "lobby";
+      const botBtn = this.$("mp-bot");
+      botBtn.hidden = !(isHost && m.mode !== "versus" && m.state === "lobby" && !hasBot && m.players.length < m.max);
       this.$("mp-start").hidden = !isHost;
       this.$("mp-start").disabled = lobbyState && !canStart;
       this.$("mp-start").textContent = lobbyState ? "\u041D\u0430\u0447\u0430\u0442\u044C \u0438\u0433\u0440\u0443" : "\u041D\u043E\u0432\u0430\u044F \u0438\u0433\u0440\u0430";
@@ -3680,11 +4040,12 @@
   }
   for (const k of ["sfx", "music"])
     settings[k] = Math.max(0, Math.min(100, +settings[k] || 0));
-  var meta = { endings: [], plays: 0 };
+  var meta = cleanMeta(null);
   try {
-    Object.assign(meta, JSON.parse(store.get(META_KEY) || "{}"));
+    meta = cleanMeta(JSON.parse(store.get(META_KEY) || "{}"));
   } catch (e) {
   }
+  var game = { mode: "solo", daily: null, chal: 0, counted: false, review: null, fresh: [] };
   var s = createState(1);
   var ui = "title";
   var prevUi = "title";
@@ -3851,6 +4212,14 @@
           banner = { label: e.label, at: time };
           say("", e.label + ".", "warn");
           break;
+        case "hostev": {
+          sound.play("event");
+          const h = HOST_EVENTS.find((x) => x.id === e.id);
+          const txt = e.text || (h ? h.text : "");
+          banner = { label: e.label, at: time };
+          say("\u0412\u0435\u0434\u0443\u0449\u0438\u0439", txt || e.label + ".", "warn", "#9fd8f0");
+          break;
+        }
         case "night":
           sound.play("night");
           log = [];
@@ -3875,7 +4244,7 @@
     s.events.length = 0;
   }
   function saveGame() {
-    if (s.phase === "ended")
+    if (s.phase === "ended" || game.mode !== "solo" || mp && mp.inGame)
       return;
     const str = serialize(s);
     store.set(SAVE_KEY, str);
@@ -3898,7 +4267,9 @@
     if (s.phase !== lastPhase || s.night !== lastNight) {
       lastPhase = s.phase;
       lastNight = s.night;
-      const online = !!(mp && mp.inGame);
+      const online = !!(mp && mp.inGame) || game.mode !== "solo";
+      if (s.phase !== "ended")
+        game.counted = false;
       if (s.phase === "night" && s.t === 0) {
         if (!online) {
           snap = serialize(s);
@@ -3914,6 +4285,10 @@
         if (online) {
           if (!meta.endings.includes(s.ending)) {
             meta.endings.push(s.ending);
+            store.set(META_KEY, JSON.stringify(meta));
+          }
+          if (game.mode !== "solo" && !(mp && mp.inGame)) {
+            meta.plays++;
             store.set(META_KEY, JSON.stringify(meta));
           }
         } else {
@@ -3938,7 +4313,7 @@
     meta.plays++;
     store.set(META_KEY, JSON.stringify(meta));
   }
-  var screens = ["title", "lobby", "prologue", "pause", "settings", "help", "card", "summary", "ending", "board"];
+  var screens = ["title", "lobby", "prologue", "pause", "settings", "help", "card", "summary", "ending", "board", "daily", "ach"];
   function show(id) {
     for (const k of screens)
       $(k).hidden = k !== id;
@@ -3988,11 +4363,17 @@
     const n = meta.endings.length;
     $("t-endings").textContent = n ? `\u041E\u0442\u043A\u0440\u044B\u0442\u043E \u043A\u043E\u043D\u0446\u043E\u0432\u043E\u043A: ${n} \u0438\u0437 ${Object.keys(ENDINGS).length}` : "\u0414\u0435\u0441\u044F\u0442\u044C \u043D\u043E\u0447\u0435\u0439. \u0428\u0435\u0441\u0442\u044C \u0441\u0443\u0434\u0435\u0431.";
   }
-  function newGame() {
+  function newGame(o = {}) {
     coach.reset();
     notes.reset();
     toast = null;
-    s = createState(Math.random() * 2 ** 31 | 0 || 1);
+    snap = null;
+    game.mode = o.mode || "solo";
+    game.daily = o.daily || null;
+    game.chal = o.chal || 0;
+    game.review = null;
+    game.counted = false;
+    s = createState(o.seed || Math.random() * 2 ** 31 | 0 || 1, o.mode ? { skipTutorial: true, host: o.mode === "daily" } : {});
     lastPhase = null;
     lastNight = -1;
     log = [];
@@ -4002,10 +4383,17 @@
     vis.popShown = POP_START;
     vis.needle = s.P;
     vis.fireShown = 0;
-    store.del(SAVE_KEY);
-    show("prologue");
-    ui = "prologue";
+    if (game.mode === "solo")
+      store.del(SAVE_KEY);
     startRun();
+    if (o.mode) {
+      startPlay();
+      if (o.toast)
+        showToast(o.toast[0], o.toast[1], "#e0b866", 12);
+    } else {
+      show("prologue");
+      ui = "prologue";
+    }
   }
   function startPlay() {
     sound.ensure();
@@ -4030,6 +4418,9 @@
     coach.reset();
     notes.reset();
     toast = null;
+    game.mode = "solo";
+    game.chal = 0;
+    game.daily = null;
     if (!loadGame()) {
       newGame();
       return;
@@ -4199,9 +4590,15 @@
     const left = Object.keys(ENDINGS).length - meta.endings.length;
     const hints = { light: "\u042D\u0442\u043E \u043B\u0443\u0447\u0448\u0430\u044F \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0430. \u041E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u0446\u0435\u043D\u044B \u0442\u043E\u0436\u0435 \u0435\u0441\u0442\u044C \u2014 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u044C \xAB\u0432\u044B\u0433\u043E\u0434\u043D\u044B\u0435\xBB \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435, \u0447\u0435\u043C \u043F\u043B\u0430\u0442\u044F\u0442 \u0434\u0440\u0443\u0433\u0438\u0435.", smoke: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043E\u0442\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u043E\u0442 \u0431\u0443\u0440\u043E\u0433\u043E \u0443\u0433\u043B\u044F \u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0444\u0438\u043B\u044C\u0442\u0440\u044B \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C\u0438.", iron: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043D\u0435 \u043F\u0440\u043E\u0434\u043B\u0435\u0432\u0430\u0442\u044C \u0441\u043C\u0435\u043D\u0443 \u0438 \u0434\u0430\u0442\u044C \u0443\u0441\u0442\u0430\u043B\u043E\u0441\u0442\u0438 \u043E\u0441\u0442\u044B\u0442\u044C: \u0441\u043D\u0438\u0436\u0430\u0439\u0442\u0435 \u0432\u0435\u043D\u0442\u0438\u043B\u044C \u0437\u0430\u0432\u043E\u0434\u0430, \u043A\u043E\u0433\u0434\u0430 \u0448\u043A\u0430\u043B\u0430 \u043A\u0440\u0430\u0441\u043D\u0430\u044F.", cold: "\u0413\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0438 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0432\u0430\u0436\u043D\u0435\u0435 \u0432\u0441\u0435\u0433\u043E. \u041D\u0435 \u0436\u0430\u043B\u0435\u0439\u0442\u0435 \u0438\u043C \u043F\u0430\u0440\u0430.", boom: "\u0421\u043B\u0435\u0434\u0438\u0442\u0435 \u0437\u0430 \u0441\u0442\u0440\u0435\u043B\u043A\u043E\u0439: \u0432 \u043A\u0440\u0430\u0441\u043D\u043E\u0439 \u0437\u043E\u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0434\u0432\u0443\u0445 \u0441\u0435\u043A\u0443\u043D\u0434 \u2014 \u0432\u0437\u0440\u044B\u0432. \u041D\u0435 \u043F\u0435\u0440\u0435\u0431\u0430\u0440\u0449\u0438\u0432\u0430\u0439\u0442\u0435 \u0441 \u0443\u0433\u043B\u0451\u043C.", silence: "\u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u0445\u043E\u0442\u044F \u0431\u044B \u0433\u043E\u0441\u043F\u0438\u0442\u0430\u043B\u044C \u0438 \u043A\u0432\u0430\u0440\u0442\u0430\u043B\u044B \u0432 \u0442\u0435\u043F\u043B\u0435 \u2014 \u0438 \u0443\u0442\u0435\u0447\u043A\u0438 \u0437\u0430\u0434\u0435\u043B\u044B\u0432\u0430\u0439\u0442\u0435 \u0441\u0440\u0430\u0437\u0443." };
     $("e-hint").textContent = hints[s.ending] + (left > 0 ? `  \u041E\u0442\u043A\u0440\u044B\u0442\u043E \u043A\u043E\u043D\u0446\u043E\u0432\u043E\u043A: ${meta.endings.length} \u0438\u0437 ${Object.keys(ENDINGS).length}.` : "  \u0412\u044B \u043E\u0442\u043A\u0440\u044B\u043B\u0438 \u0432\u0441\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438.");
-    $("b-again").textContent = mp && mp.inGame ? "\u0412 \u043B\u043E\u0431\u0431\u0438 \u043A\u043E\u043C\u043D\u0430\u0442\u044B" : "\u0421\u044B\u0433\u0440\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430";
+    $("b-again").textContent = mp && mp.inGame ? "\u0412 \u043B\u043E\u0431\u0431\u0438 \u043A\u043E\u043C\u043D\u0430\u0442\u044B" : game.mode === "daily" ? "\u0415\u0449\u0451 \u043F\u043E\u043F\u044B\u0442\u043A\u0430" : "\u0421\u044B\u0433\u0440\u0430\u0442\u044C \u0441\u043D\u043E\u0432\u0430";
+    $("e-share-msg").textContent = "";
+    $("e-review").hidden = true;
+    $("e-ach").hidden = true;
+    $("e-daily").hidden = true;
+    $("e-places").hidden = true;
     sound.play(tone === "good" ? "end-good" : tone === "fail" ? "end-fail" : "end-bitter");
     setupRank();
+    endExtras();
   }
   function setupRank() {
     const box = $("e-rank");
@@ -4210,7 +4607,9 @@
       return;
     $("e-nick").value = store.get(NICK_KEY) || "";
     $("b-submit").disabled = false;
+    $("b-submit").hidden = false;
     $("e-rank-msg").textContent = "";
+    $("b-submit").textContent = game.mode === "daily" ? "\u0417\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0432 \u0440\u0435\u0439\u0442\u0438\u043D\u0433 \u0434\u043D\u044F" : "\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u0440\u0435\u0439\u0442\u0438\u043D\u0433";
     run.pending ? run.pending.then(() => {
       box.hidden = !run.online;
     }) : box.hidden = !run.online;
@@ -4231,8 +4630,15 @@
     const btn = $("b-submit"), msg = $("e-rank-msg");
     btn.disabled = true;
     msg.textContent = "\u041E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u043C\u2026";
-    const r = await run.submit(endingResult(), nick, playerId());
-    if (r && r.ok && r.data && r.data.ok) {
+    const daily = game.mode === "daily" && game.daily;
+    const r = daily ? await run.submitDaily(endingResult(), nick, playerId(), game.daily.day) : await run.submit(endingResult(), nick, playerId());
+    if (daily && r && r.ok && r.data && r.data.ok) {
+      submitted = true;
+      const me = r.data.me;
+      msg.textContent = `\u0417\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u043A\u0430\u043A \xAB${nick || "\u0410\u043D\u043E\u043D\u0438\u043C"}\xBB. ` + (me ? `\u0412\u0430\u0448 \u043B\u0443\u0447\u0448\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0434\u043D\u044F: ${me.score} \u043E\u0447\u043A., \u043C\u0435\u0441\u0442\u043E ${me.rank} \u0438\u0437 ${me.total}.` : "") + (r.data.done ? " \u0417\u0430\u0434\u0430\u043D\u0438\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E!" : "");
+      btn.hidden = true;
+      boardAvailable = true;
+    } else if (r && r.ok && r.data && r.data.ok) {
       submitted = true;
       msg.textContent = `\u0417\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u043A\u0430\u043A \xAB${r.data.nick}\xBB. \u041C\u0435\u0441\u0442\u043E: ${r.data.rank.score} \u043F\u043E \u043E\u0447\u043A\u0430\u043C, ${r.data.rank.survival} \u043F\u043E \u0432\u044B\u0436\u0438\u0432\u0430\u043D\u0438\u044E.`;
       btn.hidden = true;
@@ -4240,7 +4646,7 @@
       openBoard("score");
     } else {
       btn.disabled = false;
-      msg.textContent = !r ? "\u041D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438 \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C \u0440\u0435\u0439\u0442\u0438\u043D\u0433\u0430. \u0418\u0433\u0440\u0430 \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u043D\u0435 \u0441\u0442\u0440\u0430\u0434\u0430\u0435\u0442 \u2014 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435." : r.status === 429 ? "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E. \u041F\u043E\u0434\u043E\u0436\u0434\u0438\u0442\u0435 \u043C\u0438\u043D\u0443\u0442\u0443." : r.status === 409 ? "\u042D\u0442\u043E\u0442 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0443\u0436\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D." : r.status === 422 ? "\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043F\u0440\u0438\u043D\u044F\u043B \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 (\u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043F\u0440\u0430\u0432\u0434\u043E\u043F\u043E\u0434\u043E\u0431\u0438\u044F)." : "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.";
+      msg.textContent = !r ? "\u041D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438 \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C \u0440\u0435\u0439\u0442\u0438\u043D\u0433\u0430. \u0418\u0433\u0440\u0430 \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u043D\u0435 \u0441\u0442\u0440\u0430\u0434\u0430\u0435\u0442 \u2014 \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435." : r.status === 429 ? "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E. \u041F\u043E\u0434\u043E\u0436\u0434\u0438\u0442\u0435 \u043C\u0438\u043D\u0443\u0442\u0443." : r.status === 409 ? daily ? "\u042D\u0442\u043E\u0442 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0443\u0436\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D (\u0438\u043B\u0438 \u0434\u0435\u043D\u044C \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F)." : "\u042D\u0442\u043E\u0442 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0443\u0436\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D." : r.status === 422 ? "\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043F\u0440\u0438\u043D\u044F\u043B \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 (\u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043F\u0440\u0430\u0432\u0434\u043E\u043F\u043E\u0434\u043E\u0431\u0438\u044F)." : "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.";
     }
   }
   function updateBoardBtn() {
@@ -4258,25 +4664,306 @@
     const list = $("lb-list"), msg = $("lb-msg");
     list.textContent = "";
     msg.textContent = "\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C\u2026";
-    const entries = await fetchBoard(boardCur);
+    let entries = null, extra = "";
+    if (boardCur === "season") {
+      const r = await fetchSeason(playerId());
+      if (r) {
+        entries = r.entries;
+        extra = `\u0421\u0435\u0437\u043E\u043D ${r.season}.` + (r.me ? ` \u0412\u0430\u0448\u0435 \u043C\u0435\u0441\u0442\u043E: ${r.me.rank} \u0438\u0437 ${r.me.total} (${r.me.score} \u043E\u0447\u043A.).` : "");
+      }
+    } else if (boardCur === "day") {
+      const r = await fetchDailyBoard(game.daily ? game.daily.day : "", playerId());
+      if (r) {
+        entries = r.entries;
+        extra = `\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F ${r.day}.` + (r.me ? ` \u0412\u0430\u0448\u0435 \u043C\u0435\u0441\u0442\u043E: ${r.me.rank} \u0438\u0437 ${r.me.total} (${r.me.score} \u043E\u0447\u043A.).` : "");
+      }
+    } else
+      entries = await fetchBoard(boardCur);
     if (ui !== "board")
       return;
     if (!entries) {
       msg.textContent = "\u0420\u0435\u0439\u0442\u0438\u043D\u0433 \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D.";
       return;
     }
-    msg.textContent = entries.length ? "" : "\u041F\u043E\u043A\u0430 \u043F\u0443\u0441\u0442\u043E \u2014 \u0441\u0442\u0430\u043D\u044C\u0442\u0435 \u043F\u0435\u0440\u0432\u044B\u043C.";
-    entries.forEach((e, i) => {
+    msg.textContent = (entries.length ? "" : "\u041F\u043E\u043A\u0430 \u043F\u0443\u0441\u0442\u043E \u2014 \u0441\u0442\u0430\u043D\u044C\u0442\u0435 \u043F\u0435\u0440\u0432\u044B\u043C.") + (extra ? " " + extra : "");
+    const byScore = boardCur !== "survival";
+    entries.forEach((e) => {
       const li = document.createElement("li");
       const nick = document.createElement("b");
       nick.textContent = String(e.nick);
       const sc = document.createElement("span");
-      sc.textContent = boardCur === "score" ? `${e.score} \u043E\u0447\u043A.` : `${e.nights} \u043D\u043E\u0447. \xB7 ${e.pop} \u0436\u0438\u0442.`;
+      sc.textContent = byScore ? `${e.score} \u043E\u0447\u043A.` : `${e.nights} \u043D\u043E\u0447. \xB7 ${e.pop} \u0436\u0438\u0442.`;
       const sub = document.createElement("small");
-      sub.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} \xB7 ${boardCur === "score" ? `${e.nights} \u043D\u043E\u0447.` : `${e.score} \u043E\u0447\u043A.`}`;
+      sub.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} \xB7 ${byScore ? `${e.nights} \u043D\u043E\u0447.` : `${e.score} \u043E\u0447\u043A.`}${e.done ? " \xB7 \u0437\u0430\u0434\u0430\u043D\u0438\u0435 \u2713" : ""}`;
       li.append(nick, sc, sub);
       list.append(li);
     });
+  }
+  function aggOf(rr2, extra = {}) {
+    return { nights: rr2.nights, pop: rr2.pop, burnouts: rr2.burnouts, smog: rr2.smog, leaksFixed: Math.min(500, s.leaksFixed | 0), shovels: Math.min(3e3, (extra.shovels === void 0 ? s.shovels : extra.shovels) | 0), ending: rr2.ending, players: extra.players || 1, mode: extra.mode || game.mode };
+  }
+  function runCtx() {
+    const rr2 = endingResult(), inMp = !!(mp && mp.inGame);
+    const c = { mode: inMp ? mp.mode || "coop" : game.mode, ending: rr2.ending, nights: rr2.nights, pop: rr2.pop, burnouts: rr2.burnouts, smog: rr2.smog, score: rr2.score, leaksFixed: s.leaksFixed | 0 };
+    if (!inMp) {
+      c.shovels = s.shovels | 0;
+      c.spills = s.spills | 0;
+    } else if (c.mode === "versus") {
+      const pl = mp.result && mp.result.places || [];
+      const me = pl.find((x) => x.pid === mp.pid);
+      c.players = pl.length;
+      c.place = me ? me.place : 0;
+      c.dnf = !!(me && me.dnf);
+    } else
+      c.players = mp.players.filter((p) => !p.bot).length;
+    if (game.mode === "daily" && game.daily)
+      c.questDone = questDone(game.daily.quest.goal, rr2);
+    return c;
+  }
+  function showAchToasts(list) {
+    if (!list.length)
+      return;
+    const box = $("ach-toast");
+    let k = 0;
+    const next = () => {
+      if (k >= list.length) {
+        box.hidden = true;
+        return;
+      }
+      const a = list[k++];
+      box.textContent = "";
+      box.insertAdjacentHTML("beforeend", badge(a.icon, a.tier));
+      const d = document.createElement("div");
+      const b = document.createElement("b");
+      b.textContent = "\u0414\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u0435: " + a.name;
+      const sm = document.createElement("small");
+      sm.textContent = a.desc;
+      d.append(b, sm);
+      box.append(d);
+      box.hidden = false;
+      $("sr-status").textContent = "\u0414\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u0435: " + a.name;
+      setTimeout(next, 3200);
+    };
+    next();
+  }
+  function renderAchNew(list) {
+    const ul = $("e-ach-list");
+    ul.textContent = "";
+    $("e-ach").hidden = !list.length;
+    for (const a of list) {
+      const li = document.createElement("li");
+      li.insertAdjacentHTML("beforeend", badge(a.icon, a.tier));
+      const b = document.createElement("b");
+      b.textContent = a.name;
+      const sm = document.createElement("small");
+      sm.textContent = a.desc;
+      li.append(b, sm);
+      ul.append(li);
+    }
+  }
+  function renderPlaces(result) {
+    const box = $("e-places");
+    if (!result || !result.places) {
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    const ol = $("e-places-list");
+    ol.textContent = "";
+    for (const e of result.places) {
+      const li = document.createElement("li");
+      if (e.pid === (mp && mp.pid))
+        li.className = "me";
+      const nm = document.createElement("b");
+      nm.textContent = e.nick + (e.pid === (mp && mp.pid) ? " (\u0432\u044B)" : "");
+      const sc = document.createElement("span");
+      sc.textContent = e.dnf ? "\u0432\u044B\u0448\u0435\u043B" : `${e.score} \u043E\u0447\u043A.`;
+      const sm = document.createElement("small");
+      sm.textContent = `${ENDINGS[e.ending] ? ENDINGS[e.ending].title : e.ending} \xB7 ${e.nights} \u043D\u043E\u0447. \xB7 ${e.pop} \u0436\u0438\u0442. \xB7 `;
+      const v = document.createElement("i");
+      v.className = e.verified ? "ok" : "no";
+      v.textContent = e.dnf ? "" : e.verified ? "\u2713 \u043F\u0440\u043E\u0432\u0435\u0440\u0435\u043D\u043E \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C" : "\u26A0 \u0441\u0435\u0440\u0432\u0435\u0440 \u043F\u0435\u0440\u0435\u0441\u0447\u0438\u0442\u0430\u043B \u0438\u043D\u0430\u0447\u0435";
+      sm.append(v);
+      li.append(nm, sc, sm);
+      ol.append(li);
+    }
+  }
+  function showReview(m) {
+    if (!m || !m.text)
+      return;
+    game.review = m;
+    const el = $("e-review");
+    el.textContent = m.text;
+    el.hidden = false;
+    const sm = document.createElement("small");
+    sm.textContent = m.src === "ai" ? "\u0420\u0430\u0437\u0431\u043E\u0440 \u043F\u0430\u0440\u0442\u0438\u0438 \xB7 \u0418\u0418" : "\u0420\u0430\u0437\u0431\u043E\u0440 \u043F\u0430\u0440\u0442\u0438\u0438 \xB7 \u043F\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u043C";
+    el.append(sm);
+  }
+  function endExtras() {
+    renderBoardHud();
+    const inMp = !!(mp && mp.inGame), versus = inMp && mp.mode === "versus";
+    if (versus)
+      renderPlaces(mp.result || livePlaces());
+    if (inMp && game.review)
+      showReview(game.review);
+    if (game.counted)
+      renderAchNew(game.fresh || []);
+    else if (!(versus && !mp.result)) {
+      game.counted = true;
+      const ctx2 = runCtx(), rr2 = endingResult();
+      const fresh = applyRun(meta, ctx2, { day: game.daily && game.daily.day });
+      if (!meta.endings.includes(s.ending))
+        meta.endings.push(s.ending);
+      store.set(META_KEY, JSON.stringify(meta));
+      game.fresh = fresh;
+      renderAchNew(fresh);
+      showAchToasts(fresh);
+      if (!inMp && settings.stats)
+        fetchReview(aggOf(rr2)).then((r) => {
+          if (r && ui === "ending" && !game.review)
+            showReview(r);
+        }, () => {
+        });
+    }
+    if (game.mode === "daily" && game.daily && !inMp) {
+      const q = game.daily.quest, done = questDone(q.goal, endingResult());
+      $("e-daily").hidden = false;
+      $("e-daily-msg").textContent = `\u0417\u0430\u0434\u0430\u043D\u0438\u0435 \xAB${q.title}\xBB: ${done ? "\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E \u2713" : "\u043D\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E \u2014 " + q.goal_text}.`;
+    } else if (game.mode === "challenge" && !inMp) {
+      const sc = endingResult().score;
+      $("e-daily").hidden = false;
+      $("e-daily-msg").textContent = game.chal ? sc > game.chal ? `\u0412\u044B\u0437\u043E\u0432 \u043F\u0440\u0438\u043D\u044F\u0442: ${sc} \u043F\u0440\u043E\u0442\u0438\u0432 ${game.chal} \u2014 \u0432\u044B \u043F\u043E\u0431\u0435\u0434\u0438\u043B\u0438!` : sc === game.chal ? `\u0412\u044B\u0437\u043E\u0432: ${sc} \u043F\u0440\u043E\u0442\u0438\u0432 ${game.chal} \u2014 \u043D\u0438\u0447\u044C\u044F.` : `\u0412\u044B\u0437\u043E\u0432: ${sc} \u043F\u0440\u043E\u0442\u0438\u0432 ${game.chal}. \u0427\u0443\u0442\u044C-\u0447\u0443\u0442\u044C \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E.` : "\u0412\u044B\u0437\u043E\u0432 \u043F\u0440\u0438\u043D\u044F\u0442. \u041F\u043E\u043A\u0430\u0436\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0434\u0440\u0443\u0433\u0443!";
+    }
+    $("b-share").hidden = false;
+  }
+  function livePlaces() {
+    if (!mp || !mp.board)
+      return null;
+    return { places: mp.board.map((r, i) => ({ place: i + 1, pid: r.pid, nick: r.nick, score: r.score, nights: r.night, pop: r.pop, ending: r.ending || "silence", dnf: r.state === "dnf", verified: true })) };
+  }
+  async function shareResult() {
+    const msg = $("e-share-msg");
+    msg.textContent = "";
+    const rr2 = endingResult(), inMp = !!(mp && mp.inGame);
+    const mode = inMp ? mp.mode || "coop" : game.mode;
+    const sc = inMp && mp.result && mp.result.score ? mp.result.score : rr2.score;
+    const url = mode === "daily" ? dailyLink(location) : challengeLink(location, s.seed, sc);
+    const mine = inMp && mp.result && mp.result.places ? mp.result.places.find((x) => x.pid === mp.pid) : null;
+    const data = { score: mine ? mine.score : sc, nights: rr2.nights, pop: rr2.pop, endingTitle: ENDINGS[s.ending] ? ENDINGS[s.ending].title : "", mode, nick: store.get(NICK_KEY) || "", seed: s.seed, place: mine && !mine.dnf ? mine.place : 0 };
+    const cv = drawShareCard($("share-cv"), data);
+    const text2 = shareText({ mode, score: data.score, nights: rr2.nights, pop: rr2.pop });
+    let how = "";
+    try {
+      const blob = await canvasToBlob(cv);
+      const file = blob ? new File([blob], "last-boiler.png", { type: "image/png" }) : null;
+      if (navigator.share && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: text2, url });
+        how = "\u041E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E.";
+      } else if (navigator.share) {
+        await navigator.share({ text: text2, url });
+        how = "\u041E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E.";
+      } else {
+        if (blob) {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "last-boiler.png";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 4e3);
+          how = "\u041A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430. ";
+        }
+        try {
+          await navigator.clipboard.writeText(text2 + " " + url);
+          how += "\u0421\u0441\u044B\u043B\u043A\u0430-\u0432\u044B\u0437\u043E\u0432 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u0430.";
+        } catch (e) {
+          how += "\u0421\u0441\u044B\u043B\u043A\u0430-\u0432\u044B\u0437\u043E\u0432: " + url;
+        }
+      }
+    } catch (e) {
+      if (e && e.name === "AbortError")
+        return;
+      how = "\u0421\u0441\u044B\u043B\u043A\u0430-\u0432\u044B\u0437\u043E\u0432: " + url;
+    }
+    msg.textContent = how;
+    const fresh = applyShare(meta);
+    store.set(META_KEY, JSON.stringify(meta));
+    showAchToasts(fresh);
+  }
+  function openAch() {
+    openOverlay("ach");
+    const have = ACHIEVEMENTS.filter((a) => meta.ach[a.id]).length;
+    $("a-count").textContent = `\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u043E: ${have} \u0438\u0437 ${ACHIEVEMENTS.length}`;
+    const ul = $("a-list");
+    ul.textContent = "";
+    for (const a of ACHIEVEMENTS) {
+      const got = !!meta.ach[a.id], li = document.createElement("li");
+      if (!got)
+        li.className = "lock";
+      li.insertAdjacentHTML("beforeend", badge(a.icon, a.tier, !got));
+      const b = document.createElement("b");
+      b.textContent = a.name;
+      const sm = document.createElement("small");
+      sm.textContent = a.desc + (got ? "" : " (\u043D\u0435 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u043E)");
+      li.append(b, sm);
+      ul.append(li);
+    }
+  }
+  async function openDaily() {
+    openOverlay("daily");
+    const play = $("d-play");
+    play.disabled = true;
+    $("d-msg").textContent = "\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C\u2026";
+    $("d-me").textContent = "";
+    const info = await fetchDaily();
+    if (ui !== "daily")
+      return;
+    if (!info) {
+      $("d-msg").textContent = "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E (\u043D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438 \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C). \u041E\u0431\u044B\u0447\u043D\u0430\u044F \u0438\u0433\u0440\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u043A\u0430\u043A \u0432\u0441\u0435\u0433\u0434\u0430.";
+      $("d-title").textContent = "";
+      $("d-story").textContent = "";
+      $("d-goal").textContent = "";
+      return;
+    }
+    game.daily = info;
+    $("d-day").textContent = "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \xB7 " + info.day + " (UTC)";
+    $("d-title").textContent = info.quest.title;
+    $("d-story").textContent = info.quest.text || "";
+    $("d-goal").textContent = "\u0417\u0430\u0434\u0430\u043D\u0438\u0435: " + info.quest.goal_text + ".";
+    $("d-msg").textContent = "";
+    play.disabled = false;
+    const st = meta.st;
+    if (st.streak > 0)
+      $("d-me").textContent = `\u0421\u0435\u0440\u0438\u044F \u0434\u043D\u0435\u0439: ${st.streak}. `;
+    const b = await fetchDailyBoard(info.day, playerId());
+    if (ui === "daily" && b && b.me)
+      $("d-me").textContent += `\u0412\u0430\u0448 \u043B\u0443\u0447\u0448\u0438\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0441\u0435\u0433\u043E\u0434\u043D\u044F: ${b.me.score} \u043E\u0447\u043A., \u043C\u0435\u0441\u0442\u043E ${b.me.rank} \u0438\u0437 ${b.me.total}${b.me.done ? ", \u0437\u0430\u0434\u0430\u043D\u0438\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E" : ""}.`;
+  }
+  function startDaily() {
+    const info = game.daily;
+    if (!info)
+      return;
+    newGame({ mode: "daily", seed: info.seed, daily: info, toast: ["\u0417\u0430\u0434\u0430\u043D\u0438\u0435 \u0434\u043D\u044F: " + info.quest.title, info.quest.goal_text] });
+  }
+  var incoming = challengeFromSearch(location.search);
+  function showChallengeBanner() {
+    const el = $("t-chal");
+    if (!incoming)
+      return;
+    el.hidden = false;
+    el.textContent = incoming.kind === "daily" ? "\u0412\u0430\u0441 \u0437\u043E\u0432\u0443\u0442 \u043D\u0430 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F \u2014 \u043E\u0434\u0438\u043D \u0441\u0438\u0434 \u043D\u0430 \u0432\u0441\u0435\u0445, \u043B\u0438\u0447\u043D\u044B\u0439 \u0440\u0435\u0439\u0442\u0438\u043D\u0433 \u0434\u043D\u044F." : `\u0412\u0430\u043C \u0431\u0440\u043E\u0441\u0438\u043B\u0438 \u0432\u044B\u0437\u043E\u0432: \u0441\u0438\u0434 ${incoming.seed}${incoming.score ? ", \u043D\u0443\u0436\u043D\u043E \u043D\u0430\u0431\u0440\u0430\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0435 " + incoming.score + " \u043E\u0447\u043A." : ""}.`;
+    const b = $("b-chal");
+    b.hidden = false;
+    b.textContent = incoming.kind === "daily" ? "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u0432\u044B\u0437\u043E\u0432 \u0434\u043D\u044F" : "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u0432\u044B\u0437\u043E\u0432";
+  }
+  function acceptChallenge() {
+    if (!incoming)
+      return;
+    if (incoming.kind === "daily") {
+      openDaily();
+      return;
+    }
+    newGame({ mode: "challenge", seed: incoming.seed, chal: incoming.score, toast: ["\u0412\u044B\u0437\u043E\u0432 \u0434\u0440\u0443\u0433\u0430", incoming.score ? `\u041D\u0430\u0431\u0440\u0430\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0435 ${incoming.score} \u043E\u0447\u043A\u043E\u0432 \u043D\u0430 \u044D\u0442\u043E\u043C \u0441\u0438\u0434\u0435.` : "\u041E\u0434\u0438\u043D \u0441\u0438\u0434 \u043D\u0430 \u0434\u0432\u043E\u0438\u0445 \u2014 \u0441\u044B\u0433\u0440\u0430\u0439\u0442\u0435 \u043B\u0443\u0447\u0448\u0435."] });
   }
   var SESS_KEY = "last-boiler-mp-v1";
   var sstore = {
@@ -4304,7 +4991,7 @@
   var lobbyUi = null;
   function mpEnsure() {
     if (!mp)
-      mp = { client: null, code: "", pid: "", nick: "", players: [], host: "", state: "lobby", max: 2, roles: null, mine: null, own: null, inGame: false, votes: {}, voted: [], acks: [], left: 0, paused: false, touch: [0, 0, 0, 0], sent: [0, 0, 0, 0], timers: [null, null, null, null], lastDeny: 0, lastShovel: 0, net: "idle", myVote: null, myAck: false };
+      mp = { client: null, mode: "coop", board: null, result: null, code: "", pid: "", nick: "", players: [], host: "", state: "lobby", max: 2, roles: null, mine: null, own: null, inGame: false, votes: {}, voted: [], acks: [], left: 0, paused: false, touch: [0, 0, 0, 0], sent: [0, 0, 0, 0], timers: [null, null, null, null], lastDeny: 0, lastShovel: 0, net: "idle", myVote: null, myAck: false };
     if (!mp.client)
       mp.client = new MpClient({ url: wsUrl(location.search, DEBUG), onMsg: mpOnMsg, onStatus: mpOnStatus });
     return mp;
@@ -4336,7 +5023,7 @@
     ui = "lobby";
     show("lobby");
     if (mp && mp.code)
-      lobbyUi.renderRoom({ code: mp.code, players: mp.players, host: mp.host, state: mp.state, max: mp.max }, mp.pid);
+      lobbyUi.renderRoom({ code: mp.code, players: mp.players, host: mp.host, state: mp.state, max: mp.max, mode: mp.mode }, mp.pid);
     else {
       lobbyUi.showEntry();
       lobbyUi.setBusy(false);
@@ -4345,7 +5032,15 @@
   }
   function mpInit() {
     lobbyUi = new LobbyUi($, {
-      onCreate: (nick, max) => mpOpenSocket({ t: "create", nick: mpNick(nick), max: max || 2, mode: "coop" }),
+      onCreate: (nick, max, mode) => mpOpenSocket({ t: "create", nick: mpNick(nick), max: max || 2, mode: mode === "versus" ? "versus" : "coop" }),
+      onBot: (rm) => mp && mp.client.send({ t: rm ? "rmbot" : "addbot" }),
+      onShare: async () => {
+        const link = inviteLink(location, mp.code);
+        try {
+          await navigator.share({ title: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043A\u043E\u0442\u0451\u043B", text: `\u0417\u0430\u0445\u043E\u0434\u0438 \u0432 \u043A\u043E\u043C\u043D\u0430\u0442\u0443 ${mp.code} \u2014 ${(MODE_NAMES[mp.mode] || "").toLowerCase()}!`, url: link });
+        } catch (e) {
+        }
+      },
       onJoin: (nick, code) => {
         code = normalizeCode(code);
         if (!CODE_RE.test(code)) {
@@ -4441,6 +5136,7 @@
     $("mp-net").hidden = true;
     $("mp-role").hidden = true;
     $("c-vote").hidden = true;
+    $("mp-board").hidden = true;
     if (s.phase !== "ended" || ui === "lobby") {
     }
     sound.silence();
@@ -4477,6 +5173,7 @@
       mpLeave(true);
   }
   function mpBackToLobby() {
+    $("mp-board").hidden = true;
     if (mp.host === mp.pid && mp.state === "ended")
       mp.client.send({ t: "again" });
     mp.inGame = false;
@@ -4520,7 +5217,15 @@
     coach.reset();
     notes.reset();
     toast = null;
-    s = createState(m.seed, { skipTutorial: true });
+    mp.mode = m.mode === "versus" ? "versus" : "coop";
+    mp.result = null;
+    mp.board = null;
+    game.counted = false;
+    game.review = null;
+    game.fresh = [];
+    game.mode = "solo";
+    game.daily = null;
+    s = createState(m.seed, { skipTutorial: true, host: true });
     lastPhase = null;
     lastNight = -1;
     snap = null;
@@ -4542,7 +5247,8 @@
     lobbyUi.hud(true);
     ui = "play";
     show(null);
-    say("\u0410\u0433\u0430\u0444\u044C\u044F", "\u0412\u044B \u0443 \u043E\u0434\u043D\u043E\u0433\u043E \u043A\u043E\u0442\u043B\u0430: \u043A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0434\u0451\u0442 \u0441\u0432\u043E\u044E \u0447\u0430\u0441\u0442\u044C. \u0413\u043E\u0432\u043E\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433 \u0441 \u0434\u0440\u0443\u0433\u043E\u043C (T)!", "talk", "#e39a62");
+    say("\u0410\u0433\u0430\u0444\u044C\u044F", mp.mode === "versus" ? "\u0413\u043E\u043D\u043A\u0430! \u0423 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0441\u0432\u043E\u0439 \u043A\u043E\u0442\u0451\u043B \u0438 \u043E\u0431\u0449\u0438\u0439 \u0441\u0438\u0434 \u2014 \u0432\u044B\u0438\u0433\u0440\u044B\u0432\u0430\u0435\u0442 \u0442\u043E\u0442, \u0443 \u043A\u043E\u0433\u043E \u0431\u043E\u043B\u044C\u0448\u0435 \u043E\u0447\u043A\u043E\u0432." : "\u0412\u044B \u0443 \u043E\u0434\u043D\u043E\u0433\u043E \u043A\u043E\u0442\u043B\u0430: \u043A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0434\u0451\u0442 \u0441\u0432\u043E\u044E \u0447\u0430\u0441\u0442\u044C. \u0413\u043E\u0432\u043E\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433 \u0441 \u0434\u0440\u0443\u0433\u043E\u043C (T)!", "talk", "#e39a62");
+    renderBoardHud();
   }
   function mpApplySnap(m) {
     const d = m.s, keep = s.valves.slice(), now = performance.now(), prevPhase = s.phase;
@@ -4576,7 +5282,10 @@
     if (ui === "card") {
       const v = $("c-vote");
       v.hidden = false;
-      v.textContent = `\u041F\u0440\u043E\u0433\u043E\u043B\u043E\u0441\u043E\u0432\u0430\u043B\u0438: ${mp.voted.length} \u0438\u0437 ${online}. \u0420\u0435\u0448\u0430\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0438\u043D\u0441\u0442\u0432\u043E; \u043F\u0440\u0438 \u043D\u0438\u0447\u044C\u0435\u0439 \u2014 \u043F\u0435\u0440\u0432\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442. \u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${mp.left} \u0441.`;
+      if (mp.mode === "versus")
+        v.textContent = `\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u0437\u0430 \u0432\u0430\u043C\u0438 \u2014 \u0432 \u0441\u043E\u0440\u0435\u0432\u043D\u043E\u0432\u0430\u043D\u0438\u0438 \u0443 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0441\u0432\u043E\u0439 \u043A\u043E\u0442\u0451\u043B. \u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${mp.left} \u0441.`;
+      else
+        v.textContent = `\u041F\u0440\u043E\u0433\u043E\u043B\u043E\u0441\u043E\u0432\u0430\u043B\u0438: ${mp.voted.length} \u0438\u0437 ${online}. \u0420\u0435\u0448\u0430\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0438\u043D\u0441\u0442\u0432\u043E; \u043F\u0440\u0438 \u043D\u0438\u0447\u044C\u0435\u0439 \u2014 \u043F\u0435\u0440\u0432\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442. \u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${mp.left} \u0441.`;
       [...$("c-opts").children].forEach((b, i) => {
         const o = s.card && s.card.options[i];
         b.classList.toggle("picked", !!(o && mp.myVote === o.key));
@@ -4587,9 +5296,37 @@
       const b = $("b-next"), last2 = s.summary && s.summary.night + 1 >= NIGHTS.length;
       const acked = mp.myAck || mp.acks.includes(mp.pid);
       b.disabled = acked;
-      b.textContent = acked ? `\u0416\u0434\u0451\u043C \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0445 (${mp.acks.length}/${online})` : `${last2 ? "\u0412\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044C \u043E\u0431\u043E\u0437" : "\u0414\u0430\u043B\u044C\u0448\u0435"} (${mp.left})`;
+      b.textContent = acked ? mp.mode === "versus" ? "\u0414\u0430\u043B\u044C\u0448\u0435\u2026" : `\u0416\u0434\u0451\u043C \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0445 (${mp.acks.length}/${online})` : `${last2 ? "\u0412\u0441\u0442\u0440\u0435\u0442\u0438\u0442\u044C \u043E\u0431\u043E\u0437" : "\u0414\u0430\u043B\u044C\u0448\u0435"} (${mp.left})`;
     } else
       $("b-next").disabled = false;
+  }
+  function renderBoardHud() {
+    const el = $("mp-board");
+    if (!mp || !mp.inGame || mp.mode !== "versus" || !mp.board || ui === "ending" || ui === "lobby") {
+      el.hidden = true;
+      return;
+    }
+    const rows = boardView(mp.board, mp.pid);
+    el.textContent = "";
+    const ol = document.createElement("ol");
+    for (const r of rows) {
+      const li = document.createElement("li");
+      if (r.me)
+        li.className = "me";
+      const n = document.createElement("i");
+      n.textContent = r.place;
+      n.style.fontStyle = "normal";
+      const b = document.createElement("b");
+      b.textContent = r.nick;
+      const sc = document.createElement("span");
+      sc.textContent = r.score;
+      const sm = document.createElement("small");
+      sm.textContent = r.state === "playing" ? `\u043D\u043E\u0447\u044C ${r.night} \xB7 ${r.pop} \u0436\u0438\u0442.` : r.state === "done" ? "\u0444\u0438\u043D\u0438\u0448" : r.state === "dnf" ? "\u0432\u044B\u0448\u0435\u043B" : "\u043D\u0435\u0442 \u0441\u0432\u044F\u0437\u0438";
+      li.append(n, b, sc, sm);
+      ol.append(li);
+    }
+    el.append(ol);
+    el.hidden = false;
   }
   function mpOnMsg(m) {
     if (!mp)
@@ -4615,6 +5352,7 @@
         mp.host = m.host;
         mp.state = m.state;
         mp.max = m.max;
+        mp.mode = m.mode === "versus" ? "versus" : "coop";
         if (mp.inGame && m.state === "playing")
           mpRoles(Object.fromEntries(m.players.filter((p) => p.role).map((p) => [p.pid, p.role])));
         lobbyUi.renderRoom(m, mp.pid);
@@ -4643,6 +5381,20 @@
         break;
       case "end":
         mp.result = m.result;
+        if (m.result && m.result.mode === "versus" && ui === "ending") {
+          renderPlaces(m.result);
+          endExtras();
+        }
+        renderBoardHud();
+        break;
+      case "board":
+        mp.board = Array.isArray(m.rows) ? m.rows : null;
+        renderBoardHud();
+        break;
+      case "review":
+        game.review = { text: String(m.text || "").slice(0, 900), src: m.src === "ai" ? "ai" : "rules" };
+        if (ui === "ending")
+          showReview(game.review);
         break;
       case "left":
         mpReset({ kicked: "\u0425\u043E\u0437\u044F\u0438\u043D \u0443\u0431\u0440\u0430\u043B \u0432\u0430\u0441 \u0438\u0437 \u043A\u043E\u043C\u043D\u0430\u0442\u044B.", timeout: "\u0412\u044B \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E \u0431\u044B\u043B\u0438 \u0431\u0435\u0437 \u0441\u0432\u044F\u0437\u0438 \u2014 \u043C\u0435\u0441\u0442\u043E \u043E\u0441\u0432\u043E\u0431\u043E\u0436\u0434\u0435\u043D\u043E.", room_closed: "\u041A\u043E\u043C\u043D\u0430\u0442\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u0430.", replaced: "\u0412\u044B \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u043B\u0438\u0441\u044C \u0441 \u0434\u0440\u0443\u0433\u043E\u0439 \u0432\u043A\u043B\u0430\u0434\u043A\u0438." }[m.reason] || "");
@@ -4722,10 +5474,26 @@
       show("title");
     });
     click("b-mp", mpOpen);
+    click("b-daily", openDaily);
+    click("b-ach", openAch);
+    click("a-close", closeOverlay);
+    click("b-chal", acceptChallenge);
+    click("b-share", shareResult);
+    click("d-play", startDaily);
+    click("d-close", closeOverlay);
+    click("d-board", () => openBoard("day"));
+    click("d-share", () => {
+      const url = dailyLink(location);
+      (navigator.share ? navigator.share({ text: "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0434\u043D\u044F \u0432 \xAB\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u043C \u043A\u043E\u0442\u043B\u0435\xBB: \u043E\u0434\u0438\u043D \u0441\u0438\u0434 \u043D\u0430 \u0432\u0441\u0435\u0445. \u041F\u043E\u0431\u044C\u0451\u0442\u0435?", url }) : navigator.clipboard.writeText(url).then(() => {
+        $("d-msg").textContent = "\u0421\u0441\u044B\u043B\u043A\u0430 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u0430: " + url;
+      })).catch(() => {
+        $("d-msg").textContent = "\u0421\u0441\u044B\u043B\u043A\u0430: " + url;
+      });
+    });
     click("b-wipe", () => {
-      if (confirm("\u0421\u0442\u0435\u0440\u0435\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438?")) {
+      if (confirm("\u0421\u0442\u0435\u0440\u0435\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435, \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u0435 \u043A\u043E\u043D\u0446\u043E\u0432\u043A\u0438 \u0438 \u0434\u043E\u0441\u0442\u0438\u0436\u0435\u043D\u0438\u044F?")) {
         store.del(SAVE_KEY);
-        meta = { endings: [], plays: 0 };
+        meta = cleanMeta(null);
         store.set(META_KEY, JSON.stringify(meta));
         updateTitle();
       }
@@ -4987,7 +5755,7 @@
       }
       return;
     }
-    if (ui === "settings" || ui === "help" || ui === "board") {
+    if (ui === "settings" || ui === "help" || ui === "board" || ui === "daily" || ui === "ach") {
       if (k === "Escape")
         closeOverlay();
       return;
@@ -5231,6 +5999,7 @@
     updateTitle();
     show("title");
     mpInit();
+    showChallengeBanner();
     fetchBoard("score").then((e) => {
       boardAvailable = e !== null;
       updateBoardBtn();
