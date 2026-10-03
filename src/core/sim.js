@@ -1,7 +1,7 @@
 // @ts-check
 // Чистая логика игры «Последний котёл». Никаких обращений к DOM/Canvas/Audio — всё детерминировано
 // и тестируется в node. Один шаг = фиксированный dt (1/60 с).
-import { NIGHTS, CARDS, CAP, TUTORIAL, TICKER, POP_START, COAL_MAX } from './data.js';
+import { NIGHTS, CARDS, CAP, TUTORIAL, TICKER, POP_START, COAL_MAX, hostEvents } from './data.js';
 import { nextRand, randRange } from './rng.js';
 
 export const P_GREEN = [40, 78];
@@ -34,6 +34,7 @@ export function createState(seed = 1, opts = {}) {
     tut: opts.skipTutorial ? null : { step: 0, active: true, done: false, shovels: 0 },
     tickerIdx: 0, evShown: {}, events: [], msgs: [], shake: 0,
     coalMade: 0, coalBurned: 0, nightStartCoal: 24, nightStartPop: POP_START, nightCoalMade: 0,
+    hostOn: !!opts.host, xev: /** @type {{id: string, d: number, m: number, t0: number, t1: number, label: string, shown: boolean}[]} */ ([]),
   };
   return s;
 }
@@ -50,6 +51,9 @@ function eventMult(s, d) {
       const ramp = Math.min(1, (s.t - e.t0) / 2, (e.t1 - s.t) / 2);
       m = Math.max(m, 1 + (e.m - 1) * Math.max(0, ramp));
     }
+  }
+  for (const e of s.xev || []) {      // события «ведущего» (только если партия создана с host:true)
+    if (e.d === d && s.t >= e.t0 && s.t <= e.t1) m = Math.max(m, 1 + (e.m - 1) * Math.max(0, Math.min(1, (s.t - e.t0) / 2, (e.t1 - s.t) / 2)));
   }
   return m;
 }
@@ -138,6 +142,7 @@ export function beginNight(s, n) {
   s.leaks = []; s.leakTimer = NIGHTS[n].leakEvery ? NIGHTS[n].leakEvery * 0.6 : 99;
   s.danger = 0; s.nightStartPop = s.pop; s.nightStartCoal = s.coal;
   s.nightCoalMade = s.coalMade;
+  s.xev = s.hostOn ? hostEvents(s.seed, n) : [];
   emit(s, 'night', { n });
 }
 
@@ -189,6 +194,7 @@ export function step(s, dt) {
     const e = N.events[k];
     if (!s.evShown[k] && s.t >= e.t0) { s.evShown[k] = true; emit(s, 'event', { label: e.label, d: e.d }); }
   }
+  for (const e of s.xev || []) if (!e.shown && s.t >= e.t0) { e.shown = true; emit(s, 'hostev', { id: e.id, d: e.d, m: e.m, label: e.label }); }
   const tk = TICKER[s.night];
   if (tk && s.tickerIdx < tk.length && s.t >= tk[s.tickerIdx].t) { emit(s, 'talk', tk[s.tickerIdx]); s.tickerIdx++; }
 

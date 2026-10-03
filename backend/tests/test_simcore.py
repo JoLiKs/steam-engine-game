@@ -13,8 +13,10 @@ V = json.loads((ROOT / "tests" / "fixtures" / "sim_vectors.json").read_text())
 
 def snap_cmp(py, js, where):
     for k, want in js.items():
-        got = py[k] if k != "leaks" else [[l["id"], l["pipe"], l["age"]] for l in py["leaks"]]
-        if isinstance(want, list) and want and isinstance(want[0], list):
+        got = py[k] if k not in ("leaks", "xev") else ([[l["id"], l["pipe"], l["age"]] for l in py["leaks"]] if k == "leaks" else [[e["id"], e["m"], e["t0"], e["t1"], e["shown"]] for e in py["xev"]])
+        if k == "xev":
+            assert got == want, (where, k, got, want)
+        elif isinstance(want, list) and want and isinstance(want[0], list):
             assert len(got) == len(want), (where, k)
             for a, b in zip(got, want):
                 assert a == pytest.approx(b, abs=1e-9, rel=1e-9), (where, k)
@@ -36,7 +38,7 @@ def apply(s, c):
 
 @pytest.mark.parametrize("case", V["cases"], ids=lambda c: f"{c['kind']}-{c['seed']}")
 def test_python_port_matches_js(case):
-    s = sc.create_state(case["seed"])
+    s = sc.create_state(case["seed"], host=case.get("host", False))
     log = {t: cmds for t, cmds in case["log"]}
     checks = {t: snap for t, snap in case["checks"]}
     for tick in range(60 * 60 * 14):

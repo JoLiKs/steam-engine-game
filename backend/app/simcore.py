@@ -17,6 +17,7 @@ NIGHTS: list[dict] = _D["NIGHTS"]
 CARDS: dict[int, dict] = {int(k): v for k, v in _D["CARDS"].items()}
 CAP: list[float] = _D["CAP"]
 TICKER: dict[int, list[dict]] = {int(k): v for k, v in _D["TICKER"].items()}
+HOST_EVENTS: list[dict] = _D["HOST_EVENTS"]
 POP_START: float = _D["POP_START"]
 COAL_MAX: float = _D["COAL_MAX"]
 K = _D["consts"]
@@ -48,7 +49,29 @@ def js_round(x: float) -> int:
     return math.floor(x + 0.5)
 
 
-def create_state(seed: int = 1) -> dict[str, Any]:
+def host_events(seed: int, n: int) -> list[dict]:
+    """События «ведущего» для ночи n — точный порт hostEvents из src/core/data.js (чистая функция сида и ночи)."""
+    if not n >= 1:
+        return []
+    st = {"rs": (_imul(seed & M32, 2654435761) ^ _imul(n + 1, 0x85EBCA6B)) & M32 or 1}
+    night_dur = NIGHTS[n]["dur"]
+    cnt = 2 if n >= 5 else 1
+    out: list[dict] = []
+    used: list[int] = []
+    for k in range(cnt):
+        i = math.floor(next_rand(st) * len(HOST_EVENTS)) % len(HOST_EVENTS)
+        while i in used:
+            i = (i + 1) % len(HOST_EVENTS)
+        used.append(i)
+        h = HOST_EVENTS[i]
+        lo, hi = (0.15, 0.40) if k == 0 else (0.55, 0.70)
+        t0 = js_round(night_dur * (lo + (hi - lo) * next_rand(st)) * 10) / 10
+        m = js_round((h["m"] + (next_rand(st) - 0.5) * 0.1) * 100) / 100
+        out.append({"id": h["id"], "d": h["d"], "m": m, "t0": t0, "t1": js_round((t0 + h["dur"]) * 10) / 10, "label": h["label"], "shown": False})
+    return out
+
+
+def create_state(seed: int = 1, host: bool = False) -> dict[str, Any]:
     seed &= M32
     return {
         "v": 1, "rs": seed or 1, "seed": seed, "phase": "night", "night": 0, "t": 0.0, "clock": 0.0,
@@ -62,6 +85,7 @@ def create_state(seed: int = 1) -> dict[str, Any]:
         "choices": {}, "card": None, "ending": None, "summary": None,
         "tickerIdx": 0, "evShown": {}, "events": [], "shake": 0.0,
         "coalMade": 0.0, "coalBurned": 0.0, "nightStartCoal": 24.0, "nightStartPop": POP_START, "nightCoalMade": 0.0,
+        "hostOn": bool(host), "xev": [],
     }
 
 
@@ -87,6 +111,9 @@ def _event_mult(s: dict, d: int) -> float:
         if e["t0"] <= s["t"] <= e["t1"]:
             ramp = min(1, (s["t"] - e["t0"]) / 2, (e["t1"] - s["t"]) / 2)
             m = max(m, 1 + (e["m"] - 1) * max(0, ramp))
+    for e in s.get("xev") or []:
+        if e["d"] == d and e["t0"] <= s["t"] <= e["t1"]:
+            m = max(m, 1 + (e["m"] - 1) * max(0, min(1, (s["t"] - e["t0"]) / 2, (e["t1"] - s["t"]) / 2)))
     return m
 
 
@@ -199,6 +226,7 @@ def begin_night(s: dict, n: int) -> None:
     s["danger"] = 0.0
     s["nightStartPop"], s["nightStartCoal"] = s["pop"], s["coal"]
     s["nightCoalMade"] = s["coalMade"]
+    s["xev"] = host_events(s["seed"], n) if s.get("hostOn") else []
     emit(s, "night", n=n)
 
 
@@ -260,6 +288,10 @@ def step(s: dict, dt: float = DT) -> None:
         if not s["evShown"].get(k) and s["t"] >= e["t0"]:
             s["evShown"][k] = True
             emit(s, "event", label=e["label"], d=e["d"])
+    for e in s["xev"]:
+        if not e["shown"] and s["t"] >= e["t0"]:
+            e["shown"] = True
+            emit(s, "hostev", id=e["id"], d=e["d"], m=e["m"], label=e["label"])
     tk = TICKER.get(s["night"])
     if tk and s["tickerIdx"] < len(tk) and s["t"] >= tk[s["tickerIdx"]]["t"]:
         emit(s, "talk", **tk[s["tickerIdx"]])

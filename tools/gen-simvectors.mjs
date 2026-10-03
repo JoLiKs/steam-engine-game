@@ -5,7 +5,7 @@ import { createState, step, setValve, shovel, fixLeak, chooseCard, continueSumma
 import { makeRng } from '../src/core/rng.js';
 
 const KEYS = ['t', 'clock', 'P', 'fire', 'coal', 'smog', 'pop', 'fw', 'danger', 'burnouts', 'night', 'phase', 'shovels', 'leaksFixed', 'exhaustSec', 'smogSum', 'coalMade'];
-const snap = s => { const o = {}; for (const k of KEYS) o[k] = s[k]; o.valves = [...s.valves]; o.sat = [...s.sat]; o.leaks = s.leaks.map(l => [l.id, l.pipe, l.age]); o.ending = s.ending; o.rs = s.rs; return o; };
+const snap = s => { const o = {}; for (const k of KEYS) o[k] = s[k]; o.valves = [...s.valves]; o.sat = [...s.sat]; o.leaks = s.leaks.map(l => [l.id, l.pipe, l.age]); o.ending = s.ending; o.rs = s.rs; o.xev = s.xev.map(e => [e.id, e.m, e.t0, e.t1, e.shown]); return o; };
 
 function policy(kind, rnd) {
   return (s, tick) => {
@@ -32,8 +32,8 @@ function apply(s, c) {
   else if (c[0] === 'card') chooseCard(s, c[1]); else if (c[0] === 'continue') continueSummary(s);
 }
 const cases = [];
-for (const [kind, seed] of [['good', 1], ['good', 777], ['good', 4242], ['random', 5], ['random', 99], ['random', 2026], ['idle', 3], ['reckless', 8]]) {
-  const rnd = makeRng(seed * 7 + 1), pol = policy(kind, rnd), s = createState(seed, { skipTutorial: true });
+for (const [kind, seed, host] of [['good', 1], ['good', 777], ['good', 4242], ['random', 5], ['random', 99], ['random', 2026], ['idle', 3], ['reckless', 8], ['good', 31, true], ['random', 64, true], ['good', 2027, true]]) {
+  const rnd = makeRng(seed * 7 + 1), pol = policy(kind, rnd), s = createState(seed, { skipTutorial: true, host: !!host });
   const log = [], checks = [];
   for (let tick = 0; tick < 60 * 60 * 14; tick++) {
     const cmds = pol(s, tick);
@@ -42,7 +42,7 @@ for (const [kind, seed] of [['good', 1], ['good', 777], ['good', 4242], ['random
     if (tick % 600 === 0 || s.phase === 'ended') checks.push([tick, snap(s)]);
     if (s.phase === 'ended') break;
   }
-  cases.push({ kind, seed, ticks: log.length ? undefined : 0, log, checks, ending: s.ending, final: snap(s) });
+  cases.push({ kind, seed, host: !!host, ticks: log.length ? undefined : 0, log, checks, ending: s.ending, final: snap(s) });
 }
 const out = JSON.stringify({ dt: '1/60', cases }) + '\n';
 const file = new URL('../tests/fixtures/sim_vectors.json', import.meta.url);

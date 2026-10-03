@@ -111,3 +111,34 @@ export const TUTORIAL = [
   { id: 'leak', text: 'Утечка! Нажмите на облачко пара над трубой (или F), чтобы заткнуть её.', hint: 'leak' },
   { id: 'go', text: 'Готово! Держите давление в зелёной зоне и подбрасывайте уголь, пока не кончится ночь.', hint: null },
 ];
+
+/** Пул событий «ведущего»: механика безопасна (множитель спроса одного района ≤ 1.45 на 10–18 с). Тексты — запасные; ИИ может переписать подачу на сервере. */
+export const HOST_EVENTS = [
+  { id: 'frost', d: 0, m: 1.3, dur: 14, label: 'Ночной мороз', text: 'Ударил внезапный мороз — в палатах Госпиталя просят больше пара.' },
+  { id: 'fever', d: 0, m: 1.35, dur: 12, label: 'Тревога в Госпитале', text: 'Привезли новых больных: Госпиталю нужен пар, и поскорее.' },
+  { id: 'wind', d: 1, m: 1.3, dur: 16, label: 'Ветер с реки', text: 'Ветер выдувает тепло из Кварталов — жители крутят вентили сами.' },
+  { id: 'feast', d: 1, m: 1.25, dur: 14, label: 'Праздник в Кварталах', text: 'В Кварталах затеяли праздник: двери нараспашку, а тепло уходит.' },
+  { id: 'order', d: 2, m: 1.4, dur: 14, label: 'Срочный заказ', text: 'На Завод пришёл срочный заказ — станки просят пара сверх нормы.' },
+  { id: 'inspect', d: 2, m: 1.25, dur: 12, label: 'Проверка Завода', text: 'Проверяющие заглянули на Завод: всё должно работать как часы.' },
+  { id: 'smogfront', d: 3, m: 1.35, dur: 16, label: 'Смог ложится', text: 'Над городом лёг смог — Фильтрам нужно больше пара, чтобы справиться.' },
+  { id: 'soot', d: 3, m: 1.3, dur: 12, label: 'Сажа в трубах', text: 'Сажа забила трубы — Фильтры жадно просят пара.' },
+];
+
+const mulberry = st => { st.rs = (st.rs + 0x6D2B79F5) >>> 0; let t = st.rs; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+/** События ведущего для ночи n: чистая функция (сид, ночь) → список окон; не трогает ГСЧ симуляции. */
+export function hostEvents(seed, n) {
+  if (!(n >= 1)) return [];
+  const st = { rs: ((Math.imul(seed >>> 0, 2654435761) ^ Math.imul(n + 1, 0x85EBCA6B)) >>> 0) || 1 };
+  const nightDur = NIGHTS[n].dur, cnt = n >= 5 ? 2 : 1, out = [], used = [];
+  for (let k = 0; k < cnt; k++) {
+    let i = Math.floor(mulberry(st) * HOST_EVENTS.length) % HOST_EVENTS.length;
+    while (used.includes(i)) i = (i + 1) % HOST_EVENTS.length;
+    used.push(i);
+    const h = HOST_EVENTS[i];
+    const lo = k === 0 ? 0.15 : 0.55, hi = k === 0 ? 0.40 : 0.70;
+    const t0 = Math.round(nightDur * (lo + (hi - lo) * mulberry(st)) * 10) / 10;
+    const m = Math.round((h.m + (mulberry(st) - 0.5) * 0.1) * 100) / 100;
+    out.push({ id: h.id, d: h.d, m, t0, t1: Math.round((t0 + h.dur) * 10) / 10, label: h.label, shown: false });
+  }
+  return out;
+}
